@@ -3,6 +3,11 @@ import { useState, useCallback } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import AddTitleModal from '@/components/AddTitleModal'
 
+const glassCard = {
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
 export default function SearchPage() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<TmdbSearchResult[]>([])
@@ -25,26 +30,32 @@ export default function SearchPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Search</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Search</h1>
       <input
         type="text" value={query}
         onChange={e => { setQuery(e.target.value); search(e.target.value) }}
         placeholder="Search movies and TV shows..."
-        className="w-full px-4 py-3 bg-gray-900 text-white rounded-xl border border-gray-700 focus:outline-none focus:border-blue-500 text-lg"
+        className="w-full px-5 py-3 rounded-full text-white text-base placeholder:text-zinc-500 focus:outline-none transition-colors"
+        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+        onFocus={e => (e.target.style.borderColor = 'rgba(255,255,255,0.3)')}
+        onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
         autoFocus
       />
-      {loading && <p className="text-gray-400 text-sm">Searching...</p>}
-      <div className="space-y-3">
+      {loading && <p className="text-zinc-500 text-sm px-1">Searching...</p>}
+      <div className="space-y-2">
         {results.map(r => (
           <button key={r.tmdb_id} onClick={() => setSelected(r)}
-            className="w-full flex items-center gap-3 p-3 bg-gray-900 hover:bg-gray-800 rounded-xl text-left">
+            className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-colors backdrop-blur-md"
+            style={glassCard}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)')}>
             {r.poster_url
-              ? <img src={r.poster_url} alt={r.title} className="w-10 h-14 object-cover rounded" />
-              : <div className="w-10 h-14 bg-gray-700 rounded" />}
+              ? <img src={r.poster_url} alt={r.title} className="w-10 h-14 object-cover rounded-lg" />
+              : <div className="w-10 h-14 rounded-lg" style={{ background: 'rgba(255,255,255,0.08)' }} />}
             <div>
               <p className="font-medium text-white">{r.title}</p>
-              <p className="text-sm text-gray-400">{r.release_year} · {r.type === 'show' ? 'TV Show' : 'Movie'}</p>
-              {r.overview && <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{r.overview}</p>}
+              <p className="text-sm text-zinc-400">{r.release_year} · {r.type === 'show' ? 'TV Show' : 'Movie'}</p>
+              {r.overview && <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">{r.overview}</p>}
             </div>
           </button>
         ))}

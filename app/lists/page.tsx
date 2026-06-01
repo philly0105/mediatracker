@@ -4,6 +4,11 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { List } from '@/types'
 
+const glassCard = {
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
 export default function ListsPage() {
   const [lists, setLists] = useState<List[]>([])
   const [name, setName] = useState('')
@@ -30,18 +35,36 @@ export default function ListsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">Lists</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Lists</h1>
       <form onSubmit={createList} className="flex gap-2">
         <input value={name} onChange={e => setName(e.target.value)} placeholder="New list name..."
-          className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500" />
-        <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">Create</button>
+          className="flex-1 px-4 py-2.5 rounded-full text-white text-sm placeholder:text-zinc-500 focus:outline-none transition-colors"
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+          onFocus={e => (e.target.style.borderColor = 'rgba(255,255,255,0.3)')}
+          onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+        />
+        <button type="submit"
+          className="px-5 py-2.5 rounded-full text-sm font-medium transition-colors"
+          style={{ background: '#ffffff', color: '#0d0d0f' }}
+          onMouseEnter={e => ((e.target as HTMLElement).style.background = '#e4e4e7')}
+          onMouseLeave={e => ((e.target as HTMLElement).style.background = '#ffffff')}>
+          Create
+        </button>
       </form>
       <div className="space-y-2">
         {lists.map(list => (
           <Link key={list.id} href={`/lists/${list.id}`}
-            className="flex items-center justify-between px-4 py-3 bg-gray-900 hover:bg-gray-800 rounded-xl">
+            className="flex items-center justify-between px-4 py-3 rounded-2xl backdrop-blur-md transition-colors"
+            style={glassCard}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)')}>
             <span className="text-white">{list.name}</span>
-            {list.is_shared && <span className="text-xs text-blue-400">Shared</span>}
+            {list.is_shared && (
+              <span className="text-xs text-zinc-400 px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                Shared
+              </span>
+            )}
           </Link>
         ))}
       </div>

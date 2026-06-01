@@ -2,6 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import StatsCharts from '@/components/StatsCharts'
 import { computeGenreBreakdown, computeRatingDistribution, computeMonthlyActivity, computeTopDirectors, computeTopActors } from '@/lib/stats'
 
+const glassCard = {
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
 export default async function StatsPage() {
   const supabase = await createClient()
   const { data: entries } = await supabase.from('watch_entries').select('*, media(*)').order('watched_at')
@@ -28,7 +33,7 @@ export default async function StatsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Stats</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Stats</h1>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Movies', value: statsData.totals.movies },
@@ -36,9 +41,9 @@ export default async function StatsPage() {
           { label: 'Episodes', value: statsData.totals.episodes },
           { label: 'Hours', value: statsData.totals.hours },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-gray-900 rounded-xl p-4 text-center">
+          <div key={label} className="rounded-2xl p-5 text-center backdrop-blur-md" style={glassCard}>
             <p className="text-3xl font-bold text-white">{value}</p>
-            <p className="text-sm text-gray-400 mt-1">{label}</p>
+            <p className="text-sm text-zinc-400 mt-1">{label}</p>
           </div>
         ))}
       </div>
