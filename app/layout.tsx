@@ -41,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Link href="/watchlist" className="text-zinc-400 hover:text-white text-sm transition-colors">Watchlist</Link>
             <Link href="/lists" className="text-zinc-400 hover:text-white text-sm transition-colors">Lists</Link>
             <Link href="/stats" className="text-zinc-400 hover:text-white text-sm transition-colors">Stats</Link>
+            <Link href="/import" className="text-zinc-400 hover:text-white text-sm transition-colors">Import</Link>
             <div className="ml-auto">
               <Link href="/settings" className="text-zinc-400 hover:text-white text-sm transition-colors">Settings</Link>
             </div>
