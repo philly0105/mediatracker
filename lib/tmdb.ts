@@ -3,15 +3,13 @@ import type { TmdbSearchResult, MediaType } from '@/types'
 const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
 
-function headers() {
-  return { Authorization: `Bearer ${process.env.TMDB_API_KEY}` }
+function apiUrl(path: string, params: Record<string, string> = {}) {
+  const qs = new URLSearchParams({ api_key: process.env.TMDB_API_KEY ?? '', ...params })
+  return `${BASE}${path}?${qs}`
 }
 
 export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
-  const res = await fetch(
-    `${BASE}/search/multi?query=${encodeURIComponent(query)}&include_adult=false`,
-    { headers: headers() }
-  )
+  const res = await fetch(apiUrl('/search/multi', { query, include_adult: 'false' }))
   if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`)
   const data = await res.json()
 
@@ -47,7 +45,7 @@ export interface TmdbFullDetails {
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`
-  const res = await fetch(`${BASE}${endpoint}?append_to_response=credits`, { headers: headers() })
+  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits' }))
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
 

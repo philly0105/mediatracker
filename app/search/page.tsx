@@ -12,10 +12,15 @@ export default function SearchPage() {
   const search = useCallback(async (q: string) => {
     if (q.trim().length < 2) { setResults([]); return }
     setLoading(true)
-    const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`)
-    const data = await res.json()
-    setResults(data.results ?? [])
-    setLoading(false)
+    try {
+      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      setResults(data.results ?? [])
+    } catch {
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   return (
