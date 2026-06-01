@@ -27,7 +27,14 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
         }
       }
     } else {
-      onProgressChange(seasonId, ep, false)
+      // Unmark this episode and all watched episodes after it
+      const season = seasons.find(s => s.id === seasonId)
+      const end = season?.episode_count ?? ep
+      for (let e = ep; e <= end; e++) {
+        if (watchedSet.has(`${seasonId}-${e}`)) {
+          onProgressChange(seasonId, e, false)
+        }
+      }
     }
   }
 
