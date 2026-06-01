@@ -1,3 +1,4 @@
+'use client'
 import Link from 'next/link'
 import RatingStars from './RatingStars'
 import type { WatchEntry } from '@/types'
