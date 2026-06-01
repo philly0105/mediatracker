@@ -9,8 +9,14 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = { title: 'MediaTracker' }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Supabase unavailable — render without auth nav
+  }
 
   return (
     <html lang="en">
