@@ -141,13 +141,22 @@ export default function ImportPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Import</h1>
-        <button onClick={downloadTemplate}
-          className="px-4 py-2 rounded-full text-sm text-zinc-300 transition-colors"
-          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
-          onMouseEnter={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.11)')}
-          onMouseLeave={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.07)')}>
-          Download template
-        </button>
+        <div className="flex gap-2">
+          <a href="/api/export"
+            className="px-4 py-2 rounded-full text-sm text-zinc-300 transition-colors"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+            onMouseEnter={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.11)')}
+            onMouseLeave={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.07)')}>
+            Export CSV
+          </a>
+          <button onClick={downloadTemplate}
+            className="px-4 py-2 rounded-full text-sm text-zinc-300 transition-colors"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+            onMouseEnter={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.11)')}
+            onMouseLeave={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.07)')}>
+            Download template
+          </button>
+        </div>
       </div>
 
       {/* Column guide */}
