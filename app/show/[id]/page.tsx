@@ -1,5 +1,6 @@
 'use client'
 import { use, useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import EpisodeTracker from '@/components/EpisodeTracker'
 import RatingStars from '@/components/RatingStars'
@@ -7,6 +8,7 @@ import type { Media, Season, EpisodeProgress, WatchEntry } from '@/types'
 
 export default function ShowDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   const [media, setMedia] = useState<Media | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
   const [progress, setProgress] = useState<EpisodeProgress[]>([])
@@ -64,6 +66,10 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-6 max-w-3xl">
+      <button onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors">
+        ← Back
+      </button>
       <div className="flex gap-4">
         {media.poster_url && <img src={media.poster_url} alt={media.title} className="w-32 rounded-2xl" />}
         <div className="space-y-2">
