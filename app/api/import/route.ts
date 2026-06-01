@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (yearMatch) match = yearMatch
   }
 
-  const { media } = await upsertMedia(supabase, match.tmdb_id, match.type)
+  const { media, seasons } = await upsertMedia(supabase, match.tmdb_id, match.type)
 
   if (status === 'watchlist') {
     const { error: wlErr } = await supabase.from('watchlist_items').upsert(
@@ -41,6 +41,23 @@ export async function POST(request: NextRequest) {
       watched_at: date || new Date().toISOString().split('T')[0],
     })
     if (weErr) return NextResponse.json({ error: weErr.message }, { status: 500 })
+
+    // For shows, mark every episode as watched
+    if (match.type === 'show' && seasons.length > 0) {
+      const watchedAt = date || new Date().toISOString().split('T')[0]
+      const episodeRows = seasons.flatMap(season =>
+        Array.from({ length: season.episode_count }, (_, i) => ({
+          user_id: user.id,
+          season_id: season.id,
+          episode_number: i + 1,
+          watched_at: watchedAt,
+        }))
+      )
+      const { error: epErr } = await supabase
+        .from('episode_progress')
+        .upsert(episodeRows, { onConflict: 'user_id,season_id,episode_number' })
+      if (epErr) return NextResponse.json({ error: epErr.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ ok: true, matched: match.title })
