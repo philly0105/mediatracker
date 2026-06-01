@@ -13,7 +13,7 @@ interface ImportRow {
 
 interface RowResult {
   title: string
-  state: 'pending' | 'success' | 'error'
+  state: 'pending' | 'success' | 'skipped' | 'error'
   matched?: string
   error?: string
 }
@@ -116,7 +116,9 @@ export default function ImportPage() {
         setResults(prev => prev.map((r, j) =>
           j === i
             ? res.ok
-              ? { ...r, state: 'success', matched: data.matched }
+              ? data.skipped
+                ? { ...r, state: 'skipped' }
+                : { ...r, state: 'success', matched: data.matched }
               : { ...r, state: 'error', error: data.error }
             : r
         ))
@@ -132,6 +134,7 @@ export default function ImportPage() {
 
   const completed = results.filter(r => r.state !== 'pending').length
   const succeeded = results.filter(r => r.state === 'success').length
+  const skipped = results.filter(r => r.state === 'skipped').length
   const failed = results.filter(r => r.state === 'error').length
 
   return (
@@ -246,6 +249,7 @@ export default function ImportPage() {
           {done && (
             <div className="rounded-2xl p-4 flex items-center gap-4 backdrop-blur-md" style={glassCard}>
               <span className="text-white font-medium">{succeeded} imported</span>
+              {skipped > 0 && <span className="text-zinc-500">{skipped} already existed</span>}
               {failed > 0 && <span className="text-rose-400">{failed} failed</span>}
             </div>
           )}
@@ -253,12 +257,15 @@ export default function ImportPage() {
             {results.map((r, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5"
                 style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                <span className="text-base leading-none">
-                  {r.state === 'pending' ? '○' : r.state === 'success' ? '✓' : '✗'}
+                <span className="text-base leading-none" style={{ color: r.state === 'success' ? '#4ade80' : r.state === 'skipped' ? '#71717a' : r.state === 'error' ? '#fb7185' : '#3f3f46' }}>
+                  {r.state === 'pending' ? '○' : r.state === 'success' ? '✓' : r.state === 'skipped' ? '–' : '✗'}
                 </span>
-                <span className="flex-1 text-sm" style={{ color: r.state === 'error' ? '#fb7185' : r.state === 'success' ? '#a3a3a3' : '#71717a' }}>
+                <span className="flex-1 text-sm" style={{ color: r.state === 'error' ? '#fb7185' : r.state === 'success' ? '#a3a3a3' : '#52525b' }}>
                   {r.title}
                 </span>
+                {r.state === 'skipped' && (
+                  <span className="text-xs text-zinc-600">already in library</span>
+                )}
                 {r.state === 'success' && r.matched && r.matched !== r.title && (
                   <span className="text-xs text-zinc-600">matched: {r.matched}</span>
                 )}

@@ -26,6 +26,18 @@ export async function POST(request: NextRequest) {
 
   const { media, seasons } = await upsertMedia(supabase, match.tmdb_id, match.type)
 
+  // Skip if already in watch history / watchlist
+  if (status !== 'watchlist') {
+    const { data: existing } = await supabase
+      .from('watch_entries')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('media_id', media.id)
+      .limit(1)
+      .maybeSingle()
+    if (existing) return NextResponse.json({ ok: true, matched: match.title, skipped: true })
+  }
+
   if (status === 'watchlist') {
     const { error: wlErr } = await supabase.from('watchlist_items').upsert(
       { user_id: user.id, media_id: media.id, priority: 'want_to_watch', added_at: new Date().toISOString().split('T')[0] },

@@ -13,6 +13,17 @@ export async function POST(request: NextRequest) {
 
   const { media } = await upsertMedia(supabase, tmdb_id, type)
 
+  if (!rewatch) {
+    const { data: existing } = await supabase
+      .from('watch_entries')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('media_id', media.id)
+      .limit(1)
+      .maybeSingle()
+    if (existing) return NextResponse.json({ error: 'Already in your watch history' }, { status: 409 })
+  }
+
   const { data, error } = await supabase
     .from('watch_entries')
     .insert({
