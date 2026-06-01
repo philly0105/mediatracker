@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/share']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -25,14 +25,18 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
-  const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p))
+  const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'))
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    const redirectToLogin = NextResponse.redirect(new URL('/login', request.url))
+    supabaseResponse.cookies.getAll().forEach(c => redirectToLogin.cookies.set(c.name, c.value))
+    return redirectToLogin
   }
 
   if (user && path === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
+    const redirectToHome = NextResponse.redirect(new URL('/', request.url))
+    supabaseResponse.cookies.getAll().forEach(c => redirectToHome.cookies.set(c.name, c.value))
+    return redirectToHome
   }
 
   return supabaseResponse
