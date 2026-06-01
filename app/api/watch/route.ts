@@ -30,6 +30,23 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ entry: data }, { status: 201 })
 }
 
+// PATCH: update rating on a watch entry
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id, rating } = await request.json()
+  const { error } = await supabase
+    .from('watch_entries')
+    .update({ rating: rating ?? null })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // DELETE: remove a watch entry
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient()

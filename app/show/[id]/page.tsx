@@ -13,6 +13,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   const [seasons, setSeasons] = useState<Season[]>([])
   const [progress, setProgress] = useState<EpisodeProgress[]>([])
   const [entry, setEntry] = useState<WatchEntry | null>(null)
+  const [rating, setRating] = useState<number | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -37,9 +38,20 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
         .limit(1)
         .single()
       setEntry(e)
+      setRating(e?.rating ?? null)
     }
     load()
   }, [id])
+
+  const handleRatingChange = useCallback(async (newRating: number) => {
+    if (!entry) return
+    setRating(newRating)
+    await fetch('/api/watch', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: entry.id, rating: newRating }),
+    })
+  }, [entry])
 
   const handleProgressChange = useCallback(async (seasonId: string, episode: number, watched: boolean) => {
     if (watched) {
@@ -85,7 +97,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
               ))}
             </div>
           )}
-          {entry?.rating && <RatingStars value={entry.rating} onChange={() => {}} readOnly />}
+          {entry && <RatingStars value={rating} onChange={handleRatingChange} />}
           {media.overview && <p className="text-sm text-zinc-400 max-w-prose leading-relaxed">{media.overview}</p>}
         </div>
       </div>

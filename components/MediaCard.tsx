@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
 import RatingStars from './RatingStars'
 import type { WatchEntry } from '@/types'
@@ -15,6 +16,16 @@ const glassCard = {
 export default function MediaCard({ entry }: Props) {
   const media = entry.media!
   const href = media.type === 'show' ? `/show/${media.id}` : '#'
+  const [rating, setRating] = useState<number | null>(entry.rating ?? null)
+
+  async function handleRatingChange(newRating: number) {
+    setRating(newRating)
+    await fetch('/api/watch', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: entry.id, rating: newRating }),
+    })
+  }
 
   return (
     <div className="rounded-2xl overflow-hidden flex gap-3 p-3 backdrop-blur-md" style={glassCard}>
@@ -30,11 +41,9 @@ export default function MediaCard({ entry }: Props) {
           <p className="font-medium text-white line-clamp-1">{media.title}</p>
         )}
         <p className="text-xs text-zinc-500 mt-0.5">{media.release_year}</p>
-        {entry.rating && (
-          <div className="mt-1">
-            <RatingStars value={entry.rating} onChange={() => {}} readOnly />
-          </div>
-        )}
+        <div className="mt-1">
+          <RatingStars value={rating} onChange={handleRatingChange} />
+        </div>
         {entry.review && <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{entry.review}</p>}
         <p className="text-xs text-zinc-700 mt-1">{entry.watched_at}</p>
       </div>
