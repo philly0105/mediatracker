@@ -41,7 +41,7 @@ export interface TmdbFullDetails {
   release_year: number | null
   runtime_mins: number | null
   director: string | null
-  cast: string[]
+  cast_members: string[]
   seasons?: Array<{ season_number: number; episode_count: number }>
 }
 
@@ -61,7 +61,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       release_year: d.release_date ? parseInt(d.release_date.split('-')[0]) : null,
       runtime_mins: d.runtime ?? null,
       director,
-      cast: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
+      cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
     }
   } else {
     return {
@@ -72,7 +72,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       release_year: d.first_air_date ? parseInt(d.first_air_date.split('-')[0]) : null,
       runtime_mins: d.episode_run_time?.[0] ?? null,
       director: null,
-      cast: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
+      cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
       seasons: (d.seasons ?? [])
         .filter((s: any) => s.season_number > 0)
         .map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count })),

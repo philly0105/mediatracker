@@ -73,7 +73,7 @@ describe('fetchTmdbDetails', () => {
     expect(details).toMatchObject({
       tmdb_id: 550, title: 'Fight Club', runtime_mins: 139,
       director: 'David Fincher', genres: ['Drama', 'Thriller'],
-      cast: ['Brad Pitt', 'Edward Norton'],
+      cast_members: ['Brad Pitt', 'Edward Norton'],
     })
   })
 })

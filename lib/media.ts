@@ -19,7 +19,7 @@ export async function upsertMedia(
     release_year: details.release_year,
     runtime_mins: details.runtime_mins,
     director: details.director,
-    cast: details.cast,
+    cast_members: details.cast_members,
   }
 
   const { data: media, error } = await supabase

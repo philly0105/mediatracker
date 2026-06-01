@@ -13,7 +13,7 @@ create table media (
   release_year integer,
   runtime_mins integer,
   director text,
-  cast text[] default '{}'
+  cast_members text[] default '{}'
 );
 
 -- TV seasons

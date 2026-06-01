@@ -12,7 +12,7 @@ export interface Media {
   release_year: number | null
   runtime_mins: number | null
   director: string | null
-  cast: string[]
+  cast_members: string[]
 }
 
 export interface Season {

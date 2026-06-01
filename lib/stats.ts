@@ -57,7 +57,7 @@ export function computeTopDirectors(entries: WatchEntry[]): Array<{ name: string
 export function computeTopActors(entries: WatchEntry[]): Array<{ name: string; count: number }> {
   const counts: Record<string, number> = {}
   for (const e of entries) {
-    for (const actor of (e.media?.cast ?? [])) {
+    for (const actor of (e.media?.cast_members ?? [])) {
       counts[actor] = (counts[actor] ?? 0) + 1
     }
   }
