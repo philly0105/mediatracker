@@ -1,0 +1,85 @@
+export type MediaType = 'movie' | 'show'
+export type WatchlistPriority = 'must_watch' | 'want_to_watch' | 'someday'
+
+export interface Media {
+  id: string
+  tmdb_id: number
+  type: MediaType
+  title: string
+  overview: string | null
+  poster_url: string | null
+  genres: string[]
+  release_year: number | null
+  runtime_mins: number | null
+  director: string | null
+  cast: string[]
+}
+
+export interface Season {
+  id: string
+  media_id: string
+  season_number: number
+  episode_count: number
+}
+
+export interface WatchEntry {
+  id: string
+  user_id: string
+  media_id: string
+  rating: number | null
+  review: string | null
+  watched_at: string
+  rewatch: boolean
+  created_at: string
+  media?: Media
+}
+
+export interface EpisodeProgress {
+  id: string
+  user_id: string
+  season_id: string
+  episode_number: number
+  watched_at: string
+}
+
+export interface WatchlistItem {
+  id: string
+  user_id: string
+  media_id: string
+  priority: WatchlistPriority
+  added_at: string
+  media?: Media
+}
+
+export interface List {
+  id: string
+  user_id: string
+  name: string
+  share_token: string | null
+  is_shared: boolean
+  created_at: string
+}
+
+export interface ListItem {
+  id: string
+  list_id: string
+  media_id: string
+  added_at: string
+  media?: Media
+}
+
+export interface UserSettings {
+  user_id: string
+  watched_share_token: string | null
+  watchlist_share_token: string | null
+}
+
+// TMDB search result shape (before caching)
+export interface TmdbSearchResult {
+  tmdb_id: number
+  type: MediaType
+  title: string
+  overview: string
+  poster_url: string | null
+  release_year: number | null
+}
