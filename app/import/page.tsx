@@ -78,6 +78,7 @@ export default function ImportPage() {
   const [importing, setImporting] = useState(false)
   const [done, setDone] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [mode, setMode] = useState<'csv' | 'watchlist'>('csv')
   const fileRef = useRef<HTMLInputElement>(null)
 
   function loadFile(file: File) {
@@ -110,7 +111,7 @@ export default function ImportPage() {
         const res = await fetch('/api/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(rows[i]),
+          body: JSON.stringify(mode === 'watchlist' ? { ...rows[i], status: 'watchlist' } : rows[i]),
         })
         const data = await res.json()
         setResults(prev => prev.map((r, j) =>
@@ -180,6 +181,19 @@ export default function ImportPage() {
         </div>
       </div>
 
+      {/* Mode toggle */}
+      <div className="flex rounded-full p-1 gap-1 w-fit" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        {(['csv', 'watchlist'] as const).map(m => (
+          <button key={m} onClick={() => { setMode(m); setRows([]); setResults([]); setDone(false) }}
+            className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+            style={mode === m
+              ? { background: '#ffffff', color: '#0d0d0f' }
+              : { background: 'transparent', color: '#71717a' }}>
+            {m === 'csv' ? 'From CSV' : 'Watchlist only'}
+          </button>
+        ))}
+      </div>
+
       {/* Drop zone */}
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
@@ -242,7 +256,9 @@ export default function ImportPage() {
             style={{ background: '#ffffff', color: '#0d0d0f' }}
             onMouseEnter={e => !importing && ((e.target as HTMLElement).style.background = '#e4e4e7')}
             onMouseLeave={e => ((e.target as HTMLElement).style.background = '#ffffff')}>
-            {importing ? `Importing ${completed}/${rows.length}...` : `Import ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`}
+            {importing
+              ? `Importing ${completed}/${rows.length}...`
+              : `${mode === 'watchlist' ? 'Add to watchlist' : 'Import'} ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`}
           </button>
           {importing && (
             <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
