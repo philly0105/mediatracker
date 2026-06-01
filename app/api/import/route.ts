@@ -27,22 +27,20 @@ export async function POST(request: NextRequest) {
   const { media } = await upsertMedia(supabase, match.tmdb_id, match.type)
 
   if (status === 'watchlist') {
-    await supabase.from('watchlist_items').upsert(
+    const { error: wlErr } = await supabase.from('watchlist_items').upsert(
       { user_id: user.id, media_id: media.id, priority: 'want_to_watch', added_at: new Date().toISOString().split('T')[0] },
       { onConflict: 'user_id,media_id' }
     )
+    if (wlErr) return NextResponse.json({ error: wlErr.message }, { status: 500 })
   } else {
-    const watchedAt = date || new Date().toISOString().split('T')[0]
-    await supabase.from('watch_entries').upsert(
-      {
-        user_id: user.id,
-        media_id: media.id,
-        rating: rating ? parseFloat(rating) : null,
-        review: review || null,
-        watched_at: watchedAt,
-      },
-      { onConflict: 'user_id,media_id,watched_at' }
-    )
+    const { error: weErr } = await supabase.from('watch_entries').insert({
+      user_id: user.id,
+      media_id: media.id,
+      rating: rating ? parseFloat(rating) : null,
+      review: review || null,
+      watched_at: date || new Date().toISOString().split('T')[0],
+    })
+    if (weErr) return NextResponse.json({ error: weErr.message }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, matched: match.title })
