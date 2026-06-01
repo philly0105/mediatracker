@@ -3,30 +3,31 @@ import Link from 'next/link'
 import RatingStars from '@/components/RatingStars'
 
 export default async function DashboardPage() {
-  let supabase: Awaited<ReturnType<typeof createClient>>
-  try {
-    supabase = await createClient()
-  } catch (e) {
-    console.error('[dashboard] createClient failed:', e)
-    throw e
-  }
-
+  let debugInfo = 'ok'
   let recent: any[] = [], watchlistCounts: any[] = [], thisYearEntries: any[] = [], inProgress: any[] = []
+
   try {
+    const supabase = await createClient()
+    debugInfo = 'client created'
+
     const results = await Promise.all([
       supabase.from('watch_entries').select('*, media(*)').order('created_at', { ascending: false }).limit(5),
       supabase.from('watchlist_items').select('priority'),
       supabase.from('watch_entries').select('id').gte('watched_at', `${new Date().getFullYear()}-01-01`),
       supabase.from('watch_entries').select('*, media(*)').order('watched_at', { ascending: false }).limit(10),
     ])
+
+    if (results[0].error) { debugInfo = 'query error: ' + JSON.stringify(results[0].error); console.error('[dashboard] error:', results[0].error) }
+    else debugInfo = 'queries ok'
+
     recent = results[0].data ?? []
     watchlistCounts = results[1].data ?? []
     thisYearEntries = results[2].data ?? []
     inProgress = results[3].data ?? []
-    if (results[0].error) console.error('[dashboard] watch_entries error:', results[0].error)
-    if (results[1].error) console.error('[dashboard] watchlist_items error:', results[1].error)
-  } catch (e) {
-    console.error('[dashboard] queries failed:', e)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    debugInfo = 'threw: ' + msg
+    console.error('[dashboard] threw:', e)
   }
 
   const priorityCounts = { must_watch: 0, want_to_watch: 0, someday: 0 }
@@ -40,6 +41,9 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
+      {/* temp debug — remove after fix */}
+      <p className="text-xs text-gray-500 font-mono">debug: {debugInfo}</p>
+
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-900 rounded-xl p-4">
           <p className="text-3xl font-bold text-white">{thisYearEntries?.length ?? 0}</p>
@@ -49,15 +53,14 @@ export default async function DashboardPage() {
           <p className="text-3xl font-bold text-white">{priorityCounts.must_watch}</p>
           <p className="text-sm text-gray-400 mt-1">Must watch</p>
         </div>
-        {currentShow?.media && (
+        {currentShow?.media ? (
           <div className="bg-gray-900 rounded-xl p-4">
             <p className="text-sm text-gray-400">Currently watching</p>
             <Link href={`/show/${currentShow.media_id}`} className="font-medium text-blue-400 hover:underline line-clamp-1 mt-1 block">
               {(currentShow.media as any).title}
             </Link>
           </div>
-        )}
-        {!currentShow?.media && (
+        ) : (
           <div className="bg-gray-900 rounded-xl p-4">
             <p className="text-sm text-gray-400">Currently watching</p>
             <p className="text-gray-600 text-sm mt-1">Nothing in progress</p>
