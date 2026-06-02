@@ -282,9 +282,6 @@ export default function WatchlistPage() {
                               <span>Movie</span>
                             </>
                           )}
-                          <span className="text-[9px] text-zinc-600 font-normal normal-case">
-                            · Added {item.added_at.split(' ')[0]}
-                          </span>
                         </div>
                       </div>
 
