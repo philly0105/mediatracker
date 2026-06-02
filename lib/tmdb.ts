@@ -77,3 +77,44 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
     }
   }
 }
+
+export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType): Promise<TmdbSearchResult[]> {
+  const endpoint = type === 'movie' ? `/movie/${tmdbId}/recommendations` : `/tv/${tmdbId}/recommendations`
+  const res = await fetch(apiUrl(endpoint))
+  if (!res.ok) return []
+  const data = await res.json()
+  return (data.results ?? [])
+    .map((r: any): TmdbSearchResult => ({
+      tmdb_id: r.id,
+      type: type,
+      title: r.title ?? r.name,
+      overview: r.overview ?? '',
+      poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
+      release_year: r.release_date
+        ? parseInt(r.release_date.split('-')[0])
+        : r.first_air_date
+        ? parseInt(r.first_air_date.split('-')[0])
+        : null,
+    }))
+}
+
+export async function fetchTmdbTrending(): Promise<TmdbSearchResult[]> {
+  const res = await fetch(apiUrl('/trending/all/week'))
+  if (!res.ok) return []
+  const data = await res.json()
+  return (data.results ?? [])
+    .filter((r: any) => r.media_type === 'movie' || r.media_type === 'tv')
+    .map((r: any): TmdbSearchResult => ({
+      tmdb_id: r.id,
+      type: r.media_type === 'tv' ? 'show' : 'movie',
+      title: r.title ?? r.name,
+      overview: r.overview ?? '',
+      poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
+      release_year: r.release_date
+        ? parseInt(r.release_date.split('-')[0])
+        : r.first_air_date
+        ? parseInt(r.first_air_date.split('-')[0])
+        : null,
+    }))
+}
+

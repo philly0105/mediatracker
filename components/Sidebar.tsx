@@ -12,7 +12,8 @@ import {
   BarChart3,
   Upload,
   Settings,
-  User
+  User,
+  Sparkles
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -28,6 +29,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     { name: 'Movies', href: '/movies', icon: Film },
     { name: 'Shows', href: '/shows', icon: Tv },
     { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
+    { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
     { name: 'Lists', href: '/lists', icon: Layers },
     { name: 'Stats', href: '/stats', icon: BarChart3 },
     { name: 'Import', href: '/import', icon: Upload },
