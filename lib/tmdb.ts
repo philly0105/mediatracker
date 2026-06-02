@@ -98,8 +98,8 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType):
     }))
 }
 
-export async function fetchTmdbTrending(): Promise<TmdbSearchResult[]> {
-  const res = await fetch(apiUrl('/trending/all/week'))
+export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
+  const res = await fetch(apiUrl('/trending/all/week', { page: String(page) }))
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])

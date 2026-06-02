@@ -29,11 +29,15 @@ export async function GET(request: NextRequest) {
 
   // Fallback: If user has watched nothing, return weekly trending items
   if (!recentWatched || recentWatched.length === 0) {
-    const trending = await fetchTmdbTrending()
+    const [trending1, trending2] = await Promise.all([
+      fetchTmdbTrending(1),
+      fetchTmdbTrending(2),
+    ])
+    const trending = [...trending1, ...trending2]
     const filteredTrending = trending.filter(
       (item) => !watchedIds.has(item.tmdb_id) && !watchlistIds.has(item.tmdb_id)
     )
-    return NextResponse.json({ results: filteredTrending.slice(0, 30), fallback: true })
+    return NextResponse.json({ results: filteredTrending.slice(0, 60), fallback: true })
   }
 
   // 2. Fetch TMDB recommendations in parallel for recently watched items
@@ -69,11 +73,11 @@ export async function GET(request: NextRequest) {
     })
   })
 
-  // 4. Sort by score descending and return the top 30 results
+  // 4. Sort by score descending and return the top 60 results
   const sortedResults = Array.from(scoredItems.values())
     .sort((a, b) => b.score - a.score)
     .map((entry) => entry.item)
-    .slice(0, 30)
+    .slice(0, 60)
 
   return NextResponse.json({ results: sortedResults, fallback: false })
 }

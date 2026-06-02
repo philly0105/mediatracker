@@ -29,6 +29,7 @@ export default function RecommendationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [fallback, setFallback] = useState(false)
   const [actioningId, setActioningId] = useState<number | null>(null)
+  const [visibleCount, setVisibleCount] = useState(12)
 
   async function loadRecommendations() {
     try {
@@ -38,6 +39,7 @@ export default function RecommendationsPage() {
       const data = await res.json()
       setItems(data.results ?? [])
       setFallback(data.fallback ?? false)
+      setVisibleCount(12)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -147,89 +149,103 @@ export default function RecommendationsPage() {
         </div>
       ) : (
         /* Main Recommendations Grid */
-        <motion.div 
-          layout
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          <AnimatePresence mode="popLayout">
-            {items.map((item) => (
-              <motion.div
-                key={item.tmdb_id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02]"
-              >
-                {/* Poster image */}
-                {item.poster_url ? (
-                  <img
-                    src={item.poster_url}
-                    alt={item.title}
-                    className="w-20 h-28 rounded-xl object-cover shadow-md shadow-black/30 border border-white/5 shrink-0"
-                  />
-                ) : (
-                  <div className="w-20 h-28 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                    No Poster
-                  </div>
-                )}
-
-                {/* Metadata & Actions */}
-                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                  <div className="space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
-                        {item.title}
-                      </h2>
-                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
-                        {item.type === 'show' ? 'TV' : 'Movie'}
-                      </span>
+        <div className="space-y-8">
+          <motion.div 
+            layout
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            <AnimatePresence mode="popLayout">
+              {items.slice(0, visibleCount).map((item) => (
+                <motion.div
+                  key={item.tmdb_id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                  className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02]"
+                >
+                  {/* Poster image */}
+                  {item.poster_url ? (
+                    <img
+                      src={item.poster_url}
+                      alt={item.title}
+                      className="w-20 h-28 rounded-xl object-cover shadow-md shadow-black/30 border border-white/5 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-20 h-28 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                      No Poster
                     </div>
-                    {item.release_year && (
-                      <p className="text-xs text-zinc-500 flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>{item.release_year}</span>
-                      </p>
-                    )}
-                    <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
-                      {item.overview || 'No description available.'}
-                    </p>
-                  </div>
+                  )}
 
-                  {/* Actions Row */}
-                  <div className="flex flex-wrap gap-2 pt-3">
-                    <button
-                      disabled={actioningId !== null}
-                      onClick={() => handleAddToWatchlist(item.tmdb_id, item.type)}
-                      className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
-                    >
-                      {actioningId === item.tmdb_id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Plus className="w-3 h-3" />
+                  {/* Metadata & Actions */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                    <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+                          {item.title}
+                        </h2>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
+                          {item.type === 'show' ? 'TV' : 'Movie'}
+                        </span>
+                      </div>
+                      {item.release_year && (
+                        <p className="text-xs text-zinc-500 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{item.release_year}</span>
+                        </p>
                       )}
-                      <span>Watchlist</span>
-                    </button>
-                    
-                    <button
-                      disabled={actioningId !== null}
-                      onClick={() => handleMarkAsWatched(item.tmdb_id, item.type)}
-                      className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
-                    >
-                      {actioningId === item.tmdb_id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Check className="w-3 h-3" />
-                      )}
-                      <span>Watched</span>
-                    </button>
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
+                        {item.overview || 'No description available.'}
+                      </p>
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap gap-2 pt-3">
+                      <button
+                        disabled={actioningId !== null}
+                        onClick={() => handleAddToWatchlist(item.tmdb_id, item.type)}
+                        className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
+                      >
+                        {actioningId === item.tmdb_id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Plus className="w-3 h-3" />
+                        )}
+                        <span>Watchlist</span>
+                      </button>
+                      
+                      <button
+                        disabled={actioningId !== null}
+                        onClick={() => handleMarkAsWatched(item.tmdb_id, item.type)}
+                        className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
+                      >
+                        {actioningId === item.tmdb_id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Check className="w-3 h-3" />
+                        )}
+                        <span>Watched</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Load More Button */}
+          {visibleCount < items.length && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 12)}
+                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-xs transition-all duration-300 hover:bg-white/10 hover:text-white hover:border-white/20 active:scale-95 shadow-md hover:shadow-violet-500/[0.03]"
+              >
+                Load More
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
