@@ -20,8 +20,9 @@ export async function GET(request: NextRequest) {
       .from('watch_entries')
       .select('rating, media!inner(tmdb_id, type)')
       .eq('user_id', user.id)
+      .not('rating', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(10),
+      .limit(15),
   ])
 
   const watchedIds = new Set((watchedList ?? []).map((w: any) => w.media.tmdb_id))
