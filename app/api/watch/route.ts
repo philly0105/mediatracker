@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
 
+// GET: fetch watch entries (with media) for the authenticated user
+export async function GET(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get('type') // 'movie' or 'show' or null for all
+
+  let query = supabase
+    .from('watch_entries')
+    .select('*, media(*)')
+    .eq('user_id', user.id)
+    .order('watched_at', { ascending: false })
+
+  if (type === 'movie' || type === 'show') {
+    query = query.eq('media.type', type)
+  }
+
+  const { data, error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ entries: data })
+}
+
 // POST: log a watched entry
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
