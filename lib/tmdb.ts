@@ -57,6 +57,7 @@ export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
         ? parseInt(r.first_air_date.split('-')[0])
         : null,
       genres: (r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean),
+      vote_average: r.vote_average,
     }))
 }
 
@@ -127,6 +128,7 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType):
         ? parseInt(r.first_air_date.split('-')[0])
         : null,
       genres: (r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean),
+      vote_average: r.vote_average,
     }))
 }
 
@@ -148,6 +150,7 @@ export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
         ? parseInt(r.first_air_date.split('-')[0])
         : null,
       genres: (r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean),
+      vote_average: r.vote_average,
     }))
 }
 

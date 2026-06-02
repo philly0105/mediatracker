@@ -11,8 +11,10 @@ import {
   Calendar,
   AlertCircle,
   Plus,
-  TrendingUp
+  TrendingUp,
+  Star
 } from 'lucide-react'
+import MediaInfoModal from '@/components/MediaInfoModal'
 
 interface Recommendation {
   tmdb_id: number
@@ -22,6 +24,7 @@ interface Recommendation {
   poster_url: string | null
   release_year: number | null
   genres?: string[]
+  vote_average?: number
 }
 
 export default function RecommendationsPage() {
@@ -32,6 +35,7 @@ export default function RecommendationsPage() {
   const [actioningId, setActioningId] = useState<number | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
   const [activeGenre, setActiveGenre] = useState('All')
+  const [selectedItem, setSelectedItem] = useState<Recommendation | null>(null)
 
   async function loadRecommendations() {
     try {
@@ -43,6 +47,7 @@ export default function RecommendationsPage() {
       setFallback(data.fallback ?? false)
       setVisibleCount(10)
       setActiveGenre('All')
+      setSelectedItem(null)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -222,7 +227,8 @@ export default function RecommendationsPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, y: 15 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02]"
+                    onClick={() => setSelectedItem(item)}
+                    className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02] cursor-pointer"
                   >
                     {/* Poster image */}
                     {item.poster_url ? (
@@ -248,12 +254,20 @@ export default function RecommendationsPage() {
                             {item.type === 'show' ? 'TV' : 'Movie'}
                           </span>
                         </div>
-                        {item.release_year && (
-                          <p className="text-xs text-zinc-500 flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>{item.release_year}</span>
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2.5 text-xs text-zinc-500">
+                          {item.release_year && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                              <span>{item.release_year}</span>
+                            </span>
+                          )}
+                          {item.vote_average !== undefined && item.vote_average > 0 && (
+                            <span className="flex items-center gap-0.5 text-amber-400 font-semibold">
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                              <span>{item.vote_average.toFixed(1)}</span>
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
                           {item.overview || 'No description available.'}
                         </p>
@@ -263,7 +277,10 @@ export default function RecommendationsPage() {
                       <div className="flex flex-wrap gap-2 pt-3">
                         <button
                           disabled={actioningId !== null}
-                          onClick={() => handleAddToWatchlist(item.tmdb_id, item.type)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleAddToWatchlist(item.tmdb_id, item.type)
+                          }}
                           className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
                         >
                           {actioningId === item.tmdb_id ? (
@@ -276,7 +293,10 @@ export default function RecommendationsPage() {
                         
                         <button
                           disabled={actioningId !== null}
-                          onClick={() => handleMarkAsWatched(item.tmdb_id, item.type)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleMarkAsWatched(item.tmdb_id, item.type)
+                          }}
                           className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
                         >
                           {actioningId === item.tmdb_id ? (
@@ -306,6 +326,15 @@ export default function RecommendationsPage() {
             </div>
           )}
         </div>
+      )}
+
+      {selectedItem && (
+        <MediaInfoModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onAddToWatchlist={() => handleAddToWatchlist(selectedItem.tmdb_id, selectedItem.type)}
+          onMarkAsWatched={() => handleMarkAsWatched(selectedItem.tmdb_id, selectedItem.type)}
+        />
       )}
     </div>
   )

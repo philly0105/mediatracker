@@ -1,0 +1,264 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+  Calendar,
+  Clock,
+  User,
+  Star,
+  Plus,
+  Check,
+  Loader2,
+  Film,
+  Tv,
+  X
+} from 'lucide-react'
+import type { TmdbSearchResult } from '@/types'
+
+interface Props {
+  item: TmdbSearchResult
+  onClose: () => void
+  onAddToWatchlist: () => Promise<void>
+  onMarkAsWatched: () => Promise<void>
+}
+
+interface FullDetails {
+  runtime_mins: number | null
+  director: string | null
+  cast_members: string[]
+  genres: string[]
+}
+
+export default function MediaInfoModal({ item, onClose, onAddToWatchlist, onMarkAsWatched }: Props) {
+  const [details, setDetails] = useState<FullDetails | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [actioning, setActioning] = useState<'watchlist' | 'watched' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchDetails() {
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/tmdb/details?id=${item.tmdb_id}&type=${item.type}`)
+        if (!res.ok) throw new Error('Failed to load movie details')
+        const data = await res.json()
+        setDetails({
+          runtime_mins: data.runtime_mins ?? null,
+          director: data.director ?? null,
+          cast_members: data.cast_members ?? [],
+          genres: data.genres ?? []
+        })
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDetails()
+  }, [item.tmdb_id, item.type])
+
+  async function handleWatchlistClick() {
+    try {
+      setActioning('watchlist')
+      await onAddToWatchlist()
+      onClose()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  async function handleWatchedClick() {
+    try {
+      setActioning('watched')
+      await onMarkAsWatched()
+      onClose()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  function formatRuntime(mins: number | null) {
+    if (!mins) return null
+    const hrs = Math.floor(mins / 60)
+    const remainingMins = mins % 60
+    if (hrs === 0) return `${remainingMins}m`
+    return `${hrs}h ${remainingMins}m`
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      {/* Click outside to close */}
+      <div className="absolute inset-0" onClick={onClose} />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        className="glass-card rounded-3xl w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[90vh] flex flex-col shadow-2xl shadow-violet-500/[0.05]"
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 z-10 p-2 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Content Area */}
+        <div className="overflow-y-auto p-6 md:p-8 flex-1 space-y-6 scrollbar-none">
+          {/* Header Layout */}
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Poster */}
+            {item.poster_url ? (
+              <img
+                src={item.poster_url}
+                alt={item.title}
+                className="w-32 md:w-40 rounded-2xl object-cover shadow-2xl shadow-black/50 border border-white/5 mx-auto md:mx-0 shrink-0 self-start"
+              />
+            ) : (
+              <div className="w-32 h-48 md:w-40 md:h-60 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-xs text-zinc-600 mx-auto md:mx-0 shrink-0">
+                No Poster
+              </div>
+            )}
+
+            {/* Basic Info */}
+            <div className="flex-1 space-y-3.5 text-center md:text-left self-center">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.04] px-2 py-0.5 rounded">
+                  {item.type === 'show' ? 'TV Show' : 'Movie'}
+                </span>
+                {item.vote_average !== undefined && item.vote_average > 0 && (
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span>{item.vote_average.toFixed(1)} TMDB / IMDb</span>
+                  </span>
+                )}
+              </div>
+
+              <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">
+                {item.title}
+              </h2>
+
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1.5 text-xs text-zinc-400">
+                {item.release_year && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-zinc-500" />
+                    <span>{item.release_year}</span>
+                  </span>
+                )}
+                {details?.runtime_mins && (
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-zinc-500" />
+                    <span>{formatRuntime(details.runtime_mins)}</span>
+                  </span>
+                )}
+                {details?.director && (
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-zinc-500" />
+                    <span>Dir: {details.director}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Genres list inside modal */}
+              {details?.genres && details.genres.length > 0 && (
+                <div className="flex flex-wrap justify-center md:justify-start gap-1.5 pt-1">
+                  {details.genres.map((g) => (
+                    <span
+                      key={g}
+                      className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-zinc-400 bg-white/[0.02] border border-white/5"
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <hr className="border-white/5" />
+
+          {/* Detailed Info */}
+          {loading ? (
+            /* Frost loading shimmer */
+            <div className="space-y-4 animate-pulse">
+              <div className="h-4 bg-zinc-900 rounded w-1/3" />
+              <div className="space-y-2">
+                <div className="h-3.5 bg-zinc-900 rounded w-full" />
+                <div className="h-3.5 bg-zinc-900 rounded w-full" />
+                <div className="h-3.5 bg-zinc-900 rounded w-4/5" />
+              </div>
+            </div>
+          ) : error ? (
+            <p className="text-sm text-zinc-500 italic">Could not fetch casting details.</p>
+          ) : (
+            <div className="space-y-5">
+              {/* Overview */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                  Overview
+                </h3>
+                <p className="text-sm text-zinc-300 leading-relaxed text-left">
+                  {item.overview || 'No description available.'}
+                </p>
+              </div>
+
+              {/* Casting */}
+              {details?.cast_members && details.cast_members.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                    Starring
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {details.cast_members.map((actor) => (
+                      <span
+                        key={actor}
+                        className="px-3 py-1 rounded-xl text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04]"
+                      >
+                        {actor}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3">
+          <button
+            disabled={actioning !== null}
+            onClick={handleWatchlistClick}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+          >
+            {actioning === 'watchlist' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            <span>Add to Watchlist</span>
+          </button>
+
+          <button
+            disabled={actioning !== null}
+            onClick={handleWatchedClick}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-emerald-600 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+          >
+            {actioning === 'watched' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Check className="w-4 h-4" />
+            )}
+            <span>Mark as Watched</span>
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
