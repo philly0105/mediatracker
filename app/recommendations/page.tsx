@@ -198,16 +198,16 @@ export default function RecommendationsPage() {
                   </div>
 
                   {/* Actions Row */}
-                  <div className="flex gap-2 pt-3">
+                  <div className="flex flex-wrap gap-2 pt-3">
                     <button
                       disabled={actioningId !== null}
                       onClick={() => handleAddToWatchlist(item.tmdb_id, item.type)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-xs transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
+                      className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
                     >
                       {actioningId === item.tmdb_id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3 h-3" />
                       )}
                       <span>Watchlist</span>
                     </button>
@@ -215,12 +215,12 @@ export default function RecommendationsPage() {
                     <button
                       disabled={actioningId !== null}
                       onClick={() => handleMarkAsWatched(item.tmdb_id, item.type)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-xs transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
+                      className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
                     >
                       {actioningId === item.tmdb_id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-3 h-3" />
                       )}
                       <span>Watched</span>
                     </button>
