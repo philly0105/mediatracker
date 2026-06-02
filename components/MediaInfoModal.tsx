@@ -11,15 +11,22 @@ import {
   Loader2,
   Film,
   Tv,
-  X
+  X,
+  Flame,
+  Sparkles,
+  Inbox,
+  Trash2
 } from 'lucide-react'
-import type { TmdbSearchResult } from '@/types'
+import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 
 interface Props {
   item: TmdbSearchResult
   onClose: () => void
   onAddToWatchlist: () => Promise<void>
   onMarkAsWatched: () => Promise<void>
+  currentPriority?: WatchlistPriority
+  onUpdatePriority?: (priority: WatchlistPriority) => Promise<void>
+  onRemoveFromWatchlist?: () => Promise<void>
 }
 
 interface FullDetails {
@@ -29,10 +36,18 @@ interface FullDetails {
   genres: string[]
 }
 
-export default function MediaInfoModal({ item, onClose, onAddToWatchlist, onMarkAsWatched }: Props) {
+export default function MediaInfoModal({
+  item,
+  onClose,
+  onAddToWatchlist,
+  onMarkAsWatched,
+  currentPriority,
+  onUpdatePriority,
+  onRemoveFromWatchlist
+}: Props) {
   const [details, setDetails] = useState<FullDetails | null>(null)
   const [loading, setLoading] = useState(true)
-  const [actioning, setActioning] = useState<'watchlist' | 'watched' | null>(null)
+  const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -73,6 +88,31 @@ export default function MediaInfoModal({ item, onClose, onAddToWatchlist, onMark
     try {
       setActioning('watched')
       await onMarkAsWatched()
+      onClose()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  async function handlePriorityClick(p: WatchlistPriority) {
+    if (!onUpdatePriority) return
+    try {
+      setActioning(`priority-${p}`)
+      await onUpdatePriority(p)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  async function handleRemoveClick() {
+    if (!onRemoveFromWatchlist) return
+    try {
+      setActioning('remove')
+      await onRemoveFromWatchlist()
       onClose()
     } catch (err) {
       console.error(err)
@@ -183,6 +223,44 @@ export default function MediaInfoModal({ item, onClose, onAddToWatchlist, onMark
 
           <hr className="border-white/5" />
 
+          {/* Watchlist Priority Switcher */}
+          {currentPriority && (
+            <div className="space-y-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Watchlist Priority
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'must_watch' as WatchlistPriority, label: 'Must Watch', icon: Flame, color: 'hover:text-rose-400 hover:bg-rose-500/5 hover:border-rose-500/20', activeColor: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
+                  { value: 'want_to_watch' as WatchlistPriority, label: 'Want to Watch', icon: Sparkles, color: 'hover:text-orange-400 hover:bg-orange-500/5 hover:border-orange-500/20', activeColor: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
+                  { value: 'someday' as WatchlistPriority, label: 'Someday', icon: Inbox, color: 'hover:text-zinc-300 hover:bg-zinc-800/20 hover:border-zinc-700', activeColor: 'text-zinc-300 bg-zinc-800/50 border-zinc-700' }
+                ].map(({ value, label, icon: Icon, color, activeColor }) => {
+                  const isActive = currentPriority === value
+                  const isActioning = actioning === `priority-${value}`
+                  return (
+                    <button
+                      key={value}
+                      disabled={actioning !== null}
+                      onClick={() => handlePriorityClick(value)}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 ${
+                        isActive 
+                          ? activeColor
+                          : `text-zinc-400 bg-white/[0.02] border-white/5 ${color}`
+                      }`}
+                    >
+                      {isActioning ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Icon className="w-3.5 h-3.5" />
+                      )}
+                      <span>{label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Detailed Info */}
           {loading ? (
             /* Frost loading shimmer */
@@ -232,18 +310,33 @@ export default function MediaInfoModal({ item, onClose, onAddToWatchlist, onMark
 
         {/* Footer Actions */}
         <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3">
-          <button
-            disabled={actioning !== null}
-            onClick={handleWatchlistClick}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
-          >
-            {actioning === 'watchlist' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Plus className="w-4 h-4" />
-            )}
-            <span>Add to Watchlist</span>
-          </button>
+          {currentPriority ? (
+            <button
+              disabled={actioning !== null}
+              onClick={handleRemoveClick}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-rose-600 hover:border-rose-500 hover:shadow-lg hover:shadow-rose-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+            >
+              {actioning === 'remove' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              <span>Remove from Watchlist</span>
+            </button>
+          ) : (
+            <button
+              disabled={actioning !== null}
+              onClick={handleWatchlistClick}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+            >
+              {actioning === 'watchlist' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              <span>Add to Watchlist</span>
+            </button>
+          )}
 
           <button
             disabled={actioning !== null}
