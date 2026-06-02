@@ -82,4 +82,5 @@ export interface TmdbSearchResult {
   overview: string
   poster_url: string | null
   release_year: number | null
+  genres?: string[]
 }

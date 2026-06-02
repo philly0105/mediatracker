@@ -21,6 +21,7 @@ interface Recommendation {
   overview: string
   poster_url: string | null
   release_year: number | null
+  genres?: string[]
 }
 
 export default function RecommendationsPage() {
@@ -30,6 +31,7 @@ export default function RecommendationsPage() {
   const [fallback, setFallback] = useState(false)
   const [actioningId, setActioningId] = useState<number | null>(null)
   const [visibleCount, setVisibleCount] = useState(12)
+  const [activeGenre, setActiveGenre] = useState('All')
 
   async function loadRecommendations() {
     try {
@@ -40,6 +42,7 @@ export default function RecommendationsPage() {
       setItems(data.results ?? [])
       setFallback(data.fallback ?? false)
       setVisibleCount(12)
+      setActiveGenre('All')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -92,6 +95,26 @@ export default function RecommendationsPage() {
       setActioningId(null)
     }
   }
+
+  // Extract top genres for tabs
+  const genreCounts: Record<string, number> = {}
+  items.forEach((item) => {
+    (item.genres ?? []).forEach((g) => {
+      genreCounts[g] = (genreCounts[g] || 0) + 1
+    })
+  })
+  const topGenres = [
+    'All',
+    ...Array.from(new Set(items.flatMap((item) => item.genres ?? [])))
+      .sort((a, b) => genreCounts[b] - genreCounts[a])
+      .slice(0, 8),
+  ]
+
+  const filteredItems = activeGenre === 'All'
+    ? items
+    : items.filter((item) => (item.genres ?? []).includes(activeGenre))
+
+  const visibleItems = filteredItems.slice(0, visibleCount)
 
   return (
     <div className="space-y-10 pb-12">
@@ -150,92 +173,129 @@ export default function RecommendationsPage() {
       ) : (
         /* Main Recommendations Grid */
         <div className="space-y-8">
-          <motion.div 
-            layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            <AnimatePresence mode="popLayout">
-              {items.slice(0, visibleCount).map((item) => (
-                <motion.div
-                  key={item.tmdb_id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                  transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                  className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02]"
-                >
-                  {/* Poster image */}
-                  {item.poster_url ? (
-                    <img
-                      src={item.poster_url}
-                      alt={item.title}
-                      className="w-20 h-28 rounded-xl object-cover shadow-md shadow-black/30 border border-white/5 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-20 h-28 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                      No Poster
-                    </div>
-                  )}
+          {/* Genre Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
+            {topGenres.map((genre) => (
+              <button
+                key={genre}
+                onClick={() => {
+                  setActiveGenre(genre)
+                  setVisibleCount(12)
+                }}
+                className={`relative px-4 py-2 rounded-full font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
+                  activeGenre === genre
+                    ? 'text-white'
+                    : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
+                }`}
+              >
+                {activeGenre === genre && (
+                  <motion.div
+                    layoutId="activeGenreTab"
+                    className="absolute inset-0 bg-violet-600 rounded-full -z-10 shadow-lg shadow-violet-600/20"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span>{genre}</span>
+              </button>
+            ))}
+          </div>
 
-                  {/* Metadata & Actions */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                    <div className="space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
-                          {item.title}
-                        </h2>
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
-                          {item.type === 'show' ? 'TV' : 'Movie'}
-                        </span>
+          {filteredItems.length === 0 ? (
+            <div className="glass-card rounded-2xl p-10 text-center border border-dashed border-white/10 max-w-sm mx-auto space-y-3">
+              <Sparkles className="w-8 h-8 text-violet-400 mx-auto opacity-50 animate-pulse" />
+              <p className="text-sm font-bold text-white">Genre Cleared</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                No recommendations left in {activeGenre}. Try exploring other categories!
+              </p>
+            </div>
+          ) : (
+            <motion.div 
+              layout
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              <AnimatePresence mode="popLayout">
+                {visibleItems.map((item) => (
+                  <motion.div
+                    key={item.tmdb_id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                    className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02]"
+                  >
+                    {/* Poster image */}
+                    {item.poster_url ? (
+                      <img
+                        src={item.poster_url}
+                        alt={item.title}
+                        className="w-20 h-28 rounded-xl object-cover shadow-md shadow-black/30 border border-white/5 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-28 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                        No Poster
                       </div>
-                      {item.release_year && (
-                        <p className="text-xs text-zinc-500 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>{item.release_year}</span>
-                        </p>
-                      )}
-                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
-                        {item.overview || 'No description available.'}
-                      </p>
-                    </div>
+                    )}
 
-                    {/* Actions Row */}
-                    <div className="flex flex-wrap gap-2 pt-3">
-                      <button
-                        disabled={actioningId !== null}
-                        onClick={() => handleAddToWatchlist(item.tmdb_id, item.type)}
-                        className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
-                      >
-                        {actioningId === item.tmdb_id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Plus className="w-3 h-3" />
+                    {/* Metadata & Actions */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                      <div className="space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+                            {item.title}
+                          </h2>
+                          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
+                            {item.type === 'show' ? 'TV' : 'Movie'}
+                          </span>
+                        </div>
+                        {item.release_year && (
+                          <p className="text-xs text-zinc-500 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{item.release_year}</span>
+                          </p>
                         )}
-                        <span>Watchlist</span>
-                      </button>
-                      
-                      <button
-                        disabled={actioningId !== null}
-                        onClick={() => handleMarkAsWatched(item.tmdb_id, item.type)}
-                        className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
-                      >
-                        {actioningId === item.tmdb_id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Check className="w-3 h-3" />
-                        )}
-                        <span>Watched</span>
-                      </button>
+                        <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
+                          {item.overview || 'No description available.'}
+                        </p>
+                      </div>
+
+                      {/* Actions Row */}
+                      <div className="flex flex-wrap gap-2 pt-3">
+                        <button
+                          disabled={actioningId !== null}
+                          onClick={() => handleAddToWatchlist(item.tmdb_id, item.type)}
+                          className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
+                        >
+                          {actioningId === item.tmdb_id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Plus className="w-3 h-3" />
+                          )}
+                          <span>Watchlist</span>
+                        </button>
+                        
+                        <button
+                          disabled={actioningId !== null}
+                          onClick={() => handleMarkAsWatched(item.tmdb_id, item.type)}
+                          className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
+                        >
+                          {actioningId === item.tmdb_id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check className="w-3 h-3" />
+                          )}
+                          <span>Watched</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
           {/* Load More Button */}
-          {visibleCount < items.length && (
+          {visibleCount < filteredItems.length && (
             <div className="flex justify-center pt-4">
               <button
                 onClick={() => setVisibleCount((prev) => prev + 12)}
