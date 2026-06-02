@@ -36,6 +36,7 @@ export default function RecommendationsPage() {
   const [visibleCount, setVisibleCount] = useState(10)
   const [activeGenre, setActiveGenre] = useState('All')
   const [selectedItem, setSelectedItem] = useState<Recommendation | null>(null)
+  const [activeType, setActiveType] = useState<'all' | 'movie' | 'show'>('all')
 
   async function loadRecommendations() {
     try {
@@ -47,6 +48,7 @@ export default function RecommendationsPage() {
       setFallback(data.fallback ?? false)
       setVisibleCount(10)
       setActiveGenre('All')
+      setActiveType('all')
       setSelectedItem(null)
     } catch (err: any) {
       setError(err.message)
@@ -101,23 +103,29 @@ export default function RecommendationsPage() {
     }
   }
 
-  // Extract top genres for tabs
+  // 1. Filter by Media Type (Movie / Show)
+  const typeFilteredItems = activeType === 'all'
+    ? items
+    : items.filter((item) => item.type === activeType)
+
+  // 2. Extract top genres for current media type selection
   const genreCounts: Record<string, number> = {}
-  items.forEach((item) => {
+  typeFilteredItems.forEach((item) => {
     (item.genres ?? []).forEach((g) => {
       genreCounts[g] = (genreCounts[g] || 0) + 1
     })
   })
   const topGenres = [
     'All',
-    ...Array.from(new Set(items.flatMap((item) => item.genres ?? [])))
+    ...Array.from(new Set(typeFilteredItems.flatMap((item) => item.genres ?? [])))
       .sort((a, b) => genreCounts[b] - genreCounts[a])
       .slice(0, 8),
   ]
 
+  // 3. Filter by Genre
   const filteredItems = activeGenre === 'All'
-    ? items
-    : items.filter((item) => (item.genres ?? []).includes(activeGenre))
+    ? typeFilteredItems
+    : typeFilteredItems.filter((item) => (item.genres ?? []).includes(activeGenre))
 
   const visibleItems = filteredItems.slice(0, visibleCount)
 
@@ -178,6 +186,39 @@ export default function RecommendationsPage() {
       ) : (
         /* Main Recommendations Grid */
         <div className="space-y-8">
+          {/* Media Type Switch */}
+          <div className="flex justify-start">
+            <div className="inline-flex p-1 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md select-none">
+              {([
+                { id: 'all', label: 'All Recommendations' },
+                { id: 'movie', label: 'Movies' },
+                { id: 'show', label: 'TV Shows' },
+              ] as const).map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => {
+                    setActiveType(type.id)
+                    setActiveGenre('All')
+                    setVisibleCount(10)
+                  }}
+                  className={`relative px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 active:scale-95 whitespace-nowrap ${
+                    activeType === type.id
+                      ? 'text-white'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  {activeType === type.id && (
+                    <motion.div
+                      layoutId="activeTypeHighlight"
+                      className="absolute inset-0 bg-white/10 rounded-xl -z-10 shadow-md"
+                      transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                    />
+                  )}
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           {/* Genre Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
             {topGenres.map((genre) => (
