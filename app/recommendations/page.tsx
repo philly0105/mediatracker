@@ -30,7 +30,7 @@ export default function RecommendationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [fallback, setFallback] = useState(false)
   const [actioningId, setActioningId] = useState<number | null>(null)
-  const [visibleCount, setVisibleCount] = useState(12)
+  const [visibleCount, setVisibleCount] = useState(10)
   const [activeGenre, setActiveGenre] = useState('All')
 
   async function loadRecommendations() {
@@ -41,7 +41,7 @@ export default function RecommendationsPage() {
       const data = await res.json()
       setItems(data.results ?? [])
       setFallback(data.fallback ?? false)
-      setVisibleCount(12)
+      setVisibleCount(10)
       setActiveGenre('All')
     } catch (err: any) {
       setError(err.message)
@@ -180,7 +180,7 @@ export default function RecommendationsPage() {
                 key={genre}
                 onClick={() => {
                   setActiveGenre(genre)
-                  setVisibleCount(12)
+                  setVisibleCount(10)
                 }}
                 className={`relative px-4 py-2 rounded-full font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
                   activeGenre === genre
@@ -298,7 +298,7 @@ export default function RecommendationsPage() {
           {visibleCount < filteredItems.length && (
             <div className="flex justify-center pt-4">
               <button
-                onClick={() => setVisibleCount((prev) => prev + 12)}
+                onClick={() => setVisibleCount((prev) => prev + 10)}
                 className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-xs transition-all duration-300 hover:bg-white/10 hover:text-white hover:border-white/20 active:scale-95 shadow-md hover:shadow-violet-500/[0.03]"
               >
                 Load More
