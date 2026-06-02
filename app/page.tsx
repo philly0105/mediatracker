@@ -136,7 +136,7 @@ export default async function DashboardPage() {
                   <span className="text-xs text-zinc-500">{entry.media?.release_year}</span>
                   {entry.rating && (
                     <div className="scale-75 origin-right">
-                      <RatingStars value={entry.rating} onChange={() => {}} readOnly />
+                      <RatingStars value={entry.rating} readOnly />
                     </div>
                   )}
                 </div>

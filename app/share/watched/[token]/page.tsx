@@ -28,8 +28,8 @@ export default async function SharedWatchedPage({ params }: { params: Promise<{ 
             {entry.media?.poster_url && <img src={entry.media.poster_url} alt={entry.media.title} className="w-14 rounded" />}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-white line-clamp-1">{entry.media?.title}</p>
-              <p className="text-xs text-gray-400">{entry.watched_at}</p>
-              {entry.rating && <RatingStars value={entry.rating} onChange={() => {}} readOnly />}
+              <p className="text-xs text-zinc-400">{entry.watched_at}</p>
+              {entry.rating && <RatingStars value={entry.rating} readOnly />}
             </div>
           </div>
         ))}

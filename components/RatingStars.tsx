@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 interface Props {
   value: number | null
-  onChange: (rating: number) => void
+  onChange?: (rating: number) => void
   readOnly?: boolean
 }
 
@@ -29,13 +29,13 @@ export default function RatingStars({ value, onChange, readOnly = false }: Props
               data-half={`${star - 0.5}`}
               className="absolute left-0 top-0 w-1/2 h-full cursor-pointer"
               onMouseEnter={() => !readOnly && setHover(star - 0.5)}
-              onClick={() => !readOnly && onChange(star - 0.5)}
+              onClick={() => !readOnly && onChange?.(star - 0.5)}
             />
             <div
               data-half={`${star}.0`}
               className="absolute right-0 top-0 w-1/2 h-full cursor-pointer"
               onMouseEnter={() => !readOnly && setHover(star)}
-              onClick={() => !readOnly && onChange(star)}
+              onClick={() => !readOnly && onChange?.(star)}
             />
           </div>
         )
