@@ -4,8 +4,8 @@ const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
 
 export const TMDB_GENRES: Record<number, string> = {
-  28: 'Action',
-  12: 'Adventure',
+  28: 'Action & Sci-Fi',
+  12: 'Action & Sci-Fi',
   16: 'Animation',
   35: 'Comedy',
   80: 'Crime',
@@ -18,16 +18,16 @@ export const TMDB_GENRES: Record<number, string> = {
   10402: 'Music',
   9648: 'Mystery',
   10749: 'Romance',
-  878: 'Sci-Fi',
+  878: 'Action & Sci-Fi',
   10770: 'TV Movie',
   53: 'Thriller',
   10752: 'War',
   37: 'Western',
-  10759: 'Action',
+  10759: 'Action & Sci-Fi',
   10762: 'Kids',
   10763: 'News',
   10764: 'Reality',
-  10765: 'Sci-Fi',
+  10765: 'Action & Sci-Fi',
   10766: 'Soap',
   10767: 'Talk',
   10768: 'War',
@@ -56,7 +56,7 @@ export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
         : r.first_air_date
         ? parseInt(r.first_air_date.split('-')[0])
         : null,
-      genres: (r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean),
+      genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
       vote_average: r.vote_average,
     }))
 }
@@ -127,7 +127,7 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType):
         : r.first_air_date
         ? parseInt(r.first_air_date.split('-')[0])
         : null,
-      genres: (r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean),
+      genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
       vote_average: r.vote_average,
     }))
 }
@@ -149,7 +149,7 @@ export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
         : r.first_air_date
         ? parseInt(r.first_air_date.split('-')[0])
         : null,
-      genres: (r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean),
+      genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
       vote_average: r.vote_average,
     }))
 }
