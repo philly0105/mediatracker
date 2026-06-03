@@ -148,6 +148,7 @@ export default function MediaCard({ entry }: Props) {
         document.body
       )}
       {showInfo && createPortal(
+        <div onClick={e => e.stopPropagation()}>
         <MediaInfoModal
           item={mediaAsResult}
           onClose={() => setShowInfo(false)}
@@ -168,7 +169,8 @@ export default function MediaCard({ entry }: Props) {
             router.refresh()
             setShowInfo(false)
           }}
-        />,
+        />
+        </div>,
         document.body
       )}
     </motion.div>
