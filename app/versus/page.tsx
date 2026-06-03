@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Swords,
   AlertCircle,
-  Sparkles,
   Loader2,
   Calendar,
   Star,
@@ -12,22 +11,46 @@ import {
   Tv,
   Check,
   Trophy,
-  Plus
+  Plus,
+  Play
 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
 
+const GENRE_OPTIONS = [
+  { id: 'any', name: 'Surprise Me (Any)' },
+  { id: '28', name: 'Action & Sci-Fi' },
+  { id: '16', name: 'Animation' },
+  { id: '35', name: 'Comedy' },
+  { id: '80', name: 'Crime' },
+  { id: '99', name: 'Documentary' },
+  { id: '18', name: 'Drama' },
+  { id: '10751', name: 'Family' },
+  { id: '14', name: 'Fantasy' },
+  { id: '27', name: 'Horror' },
+  { id: '9648', name: 'Mystery' },
+  { id: '10749', name: 'Romance' },
+  { id: '53', name: 'Thriller' },
+]
+
 export default function VersusPage() {
+  const [gameState, setGameState] = useState<'setup' | 'playing' | 'results'>('setup')
+  
+  // Setup State
+  const [selectedType, setSelectedType] = useState<'movie' | 'show'>('movie')
+  const [selectedGenreId, setSelectedGenreId] = useState<string>('any')
+  
   const [pool, setPool] = useState<TmdbSearchResult[]>([])
   const [poolIndex, setPoolIndex] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
+  // Playing State
   const [round, setRound] = useState(1)
   const [currentOptions, setCurrentOptions] = useState<TmdbSearchResult[]>([])
   const [selectedHistory, setSelectedHistory] = useState<TmdbSearchResult[]>([])
-  const [gameOver, setGameOver] = useState(false)
   
+  // Results State
   const [topGenre, setTopGenre] = useState<string>('')
   const [bonusRecs, setBonusRecs] = useState<TmdbSearchResult[]>([])
   const [finalWinner, setFinalWinner] = useState<TmdbSearchResult | null>(null)
@@ -36,26 +59,32 @@ export default function VersusPage() {
   const [infoModalItem, setInfoModalItem] = useState<TmdbSearchResult | null>(null)
   const [watchlistSet, setWatchlistSet] = useState<Set<number>>(new Set())
 
-  useEffect(() => {
-    async function fetchPool() {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/recommendations')
-        if (!res.ok) throw new Error('Failed to load recommendations')
-        const data = await res.json()
-        
-        const shuffled = [...(data.results || [])].sort(() => Math.random() - 0.5)
-        setPool(shuffled)
-        setCurrentOptions(shuffled.slice(0, 4))
-        setPoolIndex(4)
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
+  async function startTournament() {
+    try {
+      setLoading(true)
+      setError(null)
+      const res = await fetch(`/api/versus?type=${selectedType}&genreId=${selectedGenreId}`)
+      if (!res.ok) throw new Error('Failed to load tournament pool')
+      const data = await res.json()
+      
+      const shuffled = [...(data.results || [])].sort(() => Math.random() - 0.5)
+      
+      if (shuffled.length < 31) {
+        throw new Error("Not enough un-watched items matching your criteria to build a 10-round tournament! Try a different genre or type.")
       }
+      
+      setPool(shuffled)
+      setCurrentOptions(shuffled.slice(0, 4))
+      setPoolIndex(4)
+      setGameState('playing')
+      setRound(1)
+      setSelectedHistory([])
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-    fetchPool()
-  }, [])
+  }
 
   function handlePick(item: TmdbSearchResult) {
     if (actioningId !== null) return
@@ -66,9 +95,8 @@ export default function VersusPage() {
     if (round === 10) {
       calculateResults(newHistory, item)
       setFinalWinner(item)
-      setGameOver(true)
+      setGameState('results')
     } else {
-      // The winner stays, we pull 3 new ones from the pool
       const newChallengers = pool.slice(poolIndex, poolIndex + 3)
       const nextOptions = [item, ...newChallengers].sort(() => Math.random() - 0.5)
       
@@ -97,11 +125,9 @@ export default function VersusPage() {
     
     setTopGenre(bestGenre)
     
-    // Find bonus recommendations from the unused pool
     const remaining = pool.slice(poolIndex + 3)
     const matches = remaining.filter(item => (item.genres || []).includes(bestGenre) && item.tmdb_id !== winner.tmdb_id)
     
-    // Fallback to random if not enough matches in that genre
     if (matches.length < 4) {
       const others = remaining.filter(item => !(item.genres || []).includes(bestGenre) && item.tmdb_id !== winner.tmdb_id)
       matches.push(...others)
@@ -131,16 +157,11 @@ export default function VersusPage() {
   }
 
   function resetGame() {
-    const shuffled = [...pool].sort(() => Math.random() - 0.5)
-    setPool(shuffled)
-    setCurrentOptions(shuffled.slice(0, 4))
-    setPoolIndex(4)
-    setRound(1)
-    setSelectedHistory([])
-    setGameOver(false)
-    setFinalWinner(null)
+    setGameState('setup')
+    setPool([])
     setTopGenre('')
     setBonusRecs([])
+    setFinalWinner(null)
     setWatchlistSet(new Set())
   }
 
@@ -152,7 +173,9 @@ export default function VersusPage() {
           <span>Tournament</span>
         </h1>
         <p className="text-sm text-zinc-400 max-w-lg mx-auto">
-          {gameOver ? 'The results are in. Here is your ultimate winner and personalized vibe.' : '10 Rounds. 4 Options. The winner moves on. Find your ultimate watch vibe.'}
+          {gameState === 'setup' && 'Configure your tournament before we start.'}
+          {gameState === 'playing' && '10 Rounds. 4 Options. The winner moves on. Find your ultimate watch vibe.'}
+          {gameState === 'results' && 'The results are in. Here is your ultimate winner and personalized vibe.'}
         </p>
       </div>
 
@@ -161,12 +184,65 @@ export default function VersusPage() {
           <Loader2 className="w-10 h-10 animate-spin text-rose-500" />
         </div>
       ) : error ? (
-        <div className="glass-card rounded-2xl p-8 border border-red-500/20 text-center max-w-md mx-auto space-y-4">
+        <div className="glass-card rounded-2xl p-8 border border-red-500/20 text-center max-w-md mx-auto space-y-6">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
-          <h2 className="text-lg font-bold text-white">Something went wrong</h2>
-          <p className="text-sm text-zinc-400">{error}</p>
+          <div>
+            <h2 className="text-lg font-bold text-white mb-2">Something went wrong</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="px-6 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors">
+            Try Again
+          </button>
         </div>
-      ) : gameOver && finalWinner ? (
+      ) : gameState === 'setup' ? (
+        <div className="flex-1 flex flex-col items-center justify-center w-full max-w-lg mx-auto px-4">
+          <div className="glass-card rounded-[2rem] p-8 w-full border border-white/5 space-y-8">
+            <div className="space-y-4">
+              <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest block text-center">What are we watching?</label>
+              <div className="flex bg-black/40 p-1.5 rounded-2xl">
+                <button
+                  onClick={() => setSelectedType('movie')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
+                    selectedType === 'movie' ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Film className="w-4 h-4" /> Movies
+                </button>
+                <button
+                  onClick={() => setSelectedType('show')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
+                    selectedType === 'show' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Tv className="w-4 h-4" /> TV Shows
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest block text-center">Preferred Vibe (Optional)</label>
+              <select
+                value={selectedGenreId}
+                onChange={(e) => setSelectedGenreId(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-white text-sm font-semibold outline-none focus:border-rose-500/50 transition-colors appearance-none"
+              >
+                {GENRE_OPTIONS.map(genre => (
+                  <option key={genre.id} value={genre.id} className="bg-zinc-900 text-white">
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={startTournament}
+              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-400 hover:to-orange-400 text-white font-black text-lg transition-all shadow-xl shadow-rose-500/20 active:scale-95"
+            >
+              <Play className="w-5 h-5 fill-current" /> Let the Battles Begin
+            </button>
+          </div>
+        </div>
+      ) : gameState === 'results' && finalWinner ? (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -257,7 +333,7 @@ export default function VersusPage() {
             </button>
           </div>
         </motion.div>
-      ) : (
+      ) : gameState === 'playing' ? (
         <div className="flex-1 flex flex-col items-center w-full max-w-5xl mx-auto relative px-4">
           <div className="mb-8 px-6 py-2 rounded-full bg-white/5 border border-white/10 flex items-center gap-2 shadow-lg backdrop-blur-md">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -320,7 +396,7 @@ export default function VersusPage() {
             </AnimatePresence>
           </div>
         </div>
-      )}
+      ) : null}
 
       {infoModalItem && (
         <MediaInfoModal
