@@ -13,6 +13,9 @@ export default function PersonPage() {
 
   const [topMovies, setTopMovies] = useState<TmdbSearchResult[]>([])
   const [recentMovies, setRecentMovies] = useState<TmdbSearchResult[]>([])
+  const [allMovies, setAllMovies] = useState<TmdbSearchResult[]>([])
+  const [viewMode, setViewMode] = useState<'highlights' | 'all'>('highlights')
+  
   const [profileUrl, setProfileUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,6 +31,7 @@ export default function PersonPage() {
         const data = await res.json()
         setTopMovies(data.topMovies || [])
         setRecentMovies(data.recentMovies || [])
+        setAllMovies(data.allMovies || [])
         setProfileUrl(data.profile_url || null)
       } catch (err: any) {
         setError(err.message)
@@ -40,9 +44,19 @@ export default function PersonPage() {
 
   if (!name) return null
 
-  const renderMovieGrid = (items: TmdbSearchResult[], title: string) => (
+  const renderMovieGrid = (items: TmdbSearchResult[], title: string, showSeeAllButton = false) => (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold tracking-tight text-white">{title}</h2>
+        {showSeeAllButton && items.length > 0 && (
+          <button
+            onClick={() => setViewMode('all')}
+            className="text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-widest bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 rounded-full"
+          >
+            See All {allMovies.length} Credits
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
           <div
@@ -57,7 +71,7 @@ export default function PersonPage() {
                 className="w-16 h-24 rounded-xl object-cover shadow-md border border-white/5 shrink-0 group-hover:scale-[1.02] transition-transform"
               />
             ) : (
-              <div className="w-16 h-24 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+              <div className="w-16 h-24 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0 text-center p-1">
                 No Poster
               </div>
             )}
@@ -98,13 +112,21 @@ export default function PersonPage() {
 
   return (
     <div className="space-y-10 pb-12">
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-semibold mb-2"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back</span>
-      </button>
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={() => {
+            if (viewMode === 'all') {
+              setViewMode('highlights')
+            } else {
+              router.back()
+            }
+          }}
+          className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-semibold"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </button>
+      </div>
 
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-white/[0.02] border border-white/5 p-6 rounded-3xl">
         {profileUrl ? (
@@ -121,7 +143,7 @@ export default function PersonPage() {
         <div className="flex-1 text-center md:text-left pt-2">
           <h1 className="text-3xl font-black text-white tracking-tight">{name}</h1>
           <p className="text-zinc-400 mt-1">
-            Top Rated and Most Recent Credits
+            {viewMode === 'highlights' ? 'Top Rated and Most Recent Credits' : `All ${allMovies.length} Credits`}
           </p>
         </div>
       </div>
@@ -138,10 +160,14 @@ export default function PersonPage() {
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400">{error}</p>
         </div>
+      ) : viewMode === 'highlights' ? (
+        <div className="space-y-12">
+          {renderMovieGrid(topMovies, 'Top Rated', true)}
+          {renderMovieGrid(recentMovies, 'Most Recent', false)}
+        </div>
       ) : (
         <div className="space-y-12">
-          {renderMovieGrid(topMovies, 'Top Rated')}
-          {renderMovieGrid(recentMovies, 'Most Recent')}
+          {renderMovieGrid(allMovies, 'All Credits', false)}
         </div>
       )}
 

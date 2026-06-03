@@ -81,10 +81,18 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, 10)
 
+    // All Movies: Sort by release date descending
+    const allMovies = [...mapped].sort((a, b) => {
+      if (!a.full_release_date) return 1
+      if (!b.full_release_date) return -1
+      return a.full_release_date < b.full_release_date ? 1 : -1
+    })
+
     return NextResponse.json({
       profile_url: profileUrl,
       topMovies,
-      recentMovies
+      recentMovies,
+      allMovies
     })
 
   } catch (err: any) {
