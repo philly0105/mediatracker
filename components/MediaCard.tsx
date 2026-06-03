@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import RatingStars from './RatingStars'
 import EditEntryModal from './EditEntryModal'
-import type { WatchEntry } from '@/types'
+import type { WatchEntry, TmdbSearchResult } from '@/types'
 import { Calendar, Play, FileText, Pencil, Trash2, Loader2 } from 'lucide-react'
+import MediaInfoModal from './MediaInfoModal'
 
 interface Props {
   entry: WatchEntry
@@ -19,7 +20,18 @@ export default function MediaCard({ entry }: Props) {
   const href = media.type === 'show' ? `/show/${media.id}` : '#'
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const mediaAsResult: TmdbSearchResult = {
+    tmdb_id: media.tmdb_id,
+    type: media.type,
+    title: media.title,
+    overview: media.overview ?? '',
+    poster_url: media.poster_url,
+    release_year: media.release_year,
+    genres: media.genres,
+  }
 
   async function handleRatingChange(newRating: number) {
     setRating(newRating)
@@ -53,7 +65,8 @@ export default function MediaCard({ entry }: Props) {
     <motion.div
       whileHover={{ scale: 1.015, y: -2 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className="glass-card rounded-2xl overflow-hidden flex gap-4 p-3.5 backdrop-blur-md select-none"
+      className="glass-card rounded-2xl overflow-hidden flex gap-4 p-3.5 backdrop-blur-md select-none cursor-pointer"
+      onClick={() => setShowInfo(true)}
     >
       {media.poster_url ? (
         <img
@@ -112,7 +125,7 @@ export default function MediaCard({ entry }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <div className="scale-90 origin-left" onClick={e => e.stopPropagation()}>
+          <div className="scale-90 origin-left" onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
             <RatingStars value={rating} onChange={handleRatingChange} />
           </div>
           
@@ -132,6 +145,30 @@ export default function MediaCard({ entry }: Props) {
 
       {showEditModal && createPortal(
         <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />,
+        document.body
+      )}
+      {showInfo && createPortal(
+        <MediaInfoModal
+          item={mediaAsResult}
+          onClose={() => setShowInfo(false)}
+          onAddToWatchlist={async () => {
+            await fetch('/api/watchlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, priority: 'want_to_watch' }),
+            })
+            setShowInfo(false)
+          }}
+          onMarkAsWatched={async () => {
+            await fetch('/api/watch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, watched_at: new Date().toISOString().split('T')[0] }),
+            })
+            router.refresh()
+            setShowInfo(false)
+          }}
+        />,
         document.body
       )}
     </motion.div>
