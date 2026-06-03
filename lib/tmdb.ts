@@ -74,13 +74,17 @@ export interface TmdbFullDetails {
   cast_members: string[]
   seasons?: Array<{ season_number: number; episode_count: number }>
   full_release_date?: string | null
+  trailer_url?: string | null
 }
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`
-  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits' }))
+  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos' }))
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
+  
+  const trailerKey = d.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key
+  const trailer_url = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null
 
   if (type === 'movie') {
     const director = d.credits?.crew?.find((c: any) => c.job === 'Director')?.name ?? null
@@ -94,6 +98,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       director,
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
       full_release_date: d.release_date || null,
+      trailer_url,
     }
   } else {
     return {
@@ -109,6 +114,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
         .filter((s: any) => s.season_number > 0)
         .map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count })),
       full_release_date: d.next_episode_to_air?.air_date || null,
+      trailer_url,
     }
   }
 }

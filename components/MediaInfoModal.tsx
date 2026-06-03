@@ -16,7 +16,8 @@ import {
   Sparkles,
   Inbox,
   Trash2,
-  Bookmark
+  Bookmark,
+  Play
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
@@ -38,6 +39,7 @@ interface FullDetails {
   genres: string[]
   isWatched: boolean
   isWatchlisted: boolean
+  trailer_url: string | null
 }
 
 export default function MediaInfoModal({
@@ -67,7 +69,8 @@ export default function MediaInfoModal({
           cast_members: data.cast_members ?? [],
           genres: data.genres ?? [],
           isWatched: data.isWatched ?? false,
-          isWatchlisted: data.isWatchlisted ?? false
+          isWatchlisted: data.isWatchlisted ?? false,
+          trailer_url: data.trailer_url ?? null
         })
       } catch (err: any) {
         setError(err.message)
@@ -225,6 +228,21 @@ export default function MediaInfoModal({
                       {g}
                     </span>
                   ))}
+                </div>
+              )}
+              
+              {/* Watch Trailer Button */}
+              {details?.trailer_url && (
+                <div className="pt-3">
+                  <a
+                    href={details.trailer_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors border border-rose-500/20"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-rose-500" />
+                    Watch Trailer
+                  </a>
                 </div>
               )}
             </div>
