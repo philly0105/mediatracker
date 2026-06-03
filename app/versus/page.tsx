@@ -402,6 +402,7 @@ export default function VersusPage() {
         <MediaInfoModal
           item={infoModalItem}
           onClose={() => setInfoModalItem(null)}
+          newTabLinks
           onAddToWatchlist={async () => {
             await fetch('/api/watchlist', {
               method: 'POST',

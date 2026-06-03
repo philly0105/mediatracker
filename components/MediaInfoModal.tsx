@@ -30,6 +30,7 @@ interface Props {
   currentPriority?: WatchlistPriority
   onUpdatePriority?: (priority: WatchlistPriority) => Promise<void>
   onRemoveFromWatchlist?: () => Promise<void>
+  newTabLinks?: boolean
 }
 
 interface FullDetails {
@@ -49,7 +50,8 @@ export default function MediaInfoModal({
   onMarkAsWatched,
   currentPriority,
   onUpdatePriority,
-  onRemoveFromWatchlist
+  onRemoveFromWatchlist,
+  newTabLinks = false
 }: Props) {
   const [details, setDetails] = useState<FullDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -212,7 +214,7 @@ export default function MediaInfoModal({
                 {details?.director && (
                   <span className="flex items-center gap-1.5">
                     <User className="w-4 h-4 text-zinc-500" />
-                    <span>Dir: <Link href={`/person/${encodeURIComponent(details.director)}`} className="hover:text-white hover:underline transition-colors">{details.director}</Link></span>
+                    <span>Dir: <Link href={`/person/${encodeURIComponent(details.director)}`} {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })} className="hover:text-white hover:underline transition-colors">{details.director}</Link></span>
                   </span>
                 )}
               </div>
@@ -324,6 +326,7 @@ export default function MediaInfoModal({
                       <Link
                         key={actor}
                         href={`/person/${encodeURIComponent(actor)}`}
+                        {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
                         className="px-3 py-1 rounded-xl text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04] hover:bg-white/10 hover:text-white transition-colors"
                       >
                         {actor}
