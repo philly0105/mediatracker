@@ -109,7 +109,7 @@ export default function MediaCard({ entry }: Props) {
         </div>
 
         <div className="space-y-1.5">
-          <div className="scale-90 origin-left">
+          <div className="scale-90 origin-left" onClick={e => e.stopPropagation()}>
             <RatingStars value={rating} onChange={handleRatingChange} />
           </div>
           
