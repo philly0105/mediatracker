@@ -7,8 +7,7 @@ import { motion } from 'framer-motion'
 import RatingStars from './RatingStars'
 import EditEntryModal from './EditEntryModal'
 import type { WatchEntry } from '@/types'
-import { Calendar, Play, FileText, Pencil, Trash2, Loader2, Sparkles } from 'lucide-react'
-import SimilarModal from './SimilarModal'
+import { Calendar, Play, FileText, Pencil, Trash2, Loader2 } from 'lucide-react'
 
 interface Props {
   entry: WatchEntry
@@ -20,7 +19,6 @@ export default function MediaCard({ entry }: Props) {
   const href = media.type === 'show' ? `/show/${media.id}` : '#'
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showSimilar, setShowSimilar] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   async function handleRatingChange(newRating: number) {
@@ -91,13 +89,6 @@ export default function MediaCard({ entry }: Props) {
             
             <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ opacity: 1 }}>
               <button
-                onClick={(e) => { e.stopPropagation(); setShowSimilar(true); }}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-violet-400 hover:bg-violet-500/10 transition-all"
-                title={`Similar ${media.type === 'movie' ? 'movies' : 'TV shows'}`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-              </button>
-              <button
                 onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
                 className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
                 title="Edit entry"
@@ -138,10 +129,6 @@ export default function MediaCard({ entry }: Props) {
 
       {showEditModal && createPortal(
         <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />,
-        document.body
-      )}
-      {showSimilar && media.tmdb_id && createPortal(
-        <SimilarModal tmdbId={media.tmdb_id} type={media.type} onClose={() => setShowSimilar(false)} />,
         document.body
       )}
     </motion.div>

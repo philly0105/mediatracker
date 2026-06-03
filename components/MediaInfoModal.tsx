@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
+import SimilarModal from './SimilarModal'
 
 interface Props {
   item: TmdbSearchResult
@@ -60,6 +61,7 @@ export default function MediaInfoModal({
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showSimilar, setShowSimilar] = useState(false)
 
   useEffect(() => {
     async function fetchDetails() {
@@ -434,8 +436,20 @@ export default function MediaInfoModal({
               <span>{details?.isFollowed ? 'Unfollow Show' : 'Follow Show'}</span>
             </button>
           )}
+
+          <button
+            onClick={() => setShowSimilar(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 font-semibold text-xs"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Similar {item.type === 'movie' ? 'Movies' : 'TV Shows'}</span>
+          </button>
         </div>
       </motion.div>
+
+      {showSimilar && (
+        <SimilarModal tmdbId={item.tmdb_id} type={item.type} onClose={() => setShowSimilar(false)} />
+      )}
     </div>
   )
 }
