@@ -57,7 +57,7 @@ export default function EditEntryModal({ entry, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={(e) => { e.stopPropagation(); onClose(); }}>
       <div className="w-full max-w-md p-6 space-y-5 rounded-3xl relative backdrop-blur-xl" style={glassModal} onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           {media.poster_url && (
