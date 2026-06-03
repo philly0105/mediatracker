@@ -17,7 +17,28 @@ export async function GET(request: NextRequest) {
 
   try {
     const details = await fetchTmdbDetails(Number(id), type)
-    return NextResponse.json(details)
+
+    // Check user status
+    let isWatched = false
+    let isWatchlisted = false
+    
+    const { data: media } = await supabase
+      .from('media')
+      .select('id')
+      .eq('tmdb_id', Number(id))
+      .eq('type', type)
+      .single()
+
+    if (media) {
+      const [watchRes, watchlistRes] = await Promise.all([
+        supabase.from('watch_entries').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
+        supabase.from('watchlist_items').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1)
+      ])
+      isWatched = !!(watchRes.data && watchRes.data.length > 0)
+      isWatchlisted = !!(watchlistRes.data && watchlistRes.data.length > 0)
+    }
+
+    return NextResponse.json({ ...details, isWatched, isWatchlisted })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -15,7 +15,8 @@ import {
   Flame,
   Sparkles,
   Inbox,
-  Trash2
+  Trash2,
+  Bookmark
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
@@ -35,6 +36,8 @@ interface FullDetails {
   director: string | null
   cast_members: string[]
   genres: string[]
+  isWatched: boolean
+  isWatchlisted: boolean
 }
 
 export default function MediaInfoModal({
@@ -62,7 +65,9 @@ export default function MediaInfoModal({
           runtime_mins: data.runtime_mins ?? null,
           director: data.director ?? null,
           cast_members: data.cast_members ?? [],
-          genres: data.genres ?? []
+          genres: data.genres ?? [],
+          isWatched: data.isWatched ?? false,
+          isWatchlisted: data.isWatchlisted ?? false
         })
       } catch (err: any) {
         setError(err.message)
@@ -77,6 +82,8 @@ export default function MediaInfoModal({
     try {
       setActioning('watchlist')
       await onAddToWatchlist()
+      if (details) setDetails({ ...details, isWatchlisted: true })
+      // Keep modal open or close? I'll close it to match previous behavior, but actually we can keep it open if it's a toggle
       onClose()
     } catch (err) {
       console.error(err)
@@ -89,6 +96,7 @@ export default function MediaInfoModal({
     try {
       setActioning('watched')
       await onMarkAsWatched()
+      if (details) setDetails({ ...details, isWatched: true })
       onClose()
     } catch (err) {
       console.error(err)
@@ -312,22 +320,28 @@ export default function MediaInfoModal({
 
         {/* Footer Actions */}
         <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3">
-          {currentPriority ? (
+          {currentPriority || details?.isWatchlisted ? (
             <button
-              disabled={actioning !== null}
-              onClick={handleRemoveClick}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-rose-600 hover:border-rose-500 hover:shadow-lg hover:shadow-rose-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+              disabled={loading || actioning !== null || (!currentPriority && details?.isWatchlisted)}
+              onClick={currentPriority ? handleRemoveClick : undefined}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-xs transition-all duration-300 ${
+                currentPriority
+                  ? 'bg-white/5 border-white/10 text-white hover:bg-rose-600 hover:border-rose-500 hover:shadow-lg hover:shadow-rose-600/25 active:scale-95 disabled:opacity-50'
+                  : 'bg-white/5 border-white/10 text-zinc-500 opacity-60 cursor-default'
+              }`}
             >
               {actioning === 'remove' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
+              ) : currentPriority ? (
                 <Trash2 className="w-4 h-4" />
+              ) : (
+                <Bookmark className="w-4 h-4" />
               )}
-              <span>Remove from Watchlist</span>
+              <span>{currentPriority ? 'Remove from Watchlist' : 'On Watchlist'}</span>
             </button>
           ) : (
             <button
-              disabled={actioning !== null}
+              disabled={loading || actioning !== null}
               onClick={handleWatchlistClick}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
             >
@@ -341,16 +355,20 @@ export default function MediaInfoModal({
           )}
 
           <button
-            disabled={actioning !== null}
-            onClick={handleWatchedClick}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-emerald-600 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+            disabled={loading || actioning !== null || details?.isWatched}
+            onClick={details?.isWatched ? undefined : handleWatchedClick}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-xs transition-all duration-300 ${
+              details?.isWatched
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 opacity-70 cursor-default'
+                : 'bg-white/5 border-white/10 text-white hover:bg-emerald-600 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-600/25 active:scale-95 disabled:opacity-50'
+            }`}
           >
             {actioning === 'watched' ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Check className="w-4 h-4" />
             )}
-            <span>Mark as Watched</span>
+            <span>{details?.isWatched ? 'Already Watched' : 'Mark as Watched'}</span>
           </button>
         </div>
       </motion.div>
