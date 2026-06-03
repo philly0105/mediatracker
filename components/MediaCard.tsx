@@ -68,26 +68,22 @@ export default function MediaCard({ entry }: Props) {
       )}
       
       <div className="flex-1 min-w-0 flex flex-col justify-between">
-        <div>
+        <div className="space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+            <div className="min-w-0 flex-1">
               {media.type === 'show' ? (
                 <Link
                   href={href}
-                  className="font-bold text-white hover:text-rose-400 transition-colors line-clamp-1 text-sm flex items-center gap-1 group"
+                  className="font-bold text-white hover:text-rose-400 transition-colors line-clamp-2 text-sm leading-snug group flex items-start gap-1"
                 >
                   <span>{media.title}</span>
-                  <Play className="w-3 h-3 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity fill-rose-500/20" />
+                  <Play className="w-3 h-3 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity fill-rose-500/20 shrink-0 mt-0.5" />
                 </Link>
               ) : (
-                <p className="font-bold text-white line-clamp-1 text-sm">{media.title}</p>
+                <p className="font-bold text-white line-clamp-2 text-sm leading-snug">{media.title}</p>
               )}
-              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider bg-white/5 px-1.5 py-0.5 rounded border border-white/[0.03]">
-                {media.type}
-              </span>
             </div>
-            
-            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ opacity: 1 }}>
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
                 className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
@@ -95,7 +91,7 @@ export default function MediaCard({ entry }: Props) {
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 disabled={isDeleting}
                 className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
@@ -105,7 +101,14 @@ export default function MediaCard({ entry }: Props) {
               </button>
             </div>
           </div>
-          <p className="text-xs text-zinc-500 mt-0.5">{media.release_year}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider bg-white/5 px-1.5 py-0.5 rounded border border-white/[0.03]">
+              {media.type === 'show' ? 'TV' : 'Movie'}
+            </span>
+            {media.release_year && (
+              <span className="text-[10px] text-zinc-500">{media.release_year}</span>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1.5">
