@@ -70,7 +70,7 @@ export default function MediaCard({ entry }: Props) {
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
               {media.type === 'show' ? (
                 <Link
                   href={href}
@@ -87,7 +87,7 @@ export default function MediaCard({ entry }: Props) {
               </span>
             </div>
             
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ opacity: 1 }}>
+            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ opacity: 1 }}>
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
                 className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
