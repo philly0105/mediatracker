@@ -16,9 +16,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await fetchTmdbRecommendations(Number(id), type)
-    const highRated = results.filter(r => (r.vote_average ?? 0) >= 7).slice(0, 8)
-    return NextResponse.json(highRated)
+    const [page1, page2] = await Promise.all([
+      fetchTmdbRecommendations(Number(id), type, 1),
+      fetchTmdbRecommendations(Number(id), type, 2),
+    ])
+    const seen = new Set<number>()
+    const all = [...page1, ...page2].filter(r => {
+      if (seen.has(r.tmdb_id)) return false
+      seen.add(r.tmdb_id)
+      return true
+    })
+
+    let results = all.filter(r => (r.vote_average ?? 0) >= 7)
+    if (results.length < 10) {
+      results = all.filter(r => (r.vote_average ?? 0) >= 6)
+    }
+    if (results.length < 10) {
+      results = all
+    }
+
+    return NextResponse.json(results.slice(0, 12))
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

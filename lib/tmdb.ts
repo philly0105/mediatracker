@@ -119,9 +119,9 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
   }
 }
 
-export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType): Promise<TmdbSearchResult[]> {
+export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, page = 1): Promise<TmdbSearchResult[]> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}/recommendations` : `/tv/${tmdbId}/recommendations`
-  const res = await fetch(apiUrl(endpoint))
+  const res = await fetch(apiUrl(endpoint, { page: String(page) }))
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
