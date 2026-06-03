@@ -10,6 +10,8 @@ import {
   Clock
 } from 'lucide-react'
 import Link from 'next/link'
+import MediaInfoModal from '@/components/MediaInfoModal'
+import type { TmdbSearchResult } from '@/types'
 
 interface UpcomingRelease {
   tmdb_id: number
@@ -18,12 +20,17 @@ interface UpcomingRelease {
   poster_url: string | null
   full_release_date: string
   priority: string
+  overview: string
+  release_year: number | null
+  genres?: string[]
+  vote_average?: number
 }
 
 export default function CalendarPage() {
   const [releases, setReleases] = useState<UpcomingRelease[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedItem, setSelectedItem] = useState<TmdbSearchResult | null>(null)
 
   useEffect(() => {
     async function fetchCalendar() {
@@ -121,7 +128,10 @@ export default function CalendarPage() {
 
                     {/* Card Container */}
                     <div className="w-full pl-12 md:pl-0 md:w-[calc(50%-2rem)]">
-                      <div className="glass-card rounded-2xl p-3 flex gap-4 hover:border-emerald-500/30 transition-colors">
+                      <div 
+                        onClick={() => setSelectedItem(item as unknown as TmdbSearchResult)}
+                        className="glass-card rounded-2xl p-3 flex gap-4 hover:border-emerald-500/30 transition-colors cursor-pointer"
+                      >
                         {item.poster_url ? (
                           <img
                             src={item.poster_url}
@@ -137,9 +147,9 @@ export default function CalendarPage() {
                           <p className="text-emerald-400 text-xs font-bold mb-1 tracking-wider uppercase">
                             {new Date(item.full_release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
-                          <Link href={item.type === 'show' ? `/show/${item.tmdb_id}` : '#'} className="font-bold text-white text-base line-clamp-1 hover:text-emerald-400 transition-colors">
+                          <span className="font-bold text-white text-base line-clamp-1 hover:text-emerald-400 transition-colors">
                             {item.title}
-                          </Link>
+                          </span>
                           <div className="flex items-center gap-1.5 mt-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
                             {item.type === 'show' ? (
                               <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
@@ -156,6 +166,27 @@ export default function CalendarPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedItem && (
+        <MediaInfoModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onAddToWatchlist={async () => {
+            await fetch('/api/watchlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selectedItem.tmdb_id, type: selectedItem.type, priority: 'must_watch' })
+            })
+          }}
+          onMarkAsWatched={async () => {
+            await fetch('/api/watch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selectedItem.tmdb_id, type: selectedItem.type, watched_at: new Date().toISOString().split('T')[0] })
+            })
+          }}
+        />
       )}
     </div>
   )

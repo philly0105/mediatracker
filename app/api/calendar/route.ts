@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TMDB_GENRES } from '@/lib/tmdb'
 
 export async function GET(request: NextRequest) {
   const tmdbKey = process.env.TMDB_API_KEY
@@ -16,8 +17,12 @@ export async function GET(request: NextRequest) {
       tmdb_id: r.id,
       type: 'movie',
       title: r.title,
+      overview: r.overview || '',
       poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : null,
       full_release_date: r.release_date,
+      release_year: r.release_date ? parseInt(r.release_date.split('-')[0]) : null,
+      genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+      vote_average: r.vote_average,
       priority: 'upcoming'
     }))
 
