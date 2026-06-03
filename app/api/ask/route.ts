@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w500'
 
@@ -10,23 +10,19 @@ function tmdbSearch(query: string, type: 'movie' | 'show' | 'both', key: string)
 }
 
 export async function POST(request: NextRequest) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  const geminiKey = process.env.GEMINI_API_KEY
   const tmdbKey = process.env.TMDB_API_KEY
-  if (!anthropicKey) return NextResponse.json({ error: 'AI not configured' }, { status: 500 })
+  if (!geminiKey) return NextResponse.json({ error: 'AI not configured' }, { status: 500 })
   if (!tmdbKey) return NextResponse.json({ error: 'Missing TMDB key' }, { status: 500 })
 
   const { query } = await request.json()
   if (!query?.trim()) return NextResponse.json({ error: 'No query provided' }, { status: 400 })
 
-  const client = new Anthropic({ apiKey: anthropicKey })
-
-  // Parse intent with Claude
-  let parsed: { action: 'watched' | 'watchlist'; searches: { query: string; type: 'movie' | 'show' | 'both' }[]; explanation: string }
-  try {
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      system: `Parse natural language requests about movies and TV shows. Return ONLY valid JSON:
+  const genAI = new GoogleGenerativeAI(geminiKey)
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: { responseMimeType: 'application/json' },
+    systemInstruction: `Parse natural language requests about movies and TV shows. Return ONLY valid JSON:
 {
   "action": "watched" | "watchlist",
   "searches": [{ "query": string, "type": "movie" | "show" | "both" }],
@@ -37,15 +33,16 @@ Rules:
 - searches: one entry per title or franchise — use the canonical search term (e.g. "Star Wars" not "all star wars movies")
 - For a franchise like "all Star Wars movies", use one search entry with type "movie"
 - explanation: one short sentence describing what you understood`,
-      messages: [{ role: 'user', content: query }],
-    })
-    const text = (msg.content[0] as { type: string; text: string }).text.trim()
-    parsed = JSON.parse(text)
+  })
+
+  let parsed: { action: 'watched' | 'watchlist'; searches: { query: string; type: 'movie' | 'show' | 'both' }[]; explanation: string }
+  try {
+    const result = await model.generateContent(query)
+    parsed = JSON.parse(result.response.text())
   } catch {
     return NextResponse.json({ error: 'Could not understand that request. Try something like "add all Star Wars movies to watched".' }, { status: 422 })
   }
 
-  // Search TMDB for each item in parallel
   const searchResults = await Promise.all(
     parsed.searches.map(s => tmdbSearch(s.query, s.type, tmdbKey))
   )
