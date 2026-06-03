@@ -59,7 +59,7 @@ export default function CalendarPage() {
           <span>Upcoming Releases</span>
         </h1>
         <p className="text-sm text-zinc-400">
-          A timeline of upcoming movies and TV shows from your watchlist.
+          A timeline of popular upcoming movies coming to theaters.
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export default function CalendarPage() {
           <Clock className="w-10 h-10 text-emerald-400 mx-auto opacity-50" />
           <h2 className="text-lg font-bold text-white">No Upcoming Releases</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">
-            None of the items in your watchlist have an upcoming release date known. Add more unreleased movies or airing shows!
+            There are no popular upcoming movies at the moment. Please check back later!
           </p>
         </div>
       ) : (
