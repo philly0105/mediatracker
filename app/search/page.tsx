@@ -1,7 +1,7 @@
 'use client'
 import { useState, useCallback } from 'react'
 import type { TmdbSearchResult } from '@/types'
-import AddTitleModal from '@/components/AddTitleModal'
+import MediaInfoModal from '@/components/MediaInfoModal'
 
 const glassCard = {
   background: 'rgba(255,255,255,0.04)',
@@ -61,10 +61,27 @@ export default function SearchPage() {
         ))}
       </div>
       {selected && (
-        <AddTitleModal
+        <MediaInfoModal
           item={selected}
           onClose={() => setSelected(null)}
-          onSuccess={() => { setSelected(null); setResults([]); setQuery('') }}
+          onAddToWatchlist={async () => {
+            await fetch('/api/watchlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' })
+            })
+            setResults([])
+            setQuery('')
+          }}
+          onMarkAsWatched={async () => {
+            await fetch('/api/watch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] })
+            })
+            setResults([])
+            setQuery('')
+          }}
         />
       )}
     </div>
