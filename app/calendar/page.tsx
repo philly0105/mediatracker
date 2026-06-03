@@ -7,7 +7,9 @@ import {
   Tv,
   Loader2,
   AlertCircle,
-  Clock
+  Clock,
+  Bell,
+  LayoutGrid
 } from 'lucide-react'
 import Link from 'next/link'
 import MediaInfoModal from '@/components/MediaInfoModal'
@@ -24,13 +26,18 @@ interface UpcomingRelease {
   release_year: number | null
   genres?: string[]
   vote_average?: number
+  followed?: boolean
+  episode_label?: string
 }
+
+type Filter = 'all' | 'movie' | 'show'
 
 export default function CalendarPage() {
   const [releases, setReleases] = useState<UpcomingRelease[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<TmdbSearchResult | null>(null)
+  const [filter, setFilter] = useState<Filter>('all')
 
   useEffect(() => {
     async function fetchCalendar() {
@@ -49,10 +56,12 @@ export default function CalendarPage() {
     fetchCalendar()
   }, [])
 
+  const filtered = releases.filter(r => filter === 'all' || r.type === filter)
+
   // Group by month
   const groupedReleases: Record<string, UpcomingRelease[]> = {}
-  releases.forEach((release) => {
-    const d = new Date(release.full_release_date)
+  filtered.forEach((release) => {
+    const d = new Date(release.full_release_date + 'T12:00:00')
     const monthYear = d.toLocaleString('en-US', { month: 'long', year: 'numeric' })
     if (!groupedReleases[monthYear]) groupedReleases[monthYear] = []
     groupedReleases[monthYear].push(release)
@@ -66,8 +75,30 @@ export default function CalendarPage() {
           <span>Upcoming Releases</span>
         </h1>
         <p className="text-sm text-zinc-400">
-          A timeline of popular upcoming movies coming to theaters.
+          A 3-month timeline of upcoming movies and TV shows.
         </p>
+      </div>
+
+      {/* Type filter */}
+      <div className="flex bg-black/40 p-1.5 rounded-2xl w-fit">
+        {([
+          { value: 'all', label: 'All', Icon: LayoutGrid },
+          { value: 'movie', label: 'Movies', Icon: Film },
+          { value: 'show', label: 'TV Shows', Icon: Tv },
+        ] as const).map(({ value, label, Icon }) => (
+          <button
+            key={value}
+            onClick={() => setFilter(value)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              filter === value
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'text-zinc-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {loading ? (
@@ -95,12 +126,12 @@ export default function CalendarPage() {
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400">{error}</p>
         </div>
-      ) : releases.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="glass-card rounded-2xl p-10 text-center border border-dashed border-white/10 max-w-md mx-auto space-y-4">
           <Clock className="w-10 h-10 text-emerald-400 mx-auto opacity-50" />
           <h2 className="text-lg font-bold text-white">No Upcoming Releases</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">
-            There are no popular upcoming movies at the moment. Please check back later!
+            Nothing scheduled in this category right now. Check back later!
           </p>
         </div>
       ) : (
@@ -124,13 +155,25 @@ export default function CalendarPage() {
                     className="relative flex items-center justify-between md:justify-normal md:even:flex-row-reverse group"
                   >
                     {/* Timeline Node */}
-                    <div className="absolute left-[23px] md:left-1/2 -translate-x-1/2 flex items-center justify-center w-6 h-6 rounded-full border-4 border-zinc-950 bg-emerald-500 shadow-lg shadow-emerald-500/20 group-hover:scale-125 transition-transform" />
+                    <div className={`absolute left-[23px] md:left-1/2 -translate-x-1/2 flex items-center justify-center w-6 h-6 rounded-full border-4 border-zinc-950 shadow-lg group-hover:scale-125 transition-transform ${
+                      item.followed
+                        ? 'bg-teal-400 shadow-teal-400/20'
+                        : item.type === 'show'
+                        ? 'bg-rose-500 shadow-rose-500/20'
+                        : 'bg-emerald-500 shadow-emerald-500/20'
+                    }`} />
 
                     {/* Card Container */}
                     <div className="w-full pl-12 md:pl-0 md:w-[calc(50%-2rem)]">
-                      <div 
+                      <div
                         onClick={() => setSelectedItem(item as unknown as TmdbSearchResult)}
-                        className="glass-card rounded-2xl p-3 flex gap-4 hover:border-emerald-500/30 transition-colors cursor-pointer"
+                        className={`glass-card rounded-2xl p-3 flex gap-4 transition-colors cursor-pointer ${
+                          item.followed
+                            ? 'hover:border-teal-500/30'
+                            : item.type === 'show'
+                            ? 'hover:border-rose-500/30'
+                            : 'hover:border-emerald-500/30'
+                        }`}
                       >
                         {item.poster_url ? (
                           <img
@@ -143,18 +186,26 @@ export default function CalendarPage() {
                             No Poster
                           </div>
                         )}
-                        <div className="flex flex-col justify-center">
-                          <p className="text-emerald-400 text-xs font-bold mb-1 tracking-wider uppercase">
-                            {new Date(item.full_release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <div className="flex flex-col justify-center gap-1">
+                          <p className={`text-xs font-bold mb-0.5 tracking-wider uppercase ${
+                            item.followed ? 'text-teal-400' : item.type === 'show' ? 'text-rose-400' : 'text-emerald-400'
+                          }`}>
+                            {new Date(item.full_release_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
-                          <span className="font-bold text-white text-base line-clamp-1 hover:text-emerald-400 transition-colors">
+                          <span className="font-bold text-white text-base line-clamp-1">
                             {item.title}
                           </span>
-                          <div className="flex items-center gap-1.5 mt-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex-wrap">
                             {item.type === 'show' ? (
                               <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
                             ) : (
                               <><Film className="w-3.5 h-3.5 text-violet-500/80" /><span>Movie</span></>
+                            )}
+                            {item.followed && (
+                              <span className="flex items-center gap-1 text-teal-400 bg-teal-400/10 border border-teal-400/20 px-1.5 py-0.5 rounded-md normal-case tracking-normal font-semibold">
+                                <Bell className="w-3 h-3" />
+                                {item.episode_label ?? 'Next Episode'}
+                              </span>
                             )}
                           </div>
                         </div>

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     // Check user status
     let isWatched = false
     let isWatchlisted = false
+    let isFollowed = false
     
     const { data: media } = await supabase
       .from('media')
@@ -30,15 +31,20 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (media) {
-      const [watchRes, watchlistRes] = await Promise.all([
+      const queries: Promise<any>[] = [
         supabase.from('watch_entries').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
-        supabase.from('watchlist_items').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1)
-      ])
+        supabase.from('watchlist_items').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
+      ]
+      if (type === 'show') {
+        queries.push(supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).single())
+      }
+      const [watchRes, watchlistRes, followRes] = await Promise.all(queries)
       isWatched = !!(watchRes.data && watchRes.data.length > 0)
       isWatchlisted = !!(watchlistRes.data && watchlistRes.data.length > 0)
+      isFollowed = !!(followRes?.data)
     }
 
-    return NextResponse.json({ ...details, isWatched, isWatchlisted })
+    return NextResponse.json({ ...details, isWatched, isWatchlisted, isFollowed })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -17,7 +17,9 @@ import {
   Inbox,
   Trash2,
   Bookmark,
-  Play
+  Play,
+  Bell,
+  BellOff
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
@@ -40,6 +42,7 @@ interface FullDetails {
   genres: string[]
   isWatched: boolean
   isWatchlisted: boolean
+  isFollowed: boolean
   trailer_url: string | null
 }
 
@@ -72,6 +75,7 @@ export default function MediaInfoModal({
           genres: data.genres ?? [],
           isWatched: data.isWatched ?? false,
           isWatchlisted: data.isWatchlisted ?? false,
+          isFollowed: data.isFollowed ?? false,
           trailer_url: data.trailer_url ?? null
         })
       } catch (err: any) {
@@ -128,6 +132,24 @@ export default function MediaInfoModal({
       setActioning('remove')
       await onRemoveFromWatchlist()
       onClose()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setActioning(null)
+    }
+  }
+
+  async function handleFollowToggle() {
+    if (!details) return
+    try {
+      setActioning('follow')
+      if (details.isFollowed) {
+        await fetch('/api/follow', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tmdb_id: item.tmdb_id }) })
+        setDetails({ ...details, isFollowed: false })
+      } else {
+        await fetch('/api/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tmdb_id: item.tmdb_id }) })
+        setDetails({ ...details, isFollowed: true })
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -340,7 +362,7 @@ export default function MediaInfoModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3">
+        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3 flex-wrap">
           {currentPriority || details?.isWatchlisted ? (
             <button
               disabled={loading || actioning !== null || (!currentPriority && details?.isWatchlisted)}
@@ -391,6 +413,27 @@ export default function MediaInfoModal({
             )}
             <span>{details?.isWatched ? 'Already Watched' : 'Mark as Watched'}</span>
           </button>
+
+          {item.type === 'show' && (
+            <button
+              disabled={loading || actioning !== null}
+              onClick={handleFollowToggle}
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-xs transition-all duration-300 active:scale-95 disabled:opacity-50 ${
+                details?.isFollowed
+                  ? 'bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-rose-600/10 hover:border-rose-500/30 hover:text-rose-400'
+                  : 'bg-white/5 border-white/10 text-white hover:bg-teal-600 hover:border-teal-500 hover:shadow-lg hover:shadow-teal-600/25'
+              }`}
+            >
+              {actioning === 'follow' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : details?.isFollowed ? (
+                <BellOff className="w-4 h-4" />
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+              <span>{details?.isFollowed ? 'Unfollow Show' : 'Follow Show'}</span>
+            </button>
+          )}
         </div>
       </motion.div>
     </div>
