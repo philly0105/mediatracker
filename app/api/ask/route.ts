@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w500'
 
@@ -18,11 +18,9 @@ export async function POST(request: NextRequest) {
   const { query } = await request.json()
   if (!query?.trim()) return NextResponse.json({ error: 'No query provided' }, { status: 400 })
 
-  const genAI = new GoogleGenerativeAI(geminiKey)
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    generationConfig: { responseMimeType: 'application/json' },
-    systemInstruction: `Parse natural language requests about movies and TV shows. Return ONLY valid JSON:
+  const ai = new GoogleGenAI({ apiKey: geminiKey })
+
+  const systemPrompt = `Parse natural language requests about movies and TV shows. Return ONLY valid JSON with no markdown:
 {
   "action": "watched" | "watchlist",
   "searches": [{ "query": string, "type": "movie" | "show" | "both" }],
@@ -32,17 +30,20 @@ Rules:
 - action: "watched" if they say watched/seen/finished/mark, else "watchlist"
 - searches: one entry per title or franchise — use the canonical search term (e.g. "Star Wars" not "all star wars movies")
 - For a franchise like "all Star Wars movies", use one search entry with type "movie"
-- explanation: one short sentence describing what you understood`,
-  })
+- explanation: one short sentence describing what you understood`
 
   let parsed: { action: 'watched' | 'watchlist'; searches: { query: string; type: 'movie' | 'show' | 'both' }[]; explanation: string }
   try {
-    const result = await model.generateContent(query)
-    const text = result.response.text().trim()
-    const json = text.startsWith('```') ? text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '') : text
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: `${systemPrompt}\n\nRequest: ${query}`,
+      config: { responseMimeType: 'application/json' },
+    })
+    const text = response.text ?? ''
+    const json = text.trim().startsWith('```') ? text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '') : text.trim()
     parsed = JSON.parse(json)
   } catch (e: any) {
-    console.error('Gemini parse error:', e?.message ?? e)
+    console.error('Gemini error:', e?.message ?? e)
     return NextResponse.json({ error: `AI error: ${e?.message ?? 'Unknown error'}` }, { status: 422 })
   }
 
