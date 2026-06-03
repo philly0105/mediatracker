@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -22,13 +22,6 @@ export default function MediaCard({ entry }: Props) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const suppressOpen = useRef(false)
-
-  function closeInfo() {
-    suppressOpen.current = true
-    setShowInfo(false)
-    requestAnimationFrame(() => { suppressOpen.current = false })
-  }
 
   const mediaAsResult: TmdbSearchResult = {
     tmdb_id: media.tmdb_id,
@@ -73,7 +66,7 @@ export default function MediaCard({ entry }: Props) {
       whileHover={{ scale: 1.015, y: -2 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       className="glass-card rounded-2xl overflow-hidden flex gap-4 p-3.5 backdrop-blur-md select-none cursor-pointer"
-      onClick={() => { if (!suppressOpen.current) setShowInfo(true) }}
+      onClick={() => { if (!showInfo) setShowInfo(true) }}
     >
       {media.poster_url ? (
         <img
@@ -157,14 +150,14 @@ export default function MediaCard({ entry }: Props) {
       {showInfo && createPortal(
         <MediaInfoModal
           item={mediaAsResult}
-          onClose={closeInfo}
+          onClose={() => setShowInfo(false)}
           onAddToWatchlist={async () => {
             await fetch('/api/watchlist', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, priority: 'want_to_watch' }),
             })
-            closeInfo()
+            setShowInfo(false)
           }}
           onMarkAsWatched={async () => {
             await fetch('/api/watch', {
@@ -173,7 +166,7 @@ export default function MediaCard({ entry }: Props) {
               body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, watched_at: new Date().toISOString().split('T')[0] }),
             })
             router.refresh()
-            closeInfo()
+            setShowInfo(false)
           }}
         />,
         document.body
