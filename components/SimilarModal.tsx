@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star } from 'lucide-react'
 import type { TmdbSearchResult, MediaType } from '@/types'
+import MediaInfoModal from './MediaInfoModal'
 
 interface Props {
   tmdbId: number
@@ -13,6 +14,7 @@ interface Props {
 export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const [items, setItems] = useState<TmdbSearchResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}`)
@@ -57,19 +59,23 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           ) : (
             <div className="grid grid-cols-4 gap-3">
               {items.map(item => (
-                <div key={item.tmdb_id} className="space-y-1.5">
+                <button
+                  key={item.tmdb_id}
+                  onClick={() => setSelected(item)}
+                  className="text-left space-y-1.5 group"
+                >
                   {item.poster_url ? (
                     <img
                       src={item.poster_url}
                       alt={item.title}
-                      className="w-full aspect-[2/3] rounded-xl object-cover border border-white/5"
+                      className="w-full aspect-[2/3] rounded-xl object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
                     />
                   ) : (
                     <div className="w-full aspect-[2/3] rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
                       No Poster
                     </div>
                   )}
-                  <p className="text-[11px] font-semibold text-white leading-tight line-clamp-2">
+                  <p className="text-[11px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-rose-400 transition-colors">
                     {item.title}
                   </p>
                   <div className="flex items-center gap-1">
@@ -83,12 +89,35 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
                       </span>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
         </div>
       </motion.div>
+
+      {selected && (
+        <MediaInfoModal
+          item={selected}
+          onClose={() => setSelected(null)}
+          onAddToWatchlist={async () => {
+            await fetch('/api/watchlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
+            })
+            setSelected(null)
+          }}
+          onMarkAsWatched={async () => {
+            await fetch('/api/watch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
+            })
+            setSelected(null)
+          }}
+        />
+      )}
     </div>
   )
 }
