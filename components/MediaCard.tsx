@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import RatingStars from './RatingStars'
 import EditEntryModal from './EditEntryModal'
 import type { WatchEntry } from '@/types'
@@ -126,11 +127,10 @@ export default function MediaCard({ entry }: Props) {
         </div>
       </div>
 
-      <AnimatePresence>
-        {showEditModal && (
-          <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />
-        )}
-      </AnimatePresence>
+      {showEditModal && createPortal(
+        <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />,
+        document.body
+      )}
     </motion.div>
   )
 }
