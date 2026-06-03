@@ -14,7 +14,8 @@ import {
   Settings,
   User,
   Sparkles,
-  Calendar
+  Calendar,
+  Swords
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -32,6 +33,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     { name: 'Shows', href: '/shows', icon: Tv },
     { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
     { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
+    { name: 'Versus', href: '/versus', icon: Swords },
     { name: 'Lists', href: '/lists', icon: Layers },
     { name: 'Stats', href: '/stats', icon: BarChart3 },
     { name: 'Import', href: '/import', icon: Upload },
