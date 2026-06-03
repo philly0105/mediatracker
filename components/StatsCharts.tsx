@@ -1,5 +1,6 @@
 'use client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
+import Link from 'next/link'
 
 const COLORS = ['#f97316', '#e4e4e7', '#fb7185', '#a3a3a3', '#fbbf24', '#d4d4d8', '#f87171', '#71717a']
 
@@ -79,7 +80,9 @@ export default function StatsCharts({ data }: { data: StatsData }) {
             <div className="space-y-2.5">
               {items.map(({ name, count }) => (
                 <div key={name} className="flex items-center justify-between">
-                  <span className="text-zinc-300 text-sm">{name}</span>
+                  <Link href={`/person/${encodeURIComponent(name)}`} className="text-zinc-300 text-sm hover:text-white hover:underline transition-colors">
+                    {name}
+                  </Link>
                   <span className="text-zinc-600 text-sm tabular-nums">{count}</span>
                 </div>
               ))}

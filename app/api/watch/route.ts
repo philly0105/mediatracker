@@ -65,16 +65,22 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ entry: data }, { status: 201 })
 }
 
-// PATCH: update rating on a watch entry
+// PATCH: update rating, review, and watched_at on a watch entry
 export async function PATCH(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, rating } = await request.json()
+  const { id, rating, review, watched_at } = await request.json()
+  
+  const updates: any = {}
+  if (rating !== undefined) updates.rating = rating ?? null
+  if (review !== undefined) updates.review = review ?? null
+  if (watched_at !== undefined) updates.watched_at = watched_at ?? null
+
   const { error } = await supabase
     .from('watch_entries')
-    .update({ rating: rating ?? null })
+    .update(updates)
     .eq('id', id)
     .eq('user_id', user.id)
 

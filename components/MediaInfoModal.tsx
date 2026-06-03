@@ -17,6 +17,7 @@ import {
   Inbox,
   Trash2
 } from 'lucide-react'
+import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 
 interface Props {
@@ -200,7 +201,7 @@ export default function MediaInfoModal({
                 {details?.director && (
                   <span className="flex items-center gap-1.5">
                     <User className="w-4 h-4 text-zinc-500" />
-                    <span>Dir: {details.director}</span>
+                    <span>Dir: <Link href={`/person/${encodeURIComponent(details.director)}`} className="hover:text-white hover:underline transition-colors">{details.director}</Link></span>
                   </span>
                 )}
               </div>
@@ -294,12 +295,13 @@ export default function MediaInfoModal({
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
                     {details.cast_members.map((actor) => (
-                      <span
+                      <Link
                         key={actor}
-                        className="px-3 py-1 rounded-xl text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04]"
+                        href={`/person/${encodeURIComponent(actor)}`}
+                        className="px-3 py-1 rounded-xl text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04] hover:bg-white/10 hover:text-white transition-colors"
                       >
                         {actor}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 </div>

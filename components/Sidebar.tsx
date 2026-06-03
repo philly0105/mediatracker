@@ -13,7 +13,8 @@ import {
   Upload,
   Settings,
   User,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const navItems = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Search', href: '/search', icon: Search },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Movies', href: '/movies', icon: Film },
     { name: 'Shows', href: '/shows', icon: Tv },
     { name: 'Watchlist', href: '/watchlist', icon: ListTodo },

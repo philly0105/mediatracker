@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       .from('watch_entries')
       .select('rating, media!inner(tmdb_id, type)')
       .eq('user_id', user.id)
-      .not('rating', 'is', null)
+      .gte('rating', 4)
       .order('created_at', { ascending: false })
       .limit(15),
   ])

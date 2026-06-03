@@ -73,6 +73,7 @@ export interface TmdbFullDetails {
   director: string | null
   cast_members: string[]
   seasons?: Array<{ season_number: number; episode_count: number }>
+  full_release_date?: string | null
 }
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
@@ -92,6 +93,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       runtime_mins: d.runtime ?? null,
       director,
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
+      full_release_date: d.release_date || null,
     }
   } else {
     return {
@@ -106,6 +108,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       seasons: (d.seasons ?? [])
         .filter((s: any) => s.season_number > 0)
         .map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count })),
+      full_release_date: d.next_episode_to_air?.air_date || null,
     }
   }
 }

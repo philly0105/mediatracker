@@ -1,10 +1,12 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import RatingStars from './RatingStars'
+import EditEntryModal from './EditEntryModal'
 import type { WatchEntry } from '@/types'
-import { Calendar, Play, FileText } from 'lucide-react'
+import { Calendar, Play, FileText, Pencil, Trash2, Loader2 } from 'lucide-react'
 
 interface Props {
   entry: WatchEntry
@@ -12,8 +14,11 @@ interface Props {
 
 export default function MediaCard({ entry }: Props) {
   const media = entry.media!
+  const router = useRouter()
   const href = media.type === 'show' ? `/show/${media.id}` : '#'
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   async function handleRatingChange(newRating: number) {
     setRating(newRating)
@@ -22,6 +27,25 @@ export default function MediaCard({ entry }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: entry.id, rating: newRating }),
     })
+  }
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to delete this entry?')) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch('/api/watch', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: entry.id }),
+      })
+      if (res.ok) {
+        router.refresh()
+      }
+    } catch (err) {
+      console.error(err)
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -45,20 +69,40 @@ export default function MediaCard({ entry }: Props) {
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
           <div className="flex items-start justify-between gap-2">
-            {media.type === 'show' ? (
-              <Link
-                href={href}
-                className="font-bold text-white hover:text-rose-400 transition-colors line-clamp-1 text-sm flex items-center gap-1 group"
+            <div className="flex items-center gap-2">
+              {media.type === 'show' ? (
+                <Link
+                  href={href}
+                  className="font-bold text-white hover:text-rose-400 transition-colors line-clamp-1 text-sm flex items-center gap-1 group"
+                >
+                  <span>{media.title}</span>
+                  <Play className="w-3 h-3 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity fill-rose-500/20" />
+                </Link>
+              ) : (
+                <p className="font-bold text-white line-clamp-1 text-sm">{media.title}</p>
+              )}
+              <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider bg-white/5 px-1.5 py-0.5 rounded border border-white/[0.03]">
+                {media.type}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ opacity: 1 }}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
+                title="Edit entry"
               >
-                <span>{media.title}</span>
-                <Play className="w-3 h-3 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity fill-rose-500/20" />
-              </Link>
-            ) : (
-              <p className="font-bold text-white line-clamp-1 text-sm">{media.title}</p>
-            )}
-            <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider bg-white/5 px-1.5 py-0.5 rounded border border-white/[0.03]">
-              {media.type}
-            </span>
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                title="Delete entry"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
           <p className="text-xs text-zinc-500 mt-0.5">{media.release_year}</p>
         </div>
@@ -81,6 +125,12 @@ export default function MediaCard({ entry }: Props) {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showEditModal && (
+          <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
