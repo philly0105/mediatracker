@@ -1,14 +1,11 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import MediaCard from '@/components/MediaCard'
-import MediaInfoModal from '@/components/MediaInfoModal'
-import type { WatchEntry, TmdbSearchResult } from '@/types'
+import type { WatchEntry } from '@/types'
 
 export default function MoviesPage() {
   const [entries, setEntries] = useState<WatchEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedEntry, setSelectedEntry] = useState<WatchEntry | null>(null)
 
   useEffect(() => {
     fetch('/api/watch?type=movie')
@@ -21,20 +18,6 @@ export default function MoviesPage() {
       })
       .finally(() => setLoading(false))
   }, [])
-
-  const modalItem = useMemo<TmdbSearchResult | null>(() => {
-    if (!selectedEntry?.media) return null
-    const m = selectedEntry.media
-    return {
-      tmdb_id: m.tmdb_id,
-      type: m.type,
-      title: m.title,
-      overview: m.overview || '',
-      poster_url: m.poster_url,
-      release_year: m.release_year,
-      genres: m.genres,
-    } as TmdbSearchResult
-  }, [selectedEntry])
 
   return (
     <div className="space-y-6">
@@ -58,13 +41,7 @@ export default function MoviesPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {entries.map((entry) => (
-              <div
-                key={entry.id}
-                className="cursor-pointer"
-                onClick={() => setSelectedEntry(entry)}
-              >
-                <MediaCard entry={entry} />
-              </div>
+              <MediaCard key={entry.id} entry={entry} />
             ))}
           </div>
           {entries.length === 0 && (
@@ -78,26 +55,6 @@ export default function MoviesPage() {
         </>
       )}
 
-      <AnimatePresence>
-        {selectedEntry && modalItem && (
-          <MediaInfoModal
-            item={modalItem}
-            onClose={() => setSelectedEntry(null)}
-            onAddToWatchlist={async () => {
-              await fetch('/api/watchlist', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tmdb_id: selectedEntry.media!.tmdb_id,
-                  type: selectedEntry.media!.type,
-                  priority: 'must_watch',
-                }),
-              })
-            }}
-            onMarkAsWatched={async () => {}}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }
