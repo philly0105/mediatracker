@@ -20,15 +20,15 @@ export async function GET(request: NextRequest) {
   const endStr = threeMonthsOut.toISOString().split('T')[0]
 
   try {
-    // Movies (5 pages) + New TV shows (3 pages) in parallel
-    const moviePages = [1, 2, 3, 4, 5].map(page =>
+    // Movies (3 pages) + New TV shows (2 pages) in parallel — popularity-sorted, English only
+    const moviePages = [1, 2, 3].map(page =>
       tmdbFetch('/discover/movie', {
-        region: 'US', sort_by: 'primary_release_date.asc',
+        region: 'US', sort_by: 'popularity.desc',
         'primary_release_date.gte': todayStr, 'primary_release_date.lte': endStr,
-        'with_release_type': '2|3', page: String(page),
+        'with_release_type': '2|3', with_original_language: 'en', page: String(page),
       }, tmdbKey)
     )
-    const showPages = [1, 2, 3].map(page =>
+    const showPages = [1, 2].map(page =>
       tmdbFetch('/discover/tv', {
         sort_by: 'popularity.desc',
         'first_air_date.gte': todayStr, 'first_air_date.lte': endStr,
