@@ -31,17 +31,16 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (media) {
-      const queries: Promise<any>[] = [
+      const [watchRes, watchlistRes] = await Promise.all([
         supabase.from('watch_entries').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
         supabase.from('watchlist_items').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
-      ]
-      if (type === 'show') {
-        queries.push(supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).single())
-      }
-      const [watchRes, watchlistRes, followRes] = await Promise.all(queries)
+      ])
       isWatched = !!(watchRes.data && watchRes.data.length > 0)
       isWatchlisted = !!(watchlistRes.data && watchlistRes.data.length > 0)
-      isFollowed = !!(followRes?.data)
+      if (type === 'show') {
+        const { data: followData } = await supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).single()
+        isFollowed = !!followData
+      }
     }
 
     return NextResponse.json({ ...details, isWatched, isWatchlisted, isFollowed })
