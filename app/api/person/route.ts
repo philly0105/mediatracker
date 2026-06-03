@@ -81,11 +81,19 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, 10)
 
-    // All Movies: Sort by release date descending
+    // All Movies: Sort by highest IMDb rating (vote_average) descending
+    // Push items with < 20 votes down to avoid obscure 10/10s floating to the very top.
     const allMovies = [...mapped].sort((a, b) => {
-      if (!a.full_release_date) return 1
-      if (!b.full_release_date) return -1
-      return a.full_release_date < b.full_release_date ? 1 : -1
+      const aIsValid = (a.vote_count || 0) > 20
+      const bIsValid = (b.vote_count || 0) > 20
+      
+      if (aIsValid && !bIsValid) return -1
+      if (!aIsValid && bIsValid) return 1
+      
+      if (b.vote_average !== a.vote_average) {
+        return b.vote_average - a.vote_average
+      }
+      return (b.vote_count || 0) - (a.vote_count || 0)
     })
 
     return NextResponse.json({
