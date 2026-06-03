@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   const genAI = new GoogleGenerativeAI(geminiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-1.5-flash',
     generationConfig: { responseMimeType: 'application/json' },
     systemInstruction: `Parse natural language requests about movies and TV shows. Return ONLY valid JSON:
 {
@@ -38,9 +38,12 @@ Rules:
   let parsed: { action: 'watched' | 'watchlist'; searches: { query: string; type: 'movie' | 'show' | 'both' }[]; explanation: string }
   try {
     const result = await model.generateContent(query)
-    parsed = JSON.parse(result.response.text())
-  } catch {
-    return NextResponse.json({ error: 'Could not understand that request. Try something like "add all Star Wars movies to watched".' }, { status: 422 })
+    const text = result.response.text().trim()
+    const json = text.startsWith('```') ? text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '') : text
+    parsed = JSON.parse(json)
+  } catch (e: any) {
+    console.error('Gemini parse error:', e?.message ?? e)
+    return NextResponse.json({ error: `AI error: ${e?.message ?? 'Unknown error'}` }, { status: 422 })
   }
 
   const searchResults = await Promise.all(
