@@ -20,6 +20,8 @@ export async function upsertMedia(
     runtime_mins: details.runtime_mins,
     director: details.director,
     cast_members: details.cast_members,
+    collection_id: details.type === 'movie' ? (details.belongs_to_collection?.id ?? null) : null,
+    collection_name: details.type === 'movie' ? (details.belongs_to_collection?.name ?? null) : null,
   }
 
   const { data: media, error } = await supabase
