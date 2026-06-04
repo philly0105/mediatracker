@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star, ChevronDown } from 'lucide-react'
 import type { TmdbSearchResult, MediaType } from '@/types'
@@ -14,14 +14,46 @@ interface Props {
 export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const [items, setItems] = useState<TmdbSearchResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const [visibleCount, setVisibleCount] = useState(12)
+  const [hasMore, setHasMore] = useState(true)
+  const nextBatch = useRef(2)
+  const seenIds = useRef(new Set<number>())
 
   useEffect(() => {
-    fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}`)
+    fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
       .then(r => r.json())
-      .then(data => { setItems(Array.isArray(data) ? data : []); setLoading(false) })
+      .then(data => {
+        const results: TmdbSearchResult[] = Array.isArray(data) ? data : []
+        results.forEach(r => seenIds.current.add(r.tmdb_id))
+        setItems(results)
+        if (results.length === 0) setHasMore(false)
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
+  }, [tmdbId, type])
+
+  const fetchMore = useCallback(async () => {
+    setLoadingMore(true)
+    try {
+      const res = await fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=${nextBatch.current}`)
+      const data = await res.json()
+      const fresh: TmdbSearchResult[] = (Array.isArray(data) ? data : [])
+        .filter((r: TmdbSearchResult) => !seenIds.current.has(r.tmdb_id))
+      fresh.forEach(r => seenIds.current.add(r.tmdb_id))
+      if (fresh.length === 0) {
+        setHasMore(false)
+      } else {
+        setItems(prev => [...prev, ...fresh])
+        setVisibleCount(c => c + 12)
+        nextBatch.current += 1
+      }
+    } catch {
+      setHasMore(false)
+    } finally {
+      setLoadingMore(false)
+    }
   }, [tmdbId, type])
 
   return (
@@ -95,13 +127,20 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
               ))}
             </div>
           )}
-          {!loading && visibleCount < items.length && (
+          {!loading && (visibleCount < items.length || hasMore) && (
             <button
-              onClick={() => setVisibleCount(c => c + 12)}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all text-xs font-medium"
+              onClick={() => {
+                if (visibleCount < items.length) {
+                  setVisibleCount(c => c + 12)
+                } else {
+                  fetchMore()
+                }
+              }}
+              disabled={loadingMore}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronDown className="w-3.5 h-3.5" />
-              Show More
+              <ChevronDown className={`w-3.5 h-3.5 ${loadingMore ? 'animate-bounce' : ''}`} />
+              {loadingMore ? 'Loading…' : 'Show More'}
             </button>
           )}
         </div>

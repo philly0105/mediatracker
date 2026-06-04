@@ -10,15 +10,18 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
   const type = searchParams.get('type')
+  const batch = Math.max(1, parseInt(searchParams.get('batch') ?? '1', 10))
 
   if (!id || !type || (type !== 'movie' && type !== 'show')) {
     return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
   }
 
   try {
+    const tmdbPage1 = batch * 2 - 1
+    const tmdbPage2 = batch * 2
     const [page1, page2] = await Promise.all([
-      fetchTmdbRecommendations(Number(id), type, 1),
-      fetchTmdbRecommendations(Number(id), type, 2),
+      fetchTmdbRecommendations(Number(id), type, tmdbPage1),
+      fetchTmdbRecommendations(Number(id), type, tmdbPage2),
     ])
     const seen = new Set<number>()
     const all = [...page1, ...page2].filter(r => {
