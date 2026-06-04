@@ -1,7 +1,8 @@
-import type { TmdbSearchResult, MediaType } from '@/types'
+import type { TmdbSearchResult, MediaType, TmdbCollectionDetails, TmdbCollectionPart, TmdbCollectionSummary } from '@/types'
 
 const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
+const BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 
 export const TMDB_GENRES: Record<number, string> = {
   28: 'Action & Sci-Fi',
@@ -75,6 +76,7 @@ export interface TmdbFullDetails {
   seasons?: Array<{ season_number: number; episode_count: number }>
   full_release_date?: string | null
   trailer_url?: string | null
+  belongs_to_collection?: { id: number; name: string } | null
 }
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
@@ -99,6 +101,9 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
       full_release_date: d.release_date || null,
       trailer_url,
+      belongs_to_collection: d.belongs_to_collection
+        ? { id: d.belongs_to_collection.id, name: d.belongs_to_collection.name }
+        : null,
     }
   } else {
     return {
@@ -161,5 +166,53 @@ export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
       genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
       vote_average: r.vote_average,
     }))
+}
+
+export async function getCollectionDetails(id: number): Promise<TmdbCollectionDetails> {
+  const res = await fetch(apiUrl(`/collection/${id}`))
+  if (!res.ok) throw new Error(`TMDB collection failed: ${res.status}`)
+  const d = await res.json()
+
+  const parts: TmdbCollectionPart[] = (d.parts ?? [])
+    .sort((a: any, b: any) => (a.release_date ?? '').localeCompare(b.release_date ?? ''))
+    .map((p: any): TmdbCollectionPart => ({
+      tmdb_id: p.id,
+      title: p.title,
+      poster_url: p.poster_path ? `${IMG}${p.poster_path}` : null,
+      release_date: p.release_date || null,
+      release_year: p.release_date ? parseInt(p.release_date.split('-')[0]) : null,
+      overview: p.overview ?? '',
+    }))
+
+  return {
+    id: d.id,
+    name: d.name,
+    overview: d.overview ?? '',
+    poster_url: d.poster_path ? `${IMG}${d.poster_path}` : null,
+    backdrop_url: d.backdrop_path ? `${BACKDROP}${d.backdrop_path}` : null,
+    parts,
+  }
+}
+
+export async function getPopularCollections(page: number): Promise<TmdbCollectionSummary[]> {
+  const res = await fetch(apiUrl('/movie/popular', { page: String(page) }))
+  if (!res.ok) return []
+  const data = await res.json()
+
+  const seen = new Set<number>()
+  const collections: TmdbCollectionSummary[] = []
+
+  for (const movie of (data.results ?? [])) {
+    const c = movie.belongs_to_collection
+    if (!c || seen.has(c.id)) continue
+    seen.add(c.id)
+    collections.push({
+      id: c.id,
+      name: c.name,
+      poster_url: c.poster_path ? `${IMG}${c.poster_path}` : null,
+      backdrop_url: c.backdrop_path ? `${BACKDROP}${c.backdrop_path}` : null,
+    })
+  }
+  return collections
 }
 

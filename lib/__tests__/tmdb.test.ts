@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, fetchTmdbDetails } from '@/lib/tmdb'
+import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -75,5 +75,112 @@ describe('fetchTmdbDetails', () => {
       director: 'David Fincher', genres: ['Drama', 'Thriller'],
       cast_members: ['Brad Pitt', 'Edward Norton'],
     })
+  })
+
+  it('includes collection data when movie belongs to a collection', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', runtime: 139,
+        overview: 'A movie', poster_path: '/path.jpg',
+        genres: [{ name: 'Drama' }], release_date: '1999-10-15',
+        belongs_to_collection: { id: 123, name: 'Fight Club Collection' },
+        credits: { crew: [], cast: [] },
+        videos: { results: [] },
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie')
+    expect(details.belongs_to_collection).toEqual({ id: 123, name: 'Fight Club Collection' })
+  })
+
+  it('returns null belongs_to_collection when not in a collection', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', runtime: 139,
+        overview: 'A movie', poster_path: '/path.jpg',
+        genres: [], release_date: '1999-10-15',
+        belongs_to_collection: null,
+        credits: { crew: [], cast: [] },
+        videos: { results: [] },
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie')
+    expect(details.belongs_to_collection).toBeNull()
+  })
+})
+
+describe('getCollectionDetails', () => {
+  it('returns collection with parts sorted by release_date', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 131635,
+        name: 'Lord of the Rings Collection',
+        overview: 'Epic fantasy trilogy',
+        backdrop_path: '/backdrop.jpg',
+        poster_path: '/poster.jpg',
+        parts: [
+          { id: 122, title: 'The Return of the King', poster_path: '/p3.jpg', release_date: '2003-12-17', overview: 'Third' },
+          { id: 120, title: 'The Fellowship of the Ring', poster_path: '/p1.jpg', release_date: '2001-12-10', overview: 'First' },
+          { id: 121, title: 'The Two Towers', poster_path: '/p2.jpg', release_date: '2002-12-18', overview: 'Second' },
+        ],
+      }),
+    })
+    const result = await getCollectionDetails(131635)
+    expect(result.id).toBe(131635)
+    expect(result.name).toBe('Lord of the Rings Collection')
+    expect(result.backdrop_url).toBe('https://image.tmdb.org/t/p/w1280/backdrop.jpg')
+    expect(result.poster_url).toBe('https://image.tmdb.org/t/p/w500/poster.jpg')
+    expect(result.parts).toHaveLength(3)
+    expect(result.parts[0].title).toBe('The Fellowship of the Ring')
+    expect(result.parts[0].tmdb_id).toBe(120)
+    expect(result.parts[1].title).toBe('The Two Towers')
+    expect(result.parts[2].title).toBe('The Return of the King')
+    expect(result.parts[0].release_year).toBe(2001)
+  })
+
+  it('handles null poster and backdrop paths', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 1, name: 'Test', overview: '', backdrop_path: null, poster_path: null, parts: [],
+      }),
+    })
+    const result = await getCollectionDetails(1)
+    expect(result.backdrop_url).toBeNull()
+    expect(result.poster_url).toBeNull()
+  })
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+    await expect(getCollectionDetails(0)).rejects.toThrow('TMDB collection failed: 404')
+  })
+})
+
+describe('getPopularCollections', () => {
+  it('deduplicates collections within a page', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        results: [
+          { id: 1, belongs_to_collection: { id: 10, name: 'MCU', poster_path: '/p.jpg', backdrop_path: '/b.jpg' } },
+          { id: 2, belongs_to_collection: { id: 10, name: 'MCU', poster_path: '/p.jpg', backdrop_path: '/b.jpg' } },
+          { id: 3, belongs_to_collection: { id: 20, name: 'DCEU', poster_path: '/p2.jpg', backdrop_path: '/b2.jpg' } },
+          { id: 4, belongs_to_collection: null },
+          { id: 5, belongs_to_collection: undefined },
+        ],
+      }),
+    })
+    const result = await getPopularCollections(1)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({ id: 10, name: 'MCU', poster_url: 'https://image.tmdb.org/t/p/w500/p.jpg', backdrop_url: 'https://image.tmdb.org/t/p/w1280/b.jpg' })
+    expect(result[1].id).toBe(20)
+  })
+
+  it('returns empty array on API failure', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
+    const result = await getPopularCollections(1)
+    expect(result).toEqual([])
   })
 })
