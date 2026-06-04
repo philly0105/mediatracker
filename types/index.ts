@@ -13,6 +13,8 @@ export interface Media {
   runtime_mins: number | null
   director: string | null
   cast_members: string[]
+  collection_id: number | null
+  collection_name: string | null
 }
 
 export interface Season {
@@ -84,4 +86,29 @@ export interface TmdbSearchResult {
   release_year: number | null
   genres?: string[]
   vote_average?: number
+}
+
+export interface TmdbCollectionSummary {
+  id: number
+  name: string
+  poster_url: string | null
+  backdrop_url: string | null
+}
+
+export interface TmdbCollectionPart {
+  tmdb_id: number
+  title: string
+  poster_url: string | null
+  release_date: string | null
+  release_year: number | null
+  overview: string
+}
+
+export interface TmdbCollectionDetails {
+  id: number
+  name: string
+  overview: string
+  poster_url: string | null
+  backdrop_url: string | null
+  parts: TmdbCollectionPart[]
 }
