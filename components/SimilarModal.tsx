@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Star } from 'lucide-react'
+import { X, Star, ChevronDown } from 'lucide-react'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 
@@ -15,6 +15,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const [items, setItems] = useState<TmdbSearchResult[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
+  const [visibleCount, setVisibleCount] = useState(12)
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}`)
@@ -59,7 +60,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
             <p className="text-sm text-zinc-500 text-center py-8">No similar titles found.</p>
           ) : (
             <div className="grid grid-cols-4 gap-3">
-              {items.map(item => (
+              {items.slice(0, visibleCount).map(item => (
                 <button
                   key={item.tmdb_id}
                   onClick={() => setSelected(item)}
@@ -93,6 +94,15 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
                 </button>
               ))}
             </div>
+          )}
+          {!loading && visibleCount < items.length && (
+            <button
+              onClick={() => setVisibleCount(c => c + 12)}
+              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all text-xs font-medium"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+              Show More
+            </button>
           )}
         </div>
       </motion.div>

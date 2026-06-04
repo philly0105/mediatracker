@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       results = all
     }
 
-    return NextResponse.json(results.slice(0, 12))
+    return NextResponse.json(results)
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
