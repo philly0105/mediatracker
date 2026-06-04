@@ -198,11 +198,22 @@ export async function getPopularCollections(page: number): Promise<TmdbCollectio
   const res = await fetch(apiUrl('/movie/popular', { page: String(page) }))
   if (!res.ok) return []
   const data = await res.json()
+  const movieIds: number[] = (data.results ?? []).map((m: any) => m.id)
+
+  // belongs_to_collection is not in list responses — fetch details in parallel
+  const details = await Promise.all(
+    movieIds.map(id =>
+      fetch(apiUrl(`/movie/${id}`))
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+    )
+  )
 
   const seen = new Set<number>()
   const collections: TmdbCollectionSummary[] = []
 
-  for (const movie of (data.results ?? [])) {
+  for (const movie of details) {
+    if (!movie) continue
     const c = movie.belongs_to_collection
     if (!c || seen.has(c.id)) continue
     seen.add(c.id)

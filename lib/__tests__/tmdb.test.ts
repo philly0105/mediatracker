@@ -159,26 +159,44 @@ describe('getCollectionDetails', () => {
 })
 
 describe('getPopularCollections', () => {
-  it('deduplicates collections within a page', async () => {
+  it('fetches movie details and deduplicates by collection', async () => {
+    // List response
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({
-        results: [
-          { id: 1, belongs_to_collection: { id: 10, name: 'MCU', poster_path: '/p.jpg', backdrop_path: '/b.jpg' } },
-          { id: 2, belongs_to_collection: { id: 10, name: 'MCU', poster_path: '/p.jpg', backdrop_path: '/b.jpg' } },
-          { id: 3, belongs_to_collection: { id: 20, name: 'DCEU', poster_path: '/p2.jpg', backdrop_path: '/b2.jpg' } },
-          { id: 4, belongs_to_collection: null },
-          { id: 5, belongs_to_collection: undefined },
-        ],
-      }),
+      json: async () => ({ results: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] }),
     })
+    // Movie 1 detail: MCU
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ belongs_to_collection: { id: 10, name: 'MCU', poster_path: '/p.jpg', backdrop_path: '/b.jpg' } }),
+    })
+    // Movie 2 detail: MCU again (deduped)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ belongs_to_collection: { id: 10, name: 'MCU', poster_path: '/p.jpg', backdrop_path: '/b.jpg' } }),
+    })
+    // Movie 3 detail: DCEU
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ belongs_to_collection: { id: 20, name: 'DCEU', poster_path: '/p2.jpg', backdrop_path: '/b2.jpg' } }),
+    })
+    // Movie 4 detail: no collection
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ belongs_to_collection: null }),
+    })
+
     const result = await getPopularCollections(1)
     expect(result).toHaveLength(2)
-    expect(result[0]).toEqual({ id: 10, name: 'MCU', poster_url: 'https://image.tmdb.org/t/p/w500/p.jpg', backdrop_url: 'https://image.tmdb.org/t/p/w1280/b.jpg' })
+    expect(result[0]).toEqual({
+      id: 10, name: 'MCU',
+      poster_url: 'https://image.tmdb.org/t/p/w500/p.jpg',
+      backdrop_url: 'https://image.tmdb.org/t/p/w1280/b.jpg',
+    })
     expect(result[1].id).toBe(20)
   })
 
-  it('returns empty array on API failure', async () => {
+  it('returns empty array when list fetch fails', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
     const result = await getPopularCollections(1)
     expect(result).toEqual([])
