@@ -20,8 +20,6 @@ export async function upsertMedia(
     runtime_mins: details.runtime_mins,
     director: details.director,
     cast_members: details.cast_members,
-    collection_id: details.type === 'movie' ? (details.belongs_to_collection?.id ?? null) : null,
-    collection_name: details.type === 'movie' ? (details.belongs_to_collection?.name ?? null) : null,
   }
 
   const { data: media, error } = await supabase
@@ -31,6 +29,18 @@ export async function upsertMedia(
     .single()
 
   if (error) throw new Error(`Failed to upsert media: ${error.message}`)
+
+  // Best-effort: update collection fields (requires migration 003_collections.sql)
+  if (details.type === 'movie') {
+    await supabase
+      .from('media')
+      .update({
+        collection_id: details.belongs_to_collection?.id ?? null,
+        collection_name: details.belongs_to_collection?.name ?? null,
+      })
+      .eq('id', media.id)
+    // ignore error — columns may not exist until migration is applied
+  }
 
   let seasons: Season[] = []
 
