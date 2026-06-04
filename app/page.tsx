@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import RatingStars from '@/components/RatingStars'
 import { Calendar, Flame, Play, Clock, ArrowRight } from 'lucide-react'
+import DashboardRecentCards from '@/components/DashboardRecentCards'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -104,46 +104,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {(recent ?? []).map((entry: any) => (
-            <div
-              key={entry.id}
-              className="glass-card rounded-2xl overflow-hidden group hover:scale-[1.02]"
-            >
-              <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900 border-b border-white/5">
-                {entry.media?.poster_url ? (
-                  <img
-                    src={entry.media.poster_url}
-                    alt={entry.media.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                    No Poster
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                  <span className="text-[10px] font-semibold text-zinc-400 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/5">
-                    {entry.watched_at}
-                  </span>
-                </div>
-              </div>
-              <div className="p-3.5 space-y-1.5">
-                <p className="text-sm font-semibold text-white line-clamp-1 group-hover:text-violet-400 transition-colors">
-                  {entry.media?.title}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">{entry.media?.release_year}</span>
-                  {entry.rating && (
-                    <div className="scale-75 origin-right">
-                      <RatingStars value={entry.rating} readOnly />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <DashboardRecentCards entries={recent ?? []} />
         
         {(recent ?? []).length === 0 && (
           <div className="glass-card rounded-2xl p-8 text-center border border-dashed border-white/10">
