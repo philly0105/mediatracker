@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 import {
   Home,
   Search,
@@ -16,7 +17,9 @@ import {
   User,
   Sparkles,
   Calendar,
-  Swords
+  Swords,
+  MoreHorizontal,
+  X
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -25,6 +28,7 @@ interface SidebarProps {
 
 export default function Sidebar({ userEmail }: SidebarProps) {
   const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const navItems = [
     { name: 'Dashboard', href: '/', icon: Home },
@@ -39,6 +43,12 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     { name: 'Lists', href: '/lists', icon: Layers },
     { name: 'Stats', href: '/stats', icon: BarChart3 },
     { name: 'Import', href: '/import', icon: Upload },
+  ]
+
+  const primaryMobileItems = navItems.slice(0, 5)
+  const moreDrawerItems = [
+    ...navItems.slice(5),
+    { name: 'Settings', href: '/settings', icon: Settings },
   ]
 
   return (
@@ -128,9 +138,57 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </div>
       </aside>
 
+      {/* Mobile More Drawer */}
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            <motion.div
+              className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMoreOpen(false)}
+            />
+            <motion.div
+              className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-white/10 rounded-t-2xl px-4 pt-4 pb-safe-bottom select-none"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+            >
+              <div className="flex items-center justify-between mb-4 px-1">
+                <span className="text-sm font-semibold text-zinc-300">More</span>
+                <button onClick={() => setMoreOpen(false)} className="p-1 rounded-lg text-zinc-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-2 pb-4">
+                {moreDrawerItems.map((item) => {
+                  const isActive = pathname === item.href
+                  const Icon = item.icon
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMoreOpen(false)}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl text-[10px] font-medium transition-colors ${
+                        isActive ? 'text-violet-400 bg-white/5' : 'text-zinc-400'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-white/5 px-4 py-2 flex items-center justify-around pb-safe-bottom select-none">
-        {navItems.slice(0, 5).map((item) => {
+        {primaryMobileItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
 
@@ -147,15 +205,15 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             </Link>
           )
         })}
-        <Link
-          href="/settings"
+        <button
+          onClick={() => setMoreOpen(true)}
           className={`relative flex flex-col items-center gap-1 p-2 rounded-xl text-[10px] font-medium transition-colors ${
-            pathname === '/settings' ? 'text-violet-400' : 'text-zinc-400'
+            moreDrawerItems.some(i => i.href === pathname) ? 'text-violet-400' : 'text-zinc-400'
           }`}
         >
-          <Settings className="w-5 h-5" />
-          <span>Settings</span>
-        </Link>
+          <MoreHorizontal className="w-5 h-5" />
+          <span>More</span>
+        </button>
       </nav>
     </>
   )
