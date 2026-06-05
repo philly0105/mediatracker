@@ -363,35 +363,35 @@ export default function MediaInfoModal({
               )}
 
               {/* Watch Providers */}
-              {details?.watch_providers && details.watch_providers.flatrate?.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                      <Tv className="w-3.5 h-3.5" /> Where to Watch
-                    </h3>
-                    {details.watch_providers.link && (
-                      <a href={details.watch_providers.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-violet-400 hover:text-violet-300 hover:underline">
-                        Provided by JustWatch
-                      </a>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {details.watch_providers.flatrate && details.watch_providers.flatrate.length > 0 && (
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-semibold text-zinc-400">Stream</span>
-                        <div className="flex flex-wrap gap-2">
-                          {details.watch_providers.flatrate.map((p: any) => (
-                            <div key={p.provider_id} className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-white/10" title={p.provider_name}>
-                              {p.logo_path ? <img src={p.logo_path} alt={p.provider_name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-0.5">{p.provider_name}</div>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                    <Tv className="w-3.5 h-3.5" /> Where to Watch
+                  </h3>
+                  {details?.watch_providers?.link && (
+                    <a href={details.watch_providers.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-violet-400 hover:text-violet-300 hover:underline">
+                      Provided by JustWatch
+                    </a>
+                  )}
                 </div>
-              )}
+                
+                <div className="space-y-3">
+                  {details?.watch_providers?.flatrate && details.watch_providers.flatrate.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] font-semibold text-zinc-400">Stream</span>
+                      <div className="flex flex-wrap gap-2">
+                        {details.watch_providers.flatrate.map((p: any) => (
+                          <div key={p.provider_id} className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-white/10" title={p.provider_name}>
+                            {p.logo_path ? <img src={p.logo_path} alt={p.provider_name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-0.5">{p.provider_name}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-zinc-400 italic">Not available to stream.</div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
