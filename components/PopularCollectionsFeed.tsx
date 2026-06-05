@@ -12,6 +12,7 @@ export default function PopularCollectionsFeed() {
   const [batch, setBatch] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const seenIds = useRef(new Set<number>())
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   async function fetchBatch(batchNum: number, isLoadMore = false) {
     isLoadMore ? setLoadingMore(true) : setLoading(true)
@@ -33,11 +34,22 @@ export default function PopularCollectionsFeed() {
 
   useEffect(() => { fetchBatch(1) }, [])
 
-  function handleLoadMore() {
-    const next = batch + 1
-    setBatch(next)
-    fetchBatch(next, true)
-  }
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel || !hasMore || loadingMore || loading) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        const next = batch + 1
+        setBatch(next)
+        fetchBatch(next, true)
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [batch, hasMore, loadingMore, loading])
 
   if (loading) {
     return (
@@ -82,15 +94,8 @@ export default function PopularCollectionsFeed() {
       </div>
 
       {hasMore && (
-        <div className="flex justify-center">
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 active:scale-95 transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {loadingMore && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loadingMore ? 'Loading...' : 'Show More'}
-          </button>
+        <div ref={sentinelRef} className="flex justify-center h-8">
+          {loadingMore && <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />}
         </div>
       )}
     </div>
