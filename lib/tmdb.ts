@@ -62,6 +62,19 @@ export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
     }))
 }
 
+export interface TmdbWatchProvider {
+  provider_id: number
+  provider_name: string
+  logo_path: string | null
+}
+
+export interface TmdbWatchProviders {
+  link?: string
+  flatrate?: TmdbWatchProvider[]
+  rent?: TmdbWatchProvider[]
+  buy?: TmdbWatchProvider[]
+}
+
 export interface TmdbFullDetails {
   tmdb_id: number
   type: MediaType
@@ -77,16 +90,25 @@ export interface TmdbFullDetails {
   full_release_date?: string | null
   trailer_url?: string | null
   belongs_to_collection?: { id: number; name: string } | null
+  watch_providers?: TmdbWatchProviders | null
 }
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`
-  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos' }))
+  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos,watch/providers' }))
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
   
   const trailerKey = d.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key
   const trailer_url = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null
+
+  const providersData = d['watch/providers']?.results?.US
+  const watch_providers: TmdbWatchProviders | null = providersData ? {
+    link: providersData.link,
+    flatrate: providersData.flatrate?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
+    rent: providersData.rent?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
+    buy: providersData.buy?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
+  } : null
 
   if (type === 'movie') {
     const director = d.credits?.crew?.find((c: any) => c.job === 'Director')?.name ?? null
@@ -104,6 +126,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       belongs_to_collection: d.belongs_to_collection
         ? { id: d.belongs_to_collection.id, name: d.belongs_to_collection.name }
         : null,
+      watch_providers,
     }
   } else {
     return {
@@ -120,6 +143,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
         .map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count })),
       full_release_date: d.next_episode_to_air?.air_date || null,
       trailer_url,
+      watch_providers,
     }
   }
 }
