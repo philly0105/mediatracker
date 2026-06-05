@@ -14,6 +14,8 @@ export default function PopularCollectionsFeed() {
   const seenIds = useRef(new Set<number>())
   const sentinelRef = useRef<HTMLDivElement>(null)
 
+  const CACHE_KEY = 'popular-collections-cache'
+
   async function fetchBatch(batchNum: number, isLoadMore = false) {
     isLoadMore ? setLoadingMore(true) : setLoading(true)
     try {
@@ -25,14 +27,35 @@ export default function PopularCollectionsFeed() {
         seenIds.current.add(c.id)
         return true
       })
-      if (fresh.length === 0) setHasMore(false)
-      setCollections(prev => isLoadMore ? [...prev, ...fresh] : fresh)
+      const noMore = fresh.length === 0
+      if (noMore) setHasMore(false)
+      setCollections(prev => {
+        const next = isLoadMore ? [...prev, ...fresh] : fresh
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ collections: next, batch: batchNum, hasMore: !noMore }))
+        } catch {}
+        return next
+      })
     } finally {
       isLoadMore ? setLoadingMore(false) : setLoading(false)
     }
   }
 
-  useEffect(() => { fetchBatch(1) }, [])
+  useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { collections: c, batch: b, hasMore: hm } = JSON.parse(cached)
+        c.forEach((item: TmdbCollectionSummary) => seenIds.current.add(item.id))
+        setCollections(c)
+        setBatch(b)
+        setHasMore(hm)
+        setLoading(false)
+        return
+      }
+    } catch {}
+    fetchBatch(1)
+  }, [])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
