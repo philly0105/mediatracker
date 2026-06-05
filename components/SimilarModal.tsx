@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Star, ChevronDown } from 'lucide-react'
+import { X, Star, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 
@@ -20,6 +20,8 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const [hasMore, setHasMore] = useState(true)
   const nextBatch = useRef(2)
   const seenIds = useRef(new Set<number>())
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
@@ -56,6 +58,26 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
     }
   }, [tmdbId, type])
 
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    const container = scrollRef.current
+    if (!sentinel || !container || loading) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || loadingMore) return
+        if (visibleCount < items.length) {
+          setVisibleCount(c => c + 12)
+        } else if (hasMore) {
+          fetchMore()
+        }
+      },
+      { root: container, threshold: 0.1 }
+    )
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [loading, loadingMore, visibleCount, items.length, hasMore, fetchMore])
+
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md" onClick={onClose}>
@@ -78,7 +100,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           </button>
         </div>
 
-        <div className="overflow-y-auto p-4 scrollbar-none">
+        <div ref={scrollRef} className="overflow-y-auto p-4 scrollbar-none">
           {loading ? (
             <div className="grid grid-cols-4 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -128,20 +150,9 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
             </div>
           )}
           {!loading && (visibleCount < items.length || hasMore) && (
-            <button
-              onClick={() => {
-                if (visibleCount < items.length) {
-                  setVisibleCount(c => c + 12)
-                } else {
-                  fetchMore()
-                }
-              }}
-              disabled={loadingMore}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronDown className={`w-3.5 h-3.5 ${loadingMore ? 'animate-bounce' : ''}`} />
-              {loadingMore ? 'Loading…' : 'Show More'}
-            </button>
+            <div ref={sentinelRef} className="mt-4 h-8 flex items-center justify-center">
+              {loadingMore && <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />}
+            </div>
           )}
         </div>
       </motion.div>
