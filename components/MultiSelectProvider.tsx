@@ -1,6 +1,7 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Plus, X, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
@@ -18,7 +19,12 @@ const Context = createContext<MultiSelectContextType | null>(null)
 export function MultiSelectProvider({ children }: { children: ReactNode }) {
   const [selectedItems, setSelectedItems] = useState<Map<string, TmdbSearchResult>>(new Map())
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const isSelectMode = selectedItems.size > 0
 
@@ -76,8 +82,9 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       {children}
       
       {/* Floating Action Bar */}
-      <AnimatePresence>
-        {isSelectMode && (
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isSelectMode && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -124,7 +131,9 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             </button>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </Context.Provider>
   )
 }
