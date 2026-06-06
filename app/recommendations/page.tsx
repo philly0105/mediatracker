@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -37,6 +37,8 @@ export default function RecommendationsPage() {
   const [activeGenre, setActiveGenre] = useState('All')
   const [selectedItem, setSelectedItem] = useState<Recommendation | null>(null)
   const [activeType, setActiveType] = useState<'all' | 'movie' | 'show'>('all')
+
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   async function loadRecommendations() {
     try {
@@ -128,6 +130,23 @@ export default function RecommendationsPage() {
     : typeFilteredItems.filter((item) => (item.genres ?? []).includes(activeGenre))
 
   const visibleItems = filteredItems.slice(0, visibleCount)
+
+  // Infinite Scroll logic
+  useEffect(() => {
+    if (!loadMoreRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < filteredItems.length) {
+          setVisibleCount((prev) => prev + 10)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [visibleCount, filteredItems.length])
 
   return (
     <div className="space-y-10 pb-12">
@@ -355,15 +374,10 @@ export default function RecommendationsPage() {
             </motion.div>
           )}
 
-          {/* Load More Button */}
+          {/* Infinite Scroll Trigger */}
           {visibleCount < filteredItems.length && (
-            <div className="flex justify-center pt-4">
-              <button
-                onClick={() => setVisibleCount((prev) => prev + 10)}
-                className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-xs transition-all duration-300 hover:bg-white/10 hover:text-white hover:border-white/20 active:scale-95 shadow-md hover:shadow-violet-500/[0.03]"
-              >
-                Load More
-              </button>
+            <div ref={loadMoreRef} className="flex justify-center pt-8 pb-4">
+              <Loader2 className="w-6 h-6 text-violet-500/50 animate-spin" />
             </div>
           )}
         </div>
