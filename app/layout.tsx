@@ -3,6 +3,7 @@ import { Outfit } from 'next/font/google'
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
+import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 
 const outfit = Outfit({ subsets: ['latin'] })
 
@@ -41,7 +42,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <main className={`flex-1 w-full max-w-6xl mx-auto px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
             user ? 'md:pl-72 pb-24 md:pb-8' : 'pb-8'
           }`}>
-            {children}
+            <MultiSelectProvider>
+              {children}
+            </MultiSelectProvider>
           </main>
         </div>
       </body>

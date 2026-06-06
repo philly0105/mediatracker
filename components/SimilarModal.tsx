@@ -5,6 +5,7 @@ import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
+import SelectableOverlay from './SelectableOverlay'
 
 interface Props {
   tmdbId: number
@@ -147,10 +148,10 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           ) : (
             <div className="grid grid-cols-4 gap-3">
               {items.slice(0, visibleCount).map(item => (
+                <SelectableOverlay key={item.tmdb_id} item={item}>
                 <button
-                  key={item.tmdb_id}
                   onClick={() => setSelected(item)}
-                  className="text-left space-y-1.5 group"
+                  className="text-left space-y-1.5 group w-full h-full"
                 >
                   <div className="relative">
                     {item.poster_url ? (
@@ -193,6 +194,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
                     )}
                   </div>
                 </button>
+                </SelectableOverlay>
               ))}
             </div>
           )}

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import RatingStars from './RatingStars'
 import MediaInfoModal from './MediaInfoModal'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
+import SelectableOverlay from './SelectableOverlay'
 
 interface Props {
   entries: WatchEntry[]
@@ -30,10 +31,10 @@ export default function DashboardRecentCards({ entries }: Props) {
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {entries.map((entry) => (
+          <SelectableOverlay key={entry.id} item={toResult(entry)}>
           <button
-            key={entry.id}
             onClick={() => setSelected(toResult(entry))}
-            className="glass-card rounded-2xl overflow-hidden group hover:scale-[1.02] text-left transition-transform duration-200"
+            className="glass-card rounded-2xl overflow-hidden group hover:scale-[1.02] text-left transition-transform duration-200 h-full w-full"
           >
             <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900 border-b border-white/5">
               {entry.media?.poster_url ? (
@@ -67,6 +68,7 @@ export default function DashboardRecentCards({ entries }: Props) {
               </div>
             </div>
           </button>
+          </SelectableOverlay>
         ))}
       </div>
 

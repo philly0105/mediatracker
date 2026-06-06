@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import type { TmdbSearchResult } from '@/types'
 import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv, Plus, Check, Loader2 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import SelectableOverlay from '@/components/SelectableOverlay'
 
 export default function PersonPage() {
   const params = useParams()
@@ -59,8 +60,8 @@ export default function PersonPage() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
+          <SelectableOverlay key={`${item.tmdb_id}-${item.type}`} item={item}>
           <div
-            key={`${item.tmdb_id}-${item.type}`}
             onClick={() => setSelectedItem(item)}
             className="glass-card rounded-2xl p-3 flex gap-3 cursor-pointer hover:border-violet-500/30 transition-colors group"
           >
@@ -102,6 +103,7 @@ export default function PersonPage() {
               </div>
             </div>
           </div>
+          </SelectableOverlay>
         ))}
         {items.length === 0 && (
           <p className="text-zinc-500 text-sm">No items found.</p>

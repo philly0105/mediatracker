@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Sparkles, Inbox, Film, Tv, Calendar, Loader2, Trash2 } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority, TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import SelectableOverlay from '@/components/SelectableOverlay'
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -238,10 +239,20 @@ export default function WatchlistPage() {
               <AnimatePresence mode="popLayout">
                 {grouped[priority].map((item) => {
                   const isActioning = actioningId === item.id
+                  const selectableItem = item.media ? {
+                    tmdb_id: item.media.tmdb_id,
+                    type: item.media.type as 'movie' | 'show',
+                    title: item.media.title,
+                    overview: item.media.overview || '',
+                    poster_url: item.media.poster_url,
+                    release_year: item.media.release_year,
+                    genres: item.media.genres,
+                  } : null;
+
                   return (
+                    <SelectableOverlay key={item.id} item={selectableItem as TmdbSearchResult}>
                     <motion.div
                       layout
-                      key={item.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
@@ -343,6 +354,7 @@ export default function WatchlistPage() {
                         )}
                       </div>
                     </motion.div>
+                    </SelectableOverlay>
                   )
                 })}
               </AnimatePresence>

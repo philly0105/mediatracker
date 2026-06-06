@@ -14,6 +14,7 @@ import {
 import Link from 'next/link'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import type { TmdbSearchResult } from '@/types'
+import SelectableOverlay from '@/components/SelectableOverlay'
 
 interface UpcomingRelease {
   tmdb_id: number
@@ -165,6 +166,7 @@ export default function CalendarPage() {
 
                     {/* Card Container */}
                     <div className="w-full pl-12 md:pl-0 md:w-[calc(50%-2rem)]">
+                      <SelectableOverlay item={item as unknown as TmdbSearchResult}>
                       <div
                         onClick={() => setSelectedItem(item as unknown as TmdbSearchResult)}
                         className={`glass-card rounded-2xl p-3 flex gap-4 transition-colors cursor-pointer ${
@@ -210,6 +212,7 @@ export default function CalendarPage() {
                           </div>
                         </div>
                       </div>
+                      </SelectableOverlay>
                     </div>
                   </motion.div>
                 ))}

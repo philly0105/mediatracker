@@ -11,10 +11,10 @@ import {
   Calendar,
   AlertCircle,
   Plus,
-  TrendingUp,
   Star
 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import SelectableOverlay from '@/components/SelectableOverlay'
 
 interface Recommendation {
   tmdb_id: number
@@ -277,8 +277,8 @@ export default function RecommendationsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
                 {visibleItems.map((item) => (
+                  <SelectableOverlay key={item.tmdb_id} item={item}>
                   <motion.div
-                    key={item.tmdb_id}
                     layout="position"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -366,6 +366,7 @@ export default function RecommendationsPage() {
                       </div>
                     </div>
                   </motion.div>
+                  </SelectableOverlay>
                 ))}
               </AnimatePresence>
             </div>

@@ -6,6 +6,7 @@ import { CheckCircle2, BookmarkCheck } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import MediaInfoModal from './MediaInfoModal'
 import type { TmdbCollectionPart, TmdbSearchResult } from '@/types'
+import SelectableOverlay from './SelectableOverlay'
 
 interface Props {
   part: TmdbCollectionPart
@@ -28,6 +29,7 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
 
   return (
     <>
+      <SelectableOverlay item={item}>
       <motion.div
         whileHover={{ scale: 1.015, y: -2 }}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -67,6 +69,7 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
           )}
         </div>
       </motion.div>
+      </SelectableOverlay>
 
       {showInfo && createPortal(
         <MediaInfoModal

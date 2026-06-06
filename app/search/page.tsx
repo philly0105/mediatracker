@@ -4,6 +4,7 @@ import type { TmdbSearchResult } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { CheckCircle2, Bookmark } from 'lucide-react'
+import SelectableOverlay from '@/components/SelectableOverlay'
 
 const glassCard = {
   background: 'rgba(255,255,255,0.04)',
@@ -83,7 +84,8 @@ export default function SearchPage() {
           {searchLoading && <p className="text-zinc-500 text-sm px-1">Searching...</p>}
           <div className="space-y-2">
             {results.map(r => (
-              <button key={r.tmdb_id} onClick={() => setSelected(r)}
+              <SelectableOverlay key={r.tmdb_id} item={r}>
+              <button onClick={() => setSelected(r)}
                 className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-colors backdrop-blur-md"
                 style={glassCard}
                 onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)')}
@@ -109,6 +111,7 @@ export default function SearchPage() {
                   {r.overview && <p className="text-xs text-zinc-500 line-clamp-2 mt-1">{r.overview}</p>}
                 </div>
               </button>
+              </SelectableOverlay>
             ))}
           </div>
           {selected && (

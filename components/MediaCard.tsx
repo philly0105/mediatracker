@@ -9,6 +9,7 @@ import EditEntryModal from './EditEntryModal'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
 import { Calendar, Play, FileText, Pencil, Trash2, Loader2, Star } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
+import SelectableOverlay from './SelectableOverlay'
 
 interface Props {
   entry: WatchEntry
@@ -75,12 +76,13 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
   }
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.015, y: -2 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      className="glass-card rounded-2xl overflow-hidden flex gap-4 p-3.5 backdrop-blur-md select-none cursor-pointer"
-      onClick={() => { if (!showInfo) setShowInfo(true) }}
-    >
+    <SelectableOverlay item={mediaAsResult}>
+      <motion.div
+        whileHover={{ scale: 1.015, y: -2 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className="glass-card rounded-2xl overflow-hidden flex gap-4 p-3.5 backdrop-blur-md select-none cursor-pointer h-full"
+        onClick={() => { if (!showInfo) setShowInfo(true) }}
+      >
       {media.poster_url ? (
         <img
           src={media.poster_url}
@@ -192,6 +194,7 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
         document.body
       )}
     </motion.div>
+    </SelectableOverlay>
   )
 }
 
