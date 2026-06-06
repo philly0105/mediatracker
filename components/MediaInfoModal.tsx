@@ -96,8 +96,7 @@ export default function MediaInfoModal({
       setActioning('watchlist')
       await onAddToWatchlist()
       if (details) setDetails({ ...details, isWatchlisted: true })
-      // Keep modal open or close? I'll close it to match previous behavior, but actually we can keep it open if it's a toggle
-      onClose()
+      // Modal stays open after action
     } catch (err) {
       console.error(err)
     } finally {
@@ -110,7 +109,7 @@ export default function MediaInfoModal({
       setActioning('watched')
       await onMarkAsWatched()
       if (details) setDetails({ ...details, isWatched: true })
-      onClose()
+      // Modal stays open after action
     } catch (err) {
       console.error(err)
     } finally {
@@ -135,7 +134,7 @@ export default function MediaInfoModal({
     try {
       setActioning('remove')
       await onRemoveFromWatchlist()
-      onClose()
+      // Modal stays open after action
     } catch (err) {
       console.error(err)
     } finally {

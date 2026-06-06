@@ -179,7 +179,6 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, priority: 'want_to_watch' }),
             })
-            setShowInfo(false)
           }}
           onMarkAsWatched={async () => {
             await fetch('/api/watch', {
@@ -188,7 +187,6 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
               body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, watched_at: new Date().toISOString().split('T')[0] }),
             })
             router.refresh()
-            setShowInfo(false)
           }}
         />,
         document.body

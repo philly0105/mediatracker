@@ -216,7 +216,6 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
               body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
             })
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
-            setSelected(null)
           }}
           onMarkAsWatched={async () => {
             await fetch('/api/watch', {
@@ -225,7 +224,6 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
               body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
             })
             setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
-            setSelected(null)
           }}
         />
       )}
