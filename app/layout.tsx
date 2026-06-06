@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
           {user && <Sidebar userEmail={user.email} />}
           
-          <main className={`flex-1 w-full max-w-6xl mx-auto px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
+          <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
             user ? 'md:pl-72 pb-24 md:pb-8' : 'pb-8'
           }`}>
             <MultiSelectProvider>
