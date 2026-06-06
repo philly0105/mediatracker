@@ -64,5 +64,4 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
       )}
     </div>
   )
-  )
 }
