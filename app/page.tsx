@@ -40,38 +40,38 @@ export default async function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Stat 1: Watched this Year */}
-        <div className="bg-[#18181C] rounded-[24px] p-6 relative border border-white/5 flex flex-col gap-6">
+        <Link href="/stats" className="block bg-[#18181C] rounded-[24px] p-6 relative border border-white/5 hover:border-white/20 transition-colors flex flex-col gap-6 cursor-pointer group">
           <div className="flex items-center justify-between">
-            <Calendar className="w-5 h-5 text-zinc-400" />
+            <Calendar className="w-5 h-5 text-zinc-400 group-hover:text-white transition-colors" />
             <span className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">Year {new Date().getFullYear()}</span>
           </div>
           <div>
-            <p className="text-5xl font-extrabold text-[#F97316] tracking-tight">
+            <p className="text-5xl font-extrabold text-[#F97316] tracking-tight group-hover:scale-105 transform origin-left transition-transform">
               {thisYearEntries?.length ?? 0}
             </p>
             <p className="text-xs font-semibold text-zinc-400 mt-2">Watched this year</p>
           </div>
-        </div>
+        </Link>
 
         {/* Stat 2: Must Watch */}
-        <div className="bg-[#18181C] rounded-[24px] p-6 relative border border-white/5 flex flex-col gap-6">
+        <Link href="/watchlist" className="block bg-[#18181C] rounded-[24px] p-6 relative border border-white/5 hover:border-white/20 transition-colors flex flex-col gap-6 cursor-pointer group">
           <div className="flex items-center justify-between">
-            <Flame className="w-5 h-5 text-[#8B5CF6]" />
+            <Flame className="w-5 h-5 text-[#8B5CF6] group-hover:text-[#A78BFA] transition-colors" />
             <span className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase">Wishlist</span>
           </div>
           <div>
-            <p className="text-5xl font-extrabold text-white tracking-tight">
+            <p className="text-5xl font-extrabold text-white tracking-tight group-hover:scale-105 transform origin-left transition-transform">
               {priorityCounts.must_watch}
             </p>
             <p className="text-xs font-semibold text-zinc-400 mt-2">Must Watch titles</p>
           </div>
-        </div>
+        </Link>
 
         {/* Stat 3: Currently Watching */}
-        <div className="bg-[#18181C] rounded-[24px] p-6 relative border border-white/5 flex flex-col gap-6">
+        <Link href={currentShow?.media ? `/show/${currentShow.media_id}` : '/shows'} className="block bg-[#18181C] rounded-[24px] p-6 relative border border-white/5 hover:border-white/20 transition-colors flex flex-col gap-6 cursor-pointer group">
           <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5">
-              <Play className="w-3.5 h-3.5 text-zinc-300 fill-zinc-300 ml-0.5" />
+            <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-white/5 group-hover:bg-white/10 transition-colors">
+              <Play className="w-3.5 h-3.5 text-zinc-300 fill-zinc-300 ml-0.5 group-hover:text-white group-hover:fill-white transition-colors" />
             </div>
             <span className="text-[9px] font-bold bg-[#F43F5E]/15 text-[#F43F5E] px-2.5 py-1 rounded uppercase tracking-widest">
               Live Now
@@ -80,22 +80,19 @@ export default async function DashboardPage() {
           <div>
             {currentShow?.media ? (
               <>
-                <Link
-                  href={`/show/${currentShow.media_id}`}
-                  className="font-bold text-white hover:text-rose-400 transition-colors line-clamp-1 text-xl tracking-tight"
-                >
+                <span className="font-bold text-white group-hover:text-rose-400 transition-colors line-clamp-1 text-xl tracking-tight block">
                   {(currentShow.media as any).title}
-                </Link>
+                </span>
                 <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-zinc-500">
                   <Clock className="w-3.5 h-3.5" />
                   <span>Updated today</span>
                 </div>
               </>
             ) : (
-              <p className="text-zinc-500 text-sm mt-2 italic">No shows in progress</p>
+              <p className="text-zinc-500 text-sm mt-2 italic group-hover:text-zinc-300 transition-colors">No shows in progress</p>
             )}
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Recently Watched */}
