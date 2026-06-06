@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Star, Loader2 } from 'lucide-react'
+import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 
@@ -22,6 +23,37 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const seenIds = useRef(new Set<number>())
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+
+  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
+  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    async function fetchLibraryIds() {
+      const supabase = createClient()
+      const [watchedRes, watchlistRes] = await Promise.all([
+        supabase.from('watch_entries').select('media!inner(tmdb_id)'),
+        supabase.from('watchlist_items').select('media!inner(tmdb_id)')
+      ])
+      
+      if (watchedRes.data) {
+        setWatchedIds(new Set(
+          watchedRes.data.map((row: any) => {
+            const m = Array.isArray(row.media) ? row.media[0] : row.media
+            return m?.tmdb_id
+          }).filter(Boolean)
+        ))
+      }
+      if (watchlistRes.data) {
+        setWatchlistIds(new Set(
+          watchlistRes.data.map((row: any) => {
+            const m = Array.isArray(row.media) ? row.media[0] : row.media
+            return m?.tmdb_id
+          }).filter(Boolean)
+        ))
+      }
+    }
+    fetchLibraryIds()
+  }, [])
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
@@ -120,17 +152,32 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
                   onClick={() => setSelected(item)}
                   className="text-left space-y-1.5 group"
                 >
-                  {item.poster_url ? (
-                    <img
-                      src={item.poster_url}
-                      alt={item.title}
-                      className="w-full aspect-[2/3] rounded-xl object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[2/3] rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
-                      No Poster
+                  <div className="relative">
+                    {item.poster_url ? (
+                      <img
+                        src={item.poster_url}
+                        alt={item.title}
+                        className="w-full aspect-[2/3] rounded-xl object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
+                      />
+                    ) : (
+                      <div className="w-full aspect-[2/3] rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
+                        No Poster
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
+                      {watchedIds.has(item.tmdb_id) && (
+                        <div className="bg-emerald-500/90 backdrop-blur-md p-1 rounded-lg shadow-md border border-emerald-400/30">
+                          <CheckCircle2 className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                      {!watchedIds.has(item.tmdb_id) && watchlistIds.has(item.tmdb_id) && (
+                        <div className="bg-violet-500/90 backdrop-blur-md p-1 rounded-lg shadow-md border border-violet-400/30">
+                          <Bookmark className="w-3 h-3 text-white" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                   <p className="text-[11px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-rose-400 transition-colors">
                     {item.title}
                   </p>
@@ -168,6 +215,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
             })
+            setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
             setSelected(null)
           }}
           onMarkAsWatched={async () => {
@@ -176,6 +224,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
             })
+            setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
             setSelected(null)
           }}
         />
