@@ -7,13 +7,36 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data, error } = await supabase
+  const { searchParams } = new URL(request.url)
+  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  const limit = parseInt(searchParams.get('limit') ?? '24', 10)
+  const type = searchParams.get('type')
+  const genre = searchParams.get('genre')
+  const priority = searchParams.get('priority')
+  
+  const offset = (page - 1) * limit
+
+  let query = supabase
     .from('watchlist_items')
-    .select('*, media(*)')
+    .select('*, media!inner(*)', { count: 'exact' })
+    .eq('user_id', user.id)
+
+  if (type && type !== 'all') {
+    query = query.eq('media.type', type)
+  }
+  if (genre && genre !== 'All') {
+    query = query.contains('media.genres', [genre])
+  }
+  if (priority) {
+    query = query.eq('priority', priority)
+  }
+
+  const { data, error, count } = await query
     .order('added_at', { ascending: false })
+    .range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data }, { status: 200 })
+  return NextResponse.json({ items: data, total: count ?? 0, page, limit }, { status: 200 })
 }
 
 export async function POST(request: NextRequest) {

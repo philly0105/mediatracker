@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Flame, Sparkles, Inbox, Film, Tv, Calendar, Loader2, Trash2 } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2 } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority, TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -15,44 +15,155 @@ const PRIORITY_LABELS = {
 const PRIORITY_ORDER: Array<keyof typeof PRIORITY_LABELS> = ['must_watch', 'want_to_watch', 'someday']
 
 const PRIORITY_CONFIG = {
-  must_watch: {
-    color: 'text-rose-400 border-rose-500/20 bg-rose-500/5',
-    icon: Flame,
-  },
-  want_to_watch: {
-    color: 'text-orange-400 border-orange-500/20 bg-orange-500/5',
-    icon: Sparkles,
-  },
-  someday: {
-    color: 'text-zinc-400 border-zinc-800 bg-zinc-800/10',
-    icon: Inbox,
-  },
+  must_watch: { color: 'text-rose-400 border-rose-500/20 bg-rose-500/5', icon: Flame },
+  want_to_watch: { color: 'text-orange-400 border-orange-500/20 bg-orange-500/5', icon: Sparkles },
+  someday: { color: 'text-zinc-400 border-zinc-800 bg-zinc-800/10', icon: Inbox },
 }
 
+const GENRES = [
+  "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary", "Drama", 
+  "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", 
+  "Science Fiction", "TV Movie", "Thriller", "War", "Western",
+  "Action & Adventure", "Kids", "News", "Reality", "Sci-Fi & Fantasy", "Soap", "Talk", "War & Politics"
+]
+
 export default function WatchlistPage() {
+  const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'show'>('all')
+  const [genreFilter, setGenreFilter] = useState<string>('All')
+
+  return (
+    <div className="space-y-8">
+      {/* Header & Filters */}
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between sticky top-0 z-40 bg-[#09090B]/95 backdrop-blur-xl pt-2 pb-6 border-b border-white/[0.04]">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+            Watchlist
+          </h1>
+          <p className="text-sm text-zinc-400">
+            Prioritize movies and shows you want to watch next.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as any)}
+            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[120px]"
+          >
+            <option value="all">All Types</option>
+            <option value="movie">Movies Only</option>
+            <option value="show">TV Shows Only</option>
+          </select>
+
+          <select
+            value={genreFilter}
+            onChange={(e) => setGenreFilter(e.target.value)}
+            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[140px]"
+          >
+            <option value="All">All Genres</option>
+            {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-12 pb-12">
+        {PRIORITY_ORDER.map(priority => (
+          <WatchlistSection 
+            key={priority} 
+            priority={priority} 
+            typeFilter={typeFilter} 
+            genreFilter={genreFilter} 
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function WatchlistSection({ 
+  priority, 
+  typeFilter, 
+  genreFilter 
+}: { 
+  priority: WatchlistPriority; 
+  typeFilter: 'all' | 'movie' | 'show'; 
+  genreFilter: string;
+}) {
   const [items, setItems] = useState<WatchlistItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  
   const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
   const [actioningId, setActioningId] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchWatchlist() {
-      try {
-        setLoading(true)
-        const res = await fetch('/api/watchlist')
-        if (!res.ok) throw new Error('Failed to load watchlist')
-        const data = await res.json()
-        setItems(data.items || [])
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchWatchlist()
-  }, [])
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const config = PRIORITY_CONFIG[priority]
+  const Icon = config.icon
 
+  useEffect(() => {
+    // Reset state when filters change
+    setItems([])
+    setPage(1)
+    setHasMore(true)
+    fetchPage(1, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priority, typeFilter, genreFilter])
+
+  async function fetchPage(targetPage: number, isInitial = false) {
+    if (isInitial) setLoading(true)
+    else setLoadingMore(true)
+
+    try {
+      const params = new URLSearchParams()
+      params.set('priority', priority)
+      params.set('page', targetPage.toString())
+      params.set('limit', '24')
+      if (typeFilter !== 'all') params.set('type', typeFilter)
+      if (genreFilter !== 'All') params.set('genre', genreFilter)
+
+      const res = await fetch(`/api/watchlist?${params.toString()}`)
+      if (!res.ok) throw new Error('Failed to load')
+      const data = await res.json()
+
+      if (isInitial) {
+        setItems(data.items || [])
+      } else {
+        setItems(prev => [...prev, ...(data.items || [])])
+      }
+      
+      setTotal(data.total)
+      setHasMore(data.items.length === 24)
+    } catch (err) {
+      console.error(err)
+      setHasMore(false)
+    } finally {
+      if (isInitial) setLoading(false)
+      else setLoadingMore(false)
+    }
+  }
+
+  // Infinite Scroll Observer
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel || loading || !hasMore || items.length === 0) return
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !loadingMore) {
+        const nextPage = page + 1
+        setPage(nextPage)
+        fetchPage(nextPage)
+      }
+    }, { rootMargin: '200px' })
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loadingMore, hasMore, page, items.length])
+
+  // Actions
   const handleUpdatePriority = async (itemId: string, newPriority: WatchlistPriority) => {
     try {
       setActioningId(itemId)
@@ -61,12 +172,19 @@ export default function WatchlistPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: itemId, priority: newPriority }),
       })
-      if (!res.ok) throw new Error('Failed to update priority')
+      if (!res.ok) throw new Error('Failed to update')
       
-      setItems(prev => prev.map(item => item.id === itemId ? { ...item, priority: newPriority } : item))
-      setSelectedItem(prev => (prev && prev.id === itemId) ? { ...prev, priority: newPriority } : prev)
-    } catch (err: any) {
-      setError(err.message)
+      // Remove from this section
+      setItems(prev => prev.filter(i => i.id !== itemId))
+      setTotal(prev => prev - 1)
+      if (selectedItem?.id === itemId) setSelectedItem(null)
+
+      // The destination section won't update automatically without global state,
+      // but triggering a full re-fetch or using context is overkill for now.
+      // Easiest robust fix: wait 300ms and refresh the page to sync state across sections.
+      setTimeout(() => window.location.reload(), 300)
+    } catch (err) {
+      console.error(err)
     } finally {
       setActioningId(null)
     }
@@ -75,19 +193,16 @@ export default function WatchlistPage() {
   const handleRemove = async (itemId: string) => {
     try {
       setActioningId(itemId)
-      const res = await fetch('/api/watchlist', {
+      await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: itemId }),
       })
-      if (!res.ok) throw new Error('Failed to remove item')
-      
-      setItems(prev => prev.filter(item => item.id !== itemId))
-      if (selectedItem?.id === itemId) {
-        setSelectedItem(null)
-      }
-    } catch (err: any) {
-      setError(err.message)
+      setItems(prev => prev.filter(i => i.id !== itemId))
+      setTotal(prev => prev - 1)
+      if (selectedItem?.id === itemId) setSelectedItem(null)
+    } catch (err) {
+      console.error(err)
     } finally {
       setActioningId(null)
     }
@@ -97,7 +212,7 @@ export default function WatchlistPage() {
     if (!item.media) return
     try {
       setActioningId(item.id)
-      const watchRes = await fetch('/api/watch', {
+      await fetch('/api/watch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,268 +221,174 @@ export default function WatchlistPage() {
           watched_at: new Date().toISOString().split('T')[0],
         }),
       })
-      if (!watchRes.ok) throw new Error('Failed to log watch history')
-
-      const deleteRes = await fetch('/api/watchlist', {
+      await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: item.id }),
       })
-      if (!deleteRes.ok) throw new Error('Failed to remove from watchlist')
-
       setItems(prev => prev.filter(i => i.id !== item.id))
-      if (selectedItem?.id === item.id) {
-        setSelectedItem(null)
-      }
-    } catch (err: any) {
-      setError(err.message)
+      setTotal(prev => prev - 1)
+      if (selectedItem?.id === item.id) setSelectedItem(null)
+    } catch (err) {
+      console.error(err)
     } finally {
       setActioningId(null)
     }
   }
 
-  const grouped = useMemo(() => {
-    return PRIORITY_ORDER.reduce((acc, p) => {
-      acc[p] = items.filter((i) => i.priority === p)
-      return acc
-    }, {} as Record<WatchlistPriority, WatchlistItem[]>)
-  }, [items])
+  const modalItem = selectedItem?.media ? {
+    tmdb_id: selectedItem.media.tmdb_id,
+    type: selectedItem.media.type as 'movie' | 'show',
+    title: selectedItem.media.title,
+    overview: selectedItem.media.overview || '',
+    poster_url: selectedItem.media.poster_url,
+    release_year: selectedItem.media.release_year,
+    genres: selectedItem.media.genres,
+  } as TmdbSearchResult : null;
 
-  const modalItem = useMemo(() => {
-    if (!selectedItem || !selectedItem.media) return null
-    return {
-      tmdb_id: selectedItem.media.tmdb_id,
-      type: selectedItem.media.type,
-      title: selectedItem.media.title,
-      overview: selectedItem.media.overview || '',
-      poster_url: selectedItem.media.poster_url,
-      release_year: selectedItem.media.release_year,
-      genres: selectedItem.media.genres,
-    } as TmdbSearchResult
-  }, [selectedItem])
-
-  if (loading) {
-    return (
-      <div className="space-y-12">
-        {/* Header */}
-        <div className="flex flex-col gap-1.5 animate-pulse">
-          <div className="h-9 bg-white/10 rounded-lg w-48" />
-          <div className="h-4 bg-white/5 rounded w-72 mt-1" />
-        </div>
-
-        {/* Lists per Priority */}
-        {PRIORITY_ORDER.map((priority) => (
-          <div key={priority} className="space-y-5">
-            <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04] animate-pulse">
-              <div className="w-7 h-7 rounded-lg bg-white/5" />
-              <div className="h-5 bg-white/10 rounded w-32" />
-              <div className="w-6 h-4 rounded-full bg-white/5" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[0, 1, 2].map((j) => (
-                <div key={j} className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md animate-pulse border border-white/5">
-                  <div className="w-14 h-20 rounded-xl bg-white/5 shrink-0" />
-                  <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
-                    <div className="space-y-2">
-                      <div className="h-4 bg-white/10 rounded w-2/3" />
-                      <div className="h-3 bg-white/5 rounded w-1/4" />
-                    </div>
-                    <div className="h-3.5 bg-white/5 rounded w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-full text-red-400 animate-pulse">
-          <Inbox className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl font-bold text-white">Something went wrong</h2>
-        <p className="text-sm text-zinc-400 max-w-md">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 active:scale-95 transition-all text-sm font-semibold"
-        >
-          Retry
-        </button>
-      </div>
-    )
+  // Don't render anything if not loading and 0 items (unless it's Must Watch and no filters to avoid totally empty page look)
+  if (!loading && items.length === 0 && (typeFilter !== 'all' || genreFilter !== 'All' || priority !== 'must_watch')) {
+    if (typeFilter === 'all' && genreFilter === 'All') return null; // Fully empty queue naturally -> hide it
   }
 
   return (
-    <div className="space-y-12">
-      {/* Header */}
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-          Watchlist
-        </h1>
-        <p className="text-sm text-zinc-400">
-          Prioritize movies and shows you want to watch next.
-        </p>
+    <div className="space-y-5">
+      {/* Group Header */}
+      <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+        <div className={`p-1.5 rounded-lg border ${config.color.split(' ')[1]} ${config.color.split(' ')[2]}`}>
+          <Icon className={`w-4 h-4 ${config.color.split(' ')[0]}`} />
+        </div>
+        <h2 className="text-lg font-bold tracking-tight text-white">
+          {PRIORITY_LABELS[priority]}
+        </h2>
+        <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+          {loading ? '...' : total}
+        </span>
       </div>
 
-      {/* Lists per Priority */}
-      {PRIORITY_ORDER.map(priority => {
-        const config = PRIORITY_CONFIG[priority]
-        const Icon = config.icon
-        const count = grouped[priority].length
-
-        return (
-          <div key={priority} className="space-y-5">
-            {/* Group Header */}
-            <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
-              <div className={`p-1.5 rounded-lg border ${config.color.split(' ')[1]} ${config.color.split(' ')[2]}`}>
-                <Icon className={`w-4 h-4 ${config.color.split(' ')[0]}`} />
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((j) => (
+            <div key={j} className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md animate-pulse border border-white/5">
+              <div className="w-14 h-20 rounded-xl bg-white/5 shrink-0" />
+              <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
+                <div className="space-y-2">
+                  <div className="h-4 bg-white/10 rounded w-2/3" />
+                  <div className="h-3 bg-white/5 rounded w-1/4" />
+                </div>
+                <div className="h-3.5 bg-white/5 rounded w-1/3" />
               </div>
-              <h2 className="text-lg font-bold tracking-tight text-white">
-                {PRIORITY_LABELS[priority]}
-              </h2>
-              <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
-                {count}
-              </span>
             </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-zinc-600 text-xs italic pl-1 py-2">No matching items.</p>
+      ) : (
+        <>
+          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <AnimatePresence mode="popLayout">
+              {items.map((item) => {
+                const isActioning = actioningId === item.id
+                const selectableItem = item.media ? {
+                  tmdb_id: item.media.tmdb_id,
+                  type: item.media.type as 'movie' | 'show',
+                  title: item.media.title,
+                  overview: item.media.overview || '',
+                  poster_url: item.media.poster_url,
+                  release_year: item.media.release_year,
+                  genres: item.media.genres,
+                } : null;
 
-            {/* Grid */}
-            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence mode="popLayout">
-                {grouped[priority].map((item) => {
-                  const isActioning = actioningId === item.id
-                  const selectableItem = item.media ? {
-                    tmdb_id: item.media.tmdb_id,
-                    type: item.media.type as 'movie' | 'show',
-                    title: item.media.title,
-                    overview: item.media.overview || '',
-                    poster_url: item.media.poster_url,
-                    release_year: item.media.release_year,
-                    genres: item.media.genres,
-                  } : null;
-
-                  return (
-                    <SelectableOverlay key={item.id} item={selectableItem as TmdbSearchResult}>
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => setSelectedItem(item)}
-                      className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md select-none group hover:scale-[1.015] hover:border-white/10 transition-all duration-300 cursor-pointer relative"
-                    >
-                      {item.media?.poster_url ? (
-                        <img
-                          src={item.media.poster_url}
-                          alt={item.media.title}
-                          className="w-14 h-20 rounded-xl object-cover shadow-md shadow-black/20 border border-white/5 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-14 h-20 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                          No Poster
-                        </div>
-                      )}
-                      <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5 pr-20">
-                        <div>
-                          <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
-                            {item.media?.title}
-                          </p>
-                          <p className="text-xs text-zinc-500 mt-0.5">
-                            {item.media?.release_year}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                          {item.media?.type === 'show' ? (
-                            <>
-                              <Tv className="w-3.5 h-3.5 text-rose-500/80" />
-                              <span>TV Show</span>
-                            </>
-                          ) : (
-                            <>
-                              <Film className="w-3.5 h-3.5 text-violet-500/80" />
-                              <span>Movie</span>
-                            </>
-                          )}
-                        </div>
+                return (
+                  <SelectableOverlay key={item.id} item={selectableItem as TmdbSearchResult}>
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setSelectedItem(item)}
+                    className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md select-none group hover:scale-[1.015] hover:border-white/10 transition-all duration-300 cursor-pointer relative bg-white/[0.02]"
+                  >
+                    {item.media?.poster_url ? (
+                      <img
+                        src={item.media?.poster_url}
+                        alt={item.media?.title}
+                        className="w-14 h-20 rounded-xl object-cover shadow-md shadow-black/20 border border-white/5 shrink-0 bg-zinc-900"
+                      />
+                    ) : (
+                      <div className="w-14 h-20 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                        No Poster
+                      </div>
+                    )}
+                    <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5 pr-14">
+                      <div>
+                        <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+                          {item.media?.title}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {item.media?.release_year}
+                        </p>
                       </div>
 
-                      {/* Actions row on hover */}
-                      <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
-                        {isActioning ? (
-                          <div className="p-1">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" />
-                          </div>
+                      <div className="flex items-center gap-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                        {item.media?.type === 'show' ? (
+                          <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
                         ) : (
-                          <>
-                            {priority !== 'must_watch' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUpdatePriority(item.id, 'must_watch')
-                                }}
-                                className="p-1 rounded-lg bg-black/40 border border-white/5 text-zinc-400 hover:text-rose-400 hover:border-rose-500/20 hover:bg-rose-500/5 transition-all duration-200"
-                                title="Move to Must Watch"
-                              >
-                                <Flame className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            {priority !== 'want_to_watch' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUpdatePriority(item.id, 'want_to_watch')
-                                }}
-                                className="p-1 rounded-lg bg-black/40 border border-white/5 text-zinc-400 hover:text-orange-400 hover:border-orange-500/20 hover:bg-orange-500/5 transition-all duration-200"
-                                title="Move to Want to Watch"
-                              >
-                                <Sparkles className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            {priority !== 'someday' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUpdatePriority(item.id, 'someday')
-                                }}
-                                className="p-1 rounded-lg bg-black/40 border border-white/5 text-zinc-400 hover:text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/10 transition-all duration-200"
-                                title="Move to Someday"
-                              >
-                                <Inbox className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRemove(item.id)
-                              }}
-                              className="p-1 rounded-lg bg-black/40 border border-white/5 text-zinc-400 hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/5 transition-all duration-200"
-                              title="Remove"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
+                          <><Film className="w-3.5 h-3.5 text-violet-500/80" /><span>Movie</span></>
                         )}
                       </div>
-                    </motion.div>
-                    </SelectableOverlay>
-                  )
-                })}
-              </AnimatePresence>
-            </motion.div>
+                    </div>
 
-            {count === 0 && (
-              <p className="text-zinc-600 text-xs italic pl-1">
-                No items in this queue.
-              </p>
-            )}
-          </div>
-        )
-      })}
+                    {/* Actions row on hover */}
+                    <div className="absolute top-3.5 right-3.5 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                      {isActioning ? (
+                        <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
+                      ) : (
+                        <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10">
+                          {priority !== 'must_watch' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              title="Move to Must Watch"
+                            ><Flame className="w-3.5 h-3.5" /></button>
+                          )}
+                          {priority !== 'want_to_watch' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+                              title="Move to Want to Watch"
+                            ><Sparkles className="w-3.5 h-3.5" /></button>
+                          )}
+                          {priority !== 'someday' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
+                              title="Move to Someday"
+                            ><Inbox className="w-3.5 h-3.5" /></button>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="Remove"
+                          ><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                  </SelectableOverlay>
+                )
+              })}
+            </AnimatePresence>
+          </motion.div>
+          
+          {hasMore && (
+            <div ref={sentinelRef} className="h-20 flex items-center justify-center">
+              {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Media Detail Modal */}
       <AnimatePresence>
