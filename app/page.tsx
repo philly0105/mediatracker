@@ -130,19 +130,19 @@ export default async function DashboardPage() {
       </div>
 
       {/* Discover New Classics Banner */}
-      <div className="mt-8 bg-[#18181C] rounded-[24px] overflow-hidden border border-white/5 relative">
-        <div className="h-40 bg-zinc-800 w-full relative">
-          <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80" alt="Discover Classics" className="w-full h-full object-cover opacity-60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#18181C] to-transparent"></div>
+      <div className="mt-8 bg-[#18181C] rounded-[24px] overflow-hidden border border-white/5 relative flex flex-col">
+        <div className="h-44 w-full relative">
+          <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80" alt="Discover Classics" className="w-full h-full object-cover opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#18181C] via-[#18181C]/60 to-transparent"></div>
         </div>
-        <div className="px-6 pb-8 text-center -mt-8 relative z-10 flex flex-col items-center">
-          <h2 className="text-2xl font-bold text-white tracking-tight mb-2">Discover New<br/>Classics</h2>
-          <p className="text-[11px] text-zinc-400 max-w-xs mx-auto leading-relaxed mb-6 font-medium">
+        <div className="px-6 pb-8 text-center -mt-16 relative z-10 flex flex-col items-center">
+          <h2 className="text-[26px] font-extrabold text-white tracking-tight mb-3">Discover New<br/>Classics</h2>
+          <p className="text-[12px] text-zinc-400 max-w-[280px] mx-auto leading-[1.6] mb-8 font-medium">
             Based on your love for sci-fi, we've curated a list of hidden gems from the 70s and 80s that paved the way for modern blockbusters.
           </p>
-          <button className="bg-[#F97316]/20 text-[#F97316] hover:bg-[#F97316] hover:text-white transition-colors font-bold text-xs py-3 px-6 rounded-full tracking-wide">
+          <Link href="/collections" className="bg-[#46210b] text-[#F97316] hover:bg-[#F97316] hover:text-white transition-colors font-bold text-[13px] py-3 px-8 rounded-full tracking-wide inline-block">
             Explore Collection
-          </button>
+          </Link>
         </div>
       </div>
     </div>
