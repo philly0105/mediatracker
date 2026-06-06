@@ -1,3 +1,4 @@
+'use client'
 import { useState, useCallback, useEffect } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { createClient } from '@/lib/supabase/client'
