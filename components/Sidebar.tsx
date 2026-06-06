@@ -54,15 +54,17 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 z-40 glass-panel border-r border-white/5 p-6 select-none">
+      <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 z-40 bg-[#09090B] border-r border-white/5 p-6 select-none">
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-orange-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <span className="text-white font-black text-sm">M</span>
-          </div>
-          <span className="font-extrabold text-white text-lg tracking-tight bg-clip-text">
-            MediaTracker
+        <div className="flex items-center justify-between mb-8 px-2">
+          <span className="font-extrabold text-[#F97316] text-2xl tracking-widest uppercase">
+            CINESTACK
           </span>
+          {userEmail && (
+            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 overflow-hidden">
+               <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${userEmail}`} alt="User Avatar" />
+            </div>
+          )}
         </div>
 
         {/* Navigation Items */}
@@ -138,6 +140,19 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </div>
       </aside>
 
+      {/* Mobile Top Bar (CINESTACK) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#09090B]/90 backdrop-blur-md border-b border-white/5 px-4 py-4 flex items-center justify-between">
+        <span className="font-extrabold text-[#F97316] text-xl tracking-widest uppercase">
+          CINESTACK
+        </span>
+        <div className="flex items-center gap-3">
+          <Search className="w-5 h-5 text-zinc-400" />
+          <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 overflow-hidden">
+             {userEmail ? <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${userEmail}`} alt="User Avatar" /> : <User className="w-4 h-4 text-zinc-400" />}
+          </div>
+        </div>
+      </div>
+
       {/* Mobile More Drawer */}
       <AnimatePresence>
         {moreOpen && (
@@ -187,7 +202,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       </AnimatePresence>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-white/5 px-4 py-2 flex items-center justify-around pb-safe-bottom select-none">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#131316] border-t border-white/5 px-4 py-2 flex items-center justify-around pb-safe-bottom select-none">
         {primaryMobileItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon

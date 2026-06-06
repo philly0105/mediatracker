@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
 
-const inter = Inter({ subsets: ['latin'] })
+const outfit = Outfit({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MediaTracker',
@@ -23,14 +23,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen relative antialiased`}>
+      <body className={`${outfit.className} bg-[#09090B] text-zinc-100 min-h-screen relative antialiased`}>
         {/* Ambient gradient orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
-          <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[150px] opacity-40"
-            style={{ background: 'rgba(124, 58, 237, 0.25)' }} />
-          <div className="absolute -bottom-32 -right-32 w-[600px] h-[600px] rounded-full blur-[130px] opacity-30"
+          <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[150px] opacity-20"
+            style={{ background: 'rgba(139, 92, 246, 0.25)' }} />
+          <div className="absolute -bottom-32 -right-32 w-[600px] h-[600px] rounded-full blur-[130px] opacity-20"
             style={{ background: 'rgba(249, 115, 22, 0.18)' }} />
-          <div className="absolute top-1/2 left-1/3 w-[500px] h-[500px] rounded-full blur-[120px] opacity-20"
+          <div className="absolute top-1/2 left-1/3 w-[500px] h-[500px] rounded-full blur-[120px] opacity-10"
             style={{ background: 'rgba(244, 63, 94, 0.12)' }} />
         </div>
 
