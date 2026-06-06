@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getCollectionDetails } from '@/lib/tmdb'
 import CollectionMovieCard from '@/components/CollectionMovieCard'
+import BackButton from '@/components/BackButton'
 
 export default async function CollectionDetailPage({
   params,
@@ -51,13 +52,7 @@ export default async function CollectionDetailPage({
 
   return (
     <div className="space-y-8">
-      <Link
-        href="/collections"
-        className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Collections
-      </Link>
+      <BackButton label="Collections" fallback="/collections" />
 
       {/* Hero */}
       <div className="relative rounded-2xl overflow-hidden">
