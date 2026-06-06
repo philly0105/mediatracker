@@ -6,15 +6,55 @@ import { Loader2 } from 'lucide-react'
 import type { TmdbCollectionSummary } from '@/types'
 
 export default function PopularCollectionsFeed() {
-  const [collections, setCollections] = useState<TmdbCollectionSummary[]>([])
-  const [loading, setLoading] = useState(true)
+  const CACHE_KEY = 'popular-collections-cache'
+
+  const [collections, setCollections] = useState<TmdbCollectionSummary[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY)
+        if (cached) return JSON.parse(cached).collections
+      } catch {}
+    }
+    return []
+  })
+  
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !sessionStorage.getItem(CACHE_KEY)
+    }
+    return true
+  })
+  
+  const [batch, setBatch] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY)
+        if (cached) return JSON.parse(cached).batch
+      } catch {}
+    }
+    return 1
+  })
+  
+  const [hasMore, setHasMore] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY)
+        if (cached) return JSON.parse(cached).hasMore
+      } catch {}
+    }
+    return true
+  })
+
   const [loadingMore, setLoadingMore] = useState(false)
-  const [batch, setBatch] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
   const seenIds = useRef(new Set<number>())
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const CACHE_KEY = 'popular-collections-cache'
+  // Populate seenIds on mount if we restored from cache
+  useEffect(() => {
+    if (collections.length > 0 && seenIds.current.size === 0) {
+      collections.forEach(c => seenIds.current.add(c.id))
+    }
+  }, [collections])
 
   async function fetchBatch(batchNum: number, isLoadMore = false) {
     isLoadMore ? setLoadingMore(true) : setLoading(true)
@@ -42,19 +82,9 @@ export default function PopularCollectionsFeed() {
   }
 
   useEffect(() => {
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY)
-      if (cached) {
-        const { collections: c, batch: b, hasMore: hm } = JSON.parse(cached)
-        c.forEach((item: TmdbCollectionSummary) => seenIds.current.add(item.id))
-        setCollections(c)
-        setBatch(b)
-        setHasMore(hm)
-        setLoading(false)
-        return
-      }
-    } catch {}
-    fetchBatch(1)
+    if (collections.length === 0 && loading) {
+      fetchBatch(1)
+    }
   }, [])
 
   useEffect(() => {
