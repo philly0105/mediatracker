@@ -91,6 +91,7 @@ export interface TmdbFullDetails {
   trailer_url?: string | null
   belongs_to_collection?: { id: number; name: string } | null
   watch_providers?: TmdbWatchProviders | null
+  vote_average?: number
 }
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
@@ -127,6 +128,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
         ? { id: d.belongs_to_collection.id, name: d.belongs_to_collection.name }
         : null,
       watch_providers,
+      vote_average: d.vote_average,
     }
   } else {
     return {
@@ -144,6 +146,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
       full_release_date: d.next_episode_to_air?.air_date || null,
       trailer_url,
       watch_providers,
+      vote_average: d.vote_average,
     }
   }
 }

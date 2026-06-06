@@ -12,6 +12,7 @@ export interface Media {
   release_year: number | null
   runtime_mins: number | null
   director: string | null
+  vote_average?: number | null
   cast_members: string[]
   collection_id: number | null
   collection_name: string | null

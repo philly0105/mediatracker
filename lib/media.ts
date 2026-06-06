@@ -30,14 +30,20 @@ export async function upsertMedia(
 
   if (error) throw new Error(`Failed to upsert media: ${error.message}`)
 
-  // Best-effort: update collection fields (requires migration 003_collections.sql)
+  // Best-effort: update collection fields and vote_average (requires migrations)
+  const updates: any = {}
   if (details.type === 'movie') {
+    updates.collection_id = details.belongs_to_collection?.id ?? null
+    updates.collection_name = details.belongs_to_collection?.name ?? null
+  }
+  if (details.vote_average !== undefined) {
+    updates.vote_average = details.vote_average
+  }
+
+  if (Object.keys(updates).length > 0) {
     await supabase
       .from('media')
-      .update({
-        collection_id: details.belongs_to_collection?.id ?? null,
-        collection_name: details.belongs_to_collection?.name ?? null,
-      })
+      .update(updates)
       .eq('id', media.id)
     // ignore error — columns may not exist until migration is applied
   }

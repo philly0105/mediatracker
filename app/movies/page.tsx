@@ -41,7 +41,7 @@ export default function MoviesPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {entries.map((entry) => (
-              <MediaCard key={entry.id} entry={entry} />
+              <MediaCard key={entry.id} entry={entry} hideWatchedDate={true} />
             ))}
           </div>
           {entries.length === 0 && (

@@ -7,14 +7,15 @@ import { motion } from 'framer-motion'
 import RatingStars from './RatingStars'
 import EditEntryModal from './EditEntryModal'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
-import { Calendar, Play, FileText, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Calendar, Play, FileText, Pencil, Trash2, Loader2, Star } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
 
 interface Props {
   entry: WatchEntry
+  hideWatchedDate?: boolean
 }
 
-export default function MediaCard({ entry }: Props) {
+export default function MediaCard({ entry, hideWatchedDate }: Props) {
   const media = entry.media!
   const router = useRouter()
   const href = media.type === 'show' ? `/show/${media.id}` : '#'
@@ -22,6 +23,18 @@ export default function MediaCard({ entry }: Props) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [tmdbRating, setTmdbRating] = useState<number | null>(media.vote_average ?? null)
+
+  useEffect(() => {
+    if (tmdbRating === null) {
+      fetch(`/api/tmdb/rating?tmdb_id=${media.tmdb_id}&type=${media.type}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.vote_average) setTmdbRating(d.vote_average)
+        })
+        .catch(() => {})
+    }
+  }, [media.tmdb_id, media.type, tmdbRating])
 
   const mediaAsResult: TmdbSearchResult = {
     tmdb_id: media.tmdb_id,
@@ -136,10 +149,19 @@ export default function MediaCard({ entry }: Props) {
             </div>
           )}
           
-          <div className="flex items-center gap-1 text-[10px] text-zinc-600">
-            <Calendar className="w-3 h-3 text-zinc-700" />
-            <span>Watched {entry.watched_at}</span>
-          </div>
+          {!hideWatchedDate ? (
+            <div className="flex items-center gap-1 text-[10px] text-zinc-600">
+              <Calendar className="w-3 h-3 text-zinc-700" />
+              <span>Watched {entry.watched_at}</span>
+            </div>
+          ) : (
+            tmdbRating !== null && (
+              <div className="flex items-center gap-1 text-[10.5px] font-bold text-amber-400">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <span>{tmdbRating.toFixed(1)}</span>
+              </div>
+            )
+          )}
         </div>
       </div>
 
