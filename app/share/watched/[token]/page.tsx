@@ -5,19 +5,12 @@ import RatingStars from '@/components/RatingStars'
 export default async function SharedWatchedPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const supabase = await createClient()
-  const { data: settings } = await supabase
-    .from('user_settings')
-    .select('user_id, watched_share_token')
-    .eq('watched_share_token', token)
-    .single()
+  const { data: rows, error } = await supabase.rpc('shared_watched', { p_token: token })
 
-  if (!settings) notFound()
-
-  const { data: entries } = await supabase
-    .from('watch_entries')
-    .select('*, media(*)')
-    .eq('user_id', settings.user_id)
-    .order('watched_at', { ascending: false })
+  // Zero rows = token matches nothing (404). A valid-but-empty share returns a
+  // marker row with id null, which we filter out below.
+  if (error || !rows || rows.length === 0) notFound()
+  const entries = rows.filter((r: any) => r.id)
 
   return (
     <div className="space-y-6 max-w-4xl">

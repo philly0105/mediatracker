@@ -4,14 +4,10 @@ import { notFound } from 'next/navigation'
 export default async function SharedListPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const supabase = await createClient()
-  const { data: list } = await supabase
-    .from('lists')
-    .select('*, list_items(*, media(*))')
-    .eq('share_token', token)
-    .eq('is_shared', true)
-    .single()
+  const { data: rows, error } = await supabase.rpc('shared_list', { p_token: token })
 
-  if (!list) notFound()
+  if (error || !rows || rows.length === 0) notFound()
+  const list = { name: rows[0].name, list_items: rows[0].items }
 
   return (
     <div className="space-y-6 max-w-3xl">

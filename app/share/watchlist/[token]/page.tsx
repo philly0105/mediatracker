@@ -6,19 +6,12 @@ const PRIORITY_LABELS = { must_watch: 'Must Watch', want_to_watch: 'Want to Watc
 export default async function SharedWatchlistPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const supabase = await createClient()
-  const { data: settings } = await supabase
-    .from('user_settings')
-    .select('user_id, watchlist_share_token')
-    .eq('watchlist_share_token', token)
-    .single()
+  const { data: rows, error } = await supabase.rpc('shared_watchlist', { p_token: token })
 
-  if (!settings) notFound()
-
-  const { data: items } = await supabase
-    .from('watchlist_items')
-    .select('*, media(*)')
-    .eq('user_id', settings.user_id)
-    .order('added_at', { ascending: false })
+  // Zero rows = token matches nothing (404). A valid-but-empty share returns a
+  // marker row with id null, which we filter out below.
+  if (error || !rows || rows.length === 0) notFound()
+  const items = rows.filter((r: any) => r.id)
 
   return (
     <div className="space-y-6 max-w-3xl">
