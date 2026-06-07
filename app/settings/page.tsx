@@ -11,7 +11,11 @@ export default async function SettingsPage() {
 
   const { data: settings } = await supabase.from('user_settings').select('*').single()
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : '')
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto md:mx-0">
