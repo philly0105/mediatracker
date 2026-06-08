@@ -179,38 +179,6 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Discover New Classics Banner */}
-      <div className="relative z-10 pt-6 pb-4">
-        <SpotlightCard spotlightColor="rgba(249, 115, 22, 0.15)" className="overflow-hidden">
-          <div className="absolute inset-0 z-0">
-            <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1200&q=80" alt="Discover Classics" className="w-full h-full object-cover opacity-30 mix-blend-screen scale-105" />
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/80 to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent"></div>
-          </div>
-          
-          <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 h-full">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 w-fit mb-4">
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                <span className="text-[10px] font-bold tracking-widest text-orange-300 uppercase">Curated</span>
-              </div>
-              <h2 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400 tracking-tighter mb-4 leading-tight">
-                Discover New<br/>Classics
-              </h2>
-              <p className="text-sm md:text-base text-zinc-300 leading-relaxed font-medium mb-8 max-w-md">
-                Based on your love for sci-fi, we've curated a list of hidden gems from the 70s and 80s that paved the way for modern blockbusters.
-              </p>
-              <Link href="/collections" className="group relative inline-flex items-center justify-center bg-orange-500 text-white font-bold text-sm py-3.5 px-8 rounded-full overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.4)]">
-                <span className="relative z-10 flex items-center gap-2">
-                  Explore Collection
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity z-0" />
-              </Link>
-            </div>
-          </div>
-        </SpotlightCard>
-      </div>
     </div>
   )
 }
