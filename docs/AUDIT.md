@@ -6,7 +6,9 @@ Stack confirmed: Next.js 16.2.6 (App Router, `proxy.ts` middleware), React 19, S
 
 ## 🔴 Critical Issues
 
-### C1. The entire Share feature is dead — OR every user's data is world-readable
+### C1. ✅ RESOLVED (2026-06-07) — Share feature was dead OR every user's data was world-readable
+**Fixed in `migrations/006_share_rpcs.sql`** via `SECURITY DEFINER` RPCs (`shared_watched`/`shared_watchlist`/`shared_list`) rather than the public-read RLS policies suggested below. RLS stays fully locked (own-data only); the functions return rows only when the caller passes the matching `share_token`. Pages now call `supabase.rpc(...)` instead of the cookie-scoped query. Original finding preserved below for context.
+
 This is a fork, and both branches are critical. All three share pages (`app/share/list/[token]`, `app/share/watched/[token]`, `app/share/watchlist/[token]`) read data with the **cookie-scoped anon client** (`lib/supabase/server.ts`), which RLS binds to the *visitor's* session.
 
 - RLS policies (`migrations/001_initial.sql:95-111`) are `USING (user_id = auth.uid())`.
@@ -78,7 +80,7 @@ Each card with a null `vote_average` fires `/api/tmdb/rating` from a `useEffect`
 
 ## 💡 Feature Suggestions (ranked by effort vs. impact)
 
-1. **Fix & ship Sharing properly** — *Impact: High · Effort: Low–Med.* It's a headline feature that's currently dead (C1). Token-scoped RLS policies (above) make it real. Highest ROI on the list.
+1. ~~**Fix & ship Sharing properly**~~ — ✅ **DONE (2026-06-07).** Shipped via `SECURITY DEFINER` RPCs in `migrations/006_share_rpcs.sql` (better than the RLS-policy approach — RLS stays locked). See C1.
 2. **TMDB caching (SWR-style)** — *Impact: High · Effort: Low.* `'use cache'` + `cacheLife('days')` on `lib/tmdb.ts` reads, `cacheTag` per tmdb_id. Cuts latency, API cost, and rate-limit risk in one pass. Directly answers your "offline/stale-while-revalidate" question.
 3. **Search & filter on Movies/Shows/Watchlist** — *Impact: High · Effort: Med.* You already have `idx_media_genres` GIN + `idx_media_type` (migration 005) but no UI consuming them. Add genre/year/rating filters client-side over the already-fetched list; add a text filter. The DB is ready.
 4. **Surface episode-level progress** — *Impact: Med · Effort: Low–Med.* `episode_progress` table + `EpisodeTracker.tsx` already exist; import marks every episode watched. Show a "12/24 episodes · 50%" bar on show cards/detail instead of binary watched. The data's already there.
@@ -90,7 +92,7 @@ Each card with a null `vote_average` fires `/api/tmdb/rating` from a `useEffect`
 ## Prioritized Fix List
 
 ```
-[ ] File: supabase/migrations/006_share_policies.sql (new) | Issue: share links 404 for visitors because RLS hides owner rows | Fix: add token/is_shared-scoped public SELECT policies for watch_entries, watchlist_items, user_settings, lists, list_items
+[x] File: supabase/migrations/006_share_rpcs.sql (DONE 2026-06-07) | Issue: share links 404 for visitors because RLS hides owner rows | Fix: SECURITY DEFINER RPCs (shared_watched/watchlist/list) return rows only for the matching share_token; RLS stays locked. Pages call supabase.rpc(...)
 [ ] File: app/page.tsx + all read routes        | Issue: RLS is the only thing scoping data; no defense in depth | Fix: add explicit .eq('user_id', user.id) filters alongside RLS
 [ ] File: app/error.tsx                          | Issue: leaks raw error.message, no recovery | Fix: render generic copy + add reset() retry button
 [ ] File: app/api/admin/backfill-collections/route.ts | Issue: sessionless anon client can't write under RLS → silent no-op | Fix: use a service-role client (or run authenticated); add ADMIN_SECRET to .env example
