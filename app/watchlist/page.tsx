@@ -50,9 +50,9 @@ export default function WatchlistPage() {
             onChange={(e) => setTypeFilter(e.target.value as any)}
             className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[120px]"
           >
-            <option value="all">All Types</option>
-            <option value="movie">Movies Only</option>
-            <option value="show">TV Shows Only</option>
+            <option value="all" className="bg-zinc-900">All Types</option>
+            <option value="movie" className="bg-zinc-900">Movies Only</option>
+            <option value="show" className="bg-zinc-900">TV Shows Only</option>
           </select>
 
           <select
@@ -60,8 +60,8 @@ export default function WatchlistPage() {
             onChange={(e) => setGenreFilter(e.target.value)}
             className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[140px]"
           >
-            <option value="All">All Genres</option>
-            {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+            <option value="All" className="bg-zinc-900">All Genres</option>
+            {GENRES.map(g => <option key={g} value={g} className="bg-zinc-900">{g}</option>)}
           </select>
         </div>
       </div>
