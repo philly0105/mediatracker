@@ -56,15 +56,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 z-40 bg-[#09090B] border-r border-white/5 p-6 select-none">
         {/* Brand Logo */}
-        <div className="flex items-center justify-between mb-8 px-2">
-          <span className="font-extrabold text-[#F97316] text-2xl tracking-widest uppercase">
-            CINESTACK
+        <div className="flex items-center mb-8 px-2">
+          <span className="font-extrabold text-2xl tracking-wide text-white">
+            Dorf<span className="text-[#F97316]">Movies</span>
           </span>
-          {userEmail && (
-            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/10 overflow-hidden">
-               <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${userEmail}`} alt="User Avatar" />
-            </div>
-          )}
         </div>
 
         {/* Navigation Items */}
@@ -128,8 +123,8 @@ export default function Sidebar({ userEmail }: SidebarProps) {
 
           {userEmail && (
             <div className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl bg-white/[0.01] border border-white/[0.03]">
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5">
-                <User className="w-4 h-4 text-zinc-400" />
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-white/5 overflow-hidden">
+                <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${userEmail}`} alt="User Avatar" className="w-full h-full object-cover" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-white truncate">{userEmail.split('@')[0]}</p>
@@ -140,10 +135,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Mobile Top Bar (CINESTACK) */}
+      {/* Mobile Top Bar (DorfMovies) */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#09090B]/90 backdrop-blur-md border-b border-white/5 px-4 py-4 flex items-center justify-between">
-        <span className="font-extrabold text-[#F97316] text-xl tracking-widest uppercase">
-          CINESTACK
+        <span className="font-extrabold text-xl tracking-wide text-white">
+          Dorf<span className="text-[#F97316]">Movies</span>
         </span>
         <div className="flex items-center gap-3">
           <Search className="w-5 h-5 text-zinc-400" />

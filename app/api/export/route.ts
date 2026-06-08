@@ -44,7 +44,7 @@ export async function GET() {
   return new NextResponse(rows, {
     headers: {
       'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="mediatracker-${date}.csv"`,
+      'Content-Disposition': `attachment; filename="dorfmovies-${date}.csv"`,
     },
   })
 }

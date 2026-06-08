@@ -8,7 +8,7 @@ import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 const outfit = Outfit({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'MediaTracker',
+  title: 'DorfMovies',
   description: 'Track your movies, TV shows, and watchlists.',
 }
 

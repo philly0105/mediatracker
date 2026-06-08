@@ -1,4 +1,4 @@
-# MediaTracker
+# DorfMovies
 
 ## Summary
 A personal web app for tracking movies and TV shows — logging what you've watched, rating them, and managing a prioritized watchlist.

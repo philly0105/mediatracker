@@ -32,7 +32,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="relative w-full max-w-sm p-8 space-y-5 rounded-3xl backdrop-blur-md"
         style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-white">MediaTracker</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white">DorfMovies</h1>
           <p className="text-sm text-zinc-400">Sign in to your account</p>
         </div>
 

@@ -97,7 +97,7 @@ export default function ImportPage() {
     const blob = new Blob([TEMPLATE], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = 'mediatracker-template.csv'; a.click()
+    a.href = url; a.download = 'dorfmovies-template.csv'; a.click()
     URL.revokeObjectURL(url)
   }
 
