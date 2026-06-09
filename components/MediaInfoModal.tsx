@@ -274,7 +274,7 @@ export default function MediaInfoModal({
                   )}
                   {item.type === 'movie' && (
                     <a
-                      href={`http://localhost:3000/?q=${encodeURIComponent(item.title)}#movies`}
+                      href={`http://localhost:3003/?q=${encodeURIComponent(item.title)}#movies`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold text-xs transition-colors border border-violet-500/20"
