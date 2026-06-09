@@ -30,6 +30,15 @@ const GENRES = [
 export default function WatchlistPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'show'>('all')
   const [genreFilter, setGenreFilter] = useState<string>('All')
+  const [refreshSignals, setRefreshSignals] = useState<Record<WatchlistPriority, number>>({
+    must_watch: 0,
+    want_to_watch: 0,
+    someday: 0,
+  })
+
+  function handlePriorityChanged(toPriority: WatchlistPriority) {
+    setRefreshSignals(prev => ({ ...prev, [toPriority]: prev[toPriority] + 1 }))
+  }
 
   return (
     <div className="space-y-8">
@@ -68,11 +77,13 @@ export default function WatchlistPage() {
 
       <div className="space-y-12 pb-12">
         {PRIORITY_ORDER.map(priority => (
-          <WatchlistSection 
-            key={priority} 
-            priority={priority} 
-            typeFilter={typeFilter} 
-            genreFilter={genreFilter} 
+          <WatchlistSection
+            key={priority}
+            priority={priority}
+            typeFilter={typeFilter}
+            genreFilter={genreFilter}
+            refreshSignal={refreshSignals[priority]}
+            onPriorityChanged={handlePriorityChanged}
           />
         ))}
       </div>
@@ -80,14 +91,18 @@ export default function WatchlistPage() {
   )
 }
 
-function WatchlistSection({ 
-  priority, 
-  typeFilter, 
-  genreFilter 
-}: { 
-  priority: WatchlistPriority; 
-  typeFilter: 'all' | 'movie' | 'show'; 
+function WatchlistSection({
+  priority,
+  typeFilter,
+  genreFilter,
+  refreshSignal,
+  onPriorityChanged,
+}: {
+  priority: WatchlistPriority;
+  typeFilter: 'all' | 'movie' | 'show';
   genreFilter: string;
+  refreshSignal: number;
+  onPriorityChanged: (toPriority: WatchlistPriority) => void;
 }) {
   const [items, setItems] = useState<WatchlistItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,13 +119,12 @@ function WatchlistSection({
   const Icon = config.icon
 
   useEffect(() => {
-    // Reset state when filters change
     setItems([])
     setPage(1)
     setHasMore(true)
     fetchPage(1, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priority, typeFilter, genreFilter])
+  }, [priority, typeFilter, genreFilter, refreshSignal])
 
   async function fetchPage(targetPage: number, isInitial = false) {
     if (isInitial) setLoading(true)
@@ -174,15 +188,10 @@ function WatchlistSection({
       })
       if (!res.ok) throw new Error('Failed to update')
       
-      // Remove from this section
       setItems(prev => prev.filter(i => i.id !== itemId))
       setTotal(prev => prev - 1)
       if (selectedItem?.id === itemId) setSelectedItem(null)
-
-      // The destination section won't update automatically without global state,
-      // but triggering a full re-fetch or using context is overkill for now.
-      // Easiest robust fix: wait 300ms and refresh the page to sync state across sections.
-      setTimeout(() => window.location.reload(), 300)
+      onPriorityChanged(newPriority)
     } catch (err) {
       console.error(err)
     } finally {
