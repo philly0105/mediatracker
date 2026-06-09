@@ -259,17 +259,30 @@ export default function MediaInfoModal({
               )}
               
               {/* Watch Trailer Button */}
-              {details?.trailer_url && (
-                <div className="pt-3">
-                  <a
-                    href={details.trailer_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors border border-rose-500/20"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-rose-500" />
-                    Watch Trailer
-                  </a>
+              {(details?.trailer_url || item.type === 'movie') && (
+                <div className="pt-3 flex flex-wrap gap-2">
+                  {details?.trailer_url && (
+                    <a
+                      href={details.trailer_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors border border-rose-500/20"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-rose-500" />
+                      Watch Trailer
+                    </a>
+                  )}
+                  {item.type === 'movie' && (
+                    <a
+                      href={`http://localhost:3000/?q=${encodeURIComponent(item.title)}#movies`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold text-xs transition-colors border border-violet-500/20"
+                    >
+                      <Tv className="w-3.5 h-3.5" />
+                      Watch on IPTV
+                    </a>
+                  )}
                 </div>
               )}
             </div>
