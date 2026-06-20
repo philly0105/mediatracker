@@ -1,0 +1,7 @@
+/* DorfMovies webfonts — Outfit (the product's actual brand font, via next/font/google).
+   Served from Google's CDN so consumers get the real binaries with no local files. */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Outfit — the single typeface: all UI text, labels, headings, and numerals.
+   Headings run heavy (extrabold/black); tiny uppercase labels are widely tracked. */

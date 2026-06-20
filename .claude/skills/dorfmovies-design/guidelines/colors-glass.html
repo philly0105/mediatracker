@@ -1,0 +1,20 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Flat surfaces, borders & grain" subtitle="Solid warm fills, hairline borders (green emphasis), film grain" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:var(--bg-void);background-image:var(--page-radial);font-family:var(--font-sans);color:var(--text-primary);padding:20px;box-sizing:border-box;position:relative}
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;background-image:var(--grain);background-size:180px;opacity:var(--grain-opacity);mix-blend-mode:overlay}
+  .wrap{position:relative;display:flex;gap:14px;z-index:2}
+  .g{flex:1;height:130px;border-radius:var(--radius-lg);padding:14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end}
+  .n{font-size:12px;font-weight:700}
+  .h{font-size:10px;color:var(--text-secondary);font-family:var(--font-mono);margin-top:3px}
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="g" style="background:var(--glass-card);border:1px solid var(--border-subtle)"><div class="n">card</div><div class="h">#1b1711 · solid</div></div>
+    <div class="g" style="background:var(--glass-panel);border:1px solid var(--border-soft)"><div class="n">panel</div><div class="h">#18140e · solid</div></div>
+    <div class="g" style="background:var(--glass-modal);border:1px solid var(--border-default)"><div class="n">modal</div><div class="h">#201b13 · solid</div></div>
+    <div class="g" style="background:var(--glass-input);border:1px solid var(--border-focus)"><div class="n">input · focus</div><div class="h">#211c14 · green border</div></div>
+  </div>
+</body></html>
