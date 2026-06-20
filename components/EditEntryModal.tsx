@@ -4,6 +4,8 @@ import RatingStars from './RatingStars'
 import type { WatchEntry } from '@/types'
 import { Loader2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 interface Props {
   entry: WatchEntry
@@ -11,12 +13,7 @@ interface Props {
 }
 
 const glassModal = {
-  background: 'rgba(13,13,15,0.85)',
-  border: '1px solid rgba(255,255,255,0.1)',
-}
-
-const glassInput = {
-  background: 'rgba(255,255,255,0.06)',
+  background: 'var(--surface-modal)',
   border: '1px solid rgba(255,255,255,0.1)',
 }
 
@@ -57,7 +54,7 @@ export default function EditEntryModal({ entry, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={(e) => { e.stopPropagation(); onClose(); }}>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style={{ background: 'var(--scrim)' }} onClick={(e) => { e.stopPropagation(); onClose(); }}>
       <div className="w-full max-w-md p-6 space-y-5 rounded-3xl relative backdrop-blur-xl" style={glassModal} onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           {media.poster_url && (
@@ -72,9 +69,7 @@ export default function EditEntryModal({ entry, onClose }: Props) {
         <div className="space-y-4">
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wider">Date watched</label>
-            <input type="date" value={watchedAt} onChange={e => setWatchedAt(e.target.value)}
-              className="mt-2 w-full px-4 py-2.5 rounded-full text-white text-sm focus:outline-none transition-colors"
-              style={glassInput} />
+            <Input type="date" value={watchedAt} onChange={e => setWatchedAt(e.target.value)} className="mt-2" />
           </div>
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wider">Rating</label>
@@ -82,10 +77,7 @@ export default function EditEntryModal({ entry, onClose }: Props) {
           </div>
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wider">Review (optional)</label>
-            <textarea value={review} onChange={e => setReview(e.target.value)}
-              rows={4} placeholder="Write your thoughts..."
-              className="mt-2 w-full px-4 py-2.5 rounded-2xl text-white text-sm resize-none focus:outline-none transition-colors placeholder:text-zinc-600"
-              style={glassInput} />
+            <Input multiline rows={4} value={review} onChange={e => setReview(e.target.value)} placeholder="Write your thoughts..." className="mt-2" />
           </div>
         </div>
 
@@ -97,20 +89,12 @@ export default function EditEntryModal({ entry, onClose }: Props) {
         )}
 
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose}
-            className="flex-1 py-2.5 rounded-full text-sm font-medium text-white transition-colors"
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-            onMouseEnter={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.12)')}
-            onMouseLeave={e => ((e.target as HTMLElement).style.background = 'rgba(255,255,255,0.08)')}>
+          <Button variant="ghost" onClick={onClose} style={{ flex: 1 }}>
             Cancel
-          </button>
-          <button onClick={handleSubmit} disabled={loading}
-            className="flex-1 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
-            style={{ background: '#ffffff', color: '#0d0d0f' }}
-            onMouseEnter={e => !loading && ((e.target as HTMLElement).style.background = '#e4e4e7')}
-            onMouseLeave={e => ((e.target as HTMLElement).style.background = '#ffffff')}>
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading} style={{ flex: 1 }}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
-          </button>
+          </Button>
         </div>
 
         <button onClick={onClose}

@@ -24,6 +24,7 @@ import {
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 import SimilarModal from './SimilarModal'
+import { Button } from '@/components/ui/Button'
 
 interface Props {
   item: TmdbSearchResult
@@ -169,7 +170,7 @@ export default function MediaInfoModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{ background: 'var(--scrim)' }}>
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -178,6 +179,7 @@ export default function MediaInfoModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        style={{ background: 'var(--surface-modal)' }}
         className="glass-card rounded-3xl w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[90vh] flex flex-col shadow-2xl shadow-violet-500/[0.05]"
       >
         {/* Close Button */}
@@ -305,14 +307,24 @@ export default function MediaInfoModal({
                   const isActive = currentPriority === value
                   const isActioning = actioning === `priority-${value}`
                   return (
-                    <button
+                    <Button
                       key={value}
                       disabled={actioning !== null}
                       onClick={() => handlePriorityClick(value)}
-                      className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 ${
+                      style={{
+                        flex: 1,
+                        fontSize: 'var(--text-xs)',
+                        padding: '10px 12px',
+                        ...(isActive ? {} : {
+                          background: 'rgba(255,255,255,0.02)',
+                          borderColor: 'rgba(255,255,255,0.05)',
+                          color: 'var(--text-muted)'
+                        })
+                      }}
+                      className={`transition-all duration-300 active:scale-95 disabled:opacity-50 ${
                         isActive 
                           ? activeColor
-                          : `text-zinc-400 bg-white/[0.02] border-white/5 ${color}`
+                          : color
                       }`}
                     >
                       {isActioning ? (
@@ -321,7 +333,7 @@ export default function MediaInfoModal({
                         <Icon className="w-3.5 h-3.5" />
                       )}
                       <span>{label}</span>
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
@@ -411,29 +423,35 @@ export default function MediaInfoModal({
         {/* Footer Actions */}
         <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3 flex-wrap">
           {currentPriority || details?.isWatchlisted ? (
-            <button
-              disabled={loading || actioning !== null || (!currentPriority && details?.isWatchlisted)}
-              onClick={currentPriority ? handleRemoveClick : undefined}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-xs transition-all duration-300 ${
-                currentPriority
-                  ? 'bg-white/5 border-white/10 text-white hover:bg-rose-600 hover:border-rose-500 hover:shadow-lg hover:shadow-rose-600/25 active:scale-95 disabled:opacity-50'
-                  : 'bg-white/5 border-white/10 text-zinc-500 opacity-60 cursor-default'
-              }`}
-            >
-              {actioning === 'remove' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : currentPriority ? (
-                <Trash2 className="w-4 h-4" />
-              ) : (
+            currentPriority ? (
+              <Button
+                disabled={loading || actioning !== null}
+                onClick={handleRemoveClick}
+                style={{ flex: 1 }}
+                className="hover:!bg-rose-600 hover:!border-rose-500 hover:!text-white"
+              >
+                {actioning === 'remove' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                <span>Remove from Watchlist</span>
+              </Button>
+            ) : (
+              <Button
+                disabled
+                style={{ flex: 1, opacity: 0.6 }}
+              >
                 <Bookmark className="w-4 h-4" />
-              )}
-              <span>{currentPriority ? 'Remove from Watchlist' : 'On Watchlist'}</span>
-            </button>
+                <span>On Watchlist</span>
+              </Button>
+            )
           ) : (
-            <button
+            <Button
               disabled={loading || actioning !== null}
               onClick={handleWatchlistClick}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 disabled:opacity-50 font-semibold text-xs"
+              style={{ flex: 1 }}
+              className="hover:!bg-violet-600 hover:!border-violet-500 hover:!text-white"
             >
               {actioning === 'watchlist' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -441,35 +459,52 @@ export default function MediaInfoModal({
                 <Plus className="w-4 h-4" />
               )}
               <span>Add to Watchlist</span>
-            </button>
+            </Button>
           )}
 
-          <button
-            disabled={loading || actioning !== null || details?.isWatched}
-            onClick={details?.isWatched ? undefined : handleWatchedClick}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-xs transition-all duration-300 ${
-              details?.isWatched
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 opacity-70 cursor-default'
-                : 'bg-white/5 border-white/10 text-white hover:bg-emerald-600 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-600/25 active:scale-95 disabled:opacity-50'
-            }`}
-          >
-            {actioning === 'watched' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
+          {details?.isWatched ? (
+            <Button
+              disabled
+              style={{
+                flex: 1,
+                background: 'var(--teal-tint-bg)',
+                border: '1px solid var(--teal-tint-border)',
+                color: 'var(--teal-300)',
+                opacity: 0.7
+              }}
+            >
               <Check className="w-4 h-4" />
-            )}
-            <span>{details?.isWatched ? 'Already Watched' : 'Mark as Watched'}</span>
-          </button>
+              <span>Already Watched</span>
+            </Button>
+          ) : (
+            <Button
+              disabled={loading || actioning !== null}
+              onClick={handleWatchedClick}
+              style={{ flex: 1 }}
+              className="hover:!bg-emerald-600 hover:!border-emerald-500 hover:!text-white"
+            >
+              {actioning === 'watched' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              <span>Mark as Watched</span>
+            </Button>
+          )}
 
           {item.type === 'show' && (
-            <button
+            <Button
               disabled={loading || actioning !== null}
               onClick={handleFollowToggle}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border font-semibold text-xs transition-all duration-300 active:scale-95 disabled:opacity-50 ${
-                details?.isFollowed
-                  ? 'bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-rose-600/10 hover:border-rose-500/30 hover:text-rose-400'
-                  : 'bg-white/5 border-white/10 text-white hover:bg-teal-600 hover:border-teal-500 hover:shadow-lg hover:shadow-teal-600/25'
-              }`}
+              fullWidth
+              style={{
+                ...(details?.isFollowed ? {
+                  background: 'var(--teal-tint-bg)',
+                  borderColor: 'var(--teal-tint-border)',
+                  color: 'var(--teal-300)',
+                } : {})
+              }}
+              className={details?.isFollowed ? "hover:!bg-rose-600/10 hover:!border-rose-500/30 hover:!text-rose-400" : "hover:!bg-teal-600 hover:!border-teal-500 hover:!text-white"}
             >
               {actioning === 'follow' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -479,16 +514,17 @@ export default function MediaInfoModal({
                 <Bell className="w-4 h-4" />
               )}
               <span>{details?.isFollowed ? 'Unfollow Show' : 'Follow Show'}</span>
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
             onClick={() => setShowSimilar(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-lg hover:shadow-violet-600/25 active:scale-95 transition-all duration-300 font-semibold text-xs"
+            fullWidth
+            className="hover:!bg-violet-600 hover:!border-violet-500 hover:!text-white"
           >
             <Sparkles className="w-4 h-4" />
             <span>Similar {item.type === 'movie' ? 'Movies' : 'TV Shows'}</span>
-          </button>
+          </Button>
         </div>
       </motion.div>
 

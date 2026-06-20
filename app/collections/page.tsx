@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Layers, Library } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import PopularCollectionsFeed from '@/components/PopularCollectionsFeed'
+import { PosterCard } from '@/components/ui/PosterCard'
 
 export default async function CollectionsPage() {
   const supabase = await createClient()
@@ -68,26 +69,14 @@ export default async function CollectionsPage() {
             </Link>
           </p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
             {activeCollections.map(c => (
               <Link key={c.id} href={`/collections/${c.id}`}>
-                <div className="glass-card rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform duration-200">
-                  {c.poster_url ? (
-                    <img
-                      src={c.poster_url}
-                      alt={c.name}
-                      className="w-full aspect-[2/3] object-cover"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[2/3] bg-zinc-900 flex items-center justify-center">
-                      <Library className="w-8 h-8 text-zinc-700" />
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <p className="font-semibold text-white text-sm line-clamp-2 leading-snug">{c.name}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">{c.count} watched</p>
-                  </div>
-                </div>
+                <PosterCard
+                  title={c.name}
+                  year={`${c.count} watched`}
+                  posterUrl={c.poster_url}
+                />
               </Link>
             ))}
           </div>

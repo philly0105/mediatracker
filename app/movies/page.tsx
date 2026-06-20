@@ -29,7 +29,7 @@ export default function MoviesPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {[0, 1, 2].map((i) => (
             <div
               key={i}
@@ -39,7 +39,7 @@ export default function MoviesPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
             {entries.map((entry) => (
               <MediaCard key={entry.id} entry={entry} hideWatchedDate={true} />
             ))}

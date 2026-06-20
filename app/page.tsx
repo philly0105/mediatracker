@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { Calendar, Flame, Play, Clock, ArrowRight, Sparkles, TrendingUp, MonitorPlay } from 'lucide-react'
 import DashboardRecentCards from '@/components/DashboardRecentCards'
 import { BentoGrid, BentoGridItem } from '@/components/ui/BentoGrid'
-import { SpotlightCard } from '@/components/ui/SpotlightCard'
+import { Card } from '@/components/ui/Card'
+import { Eyebrow } from '@/components/ui/Eyebrow'
+import { StatTile } from '@/components/ui/StatTile'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -34,10 +36,10 @@ export default async function DashboardPage() {
       
       {/* Header */}
       <div className="flex flex-col gap-2 relative z-10 pl-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit mb-2 backdrop-blur-md shadow-lg shadow-white/5">
+        <Eyebrow style={{ marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
           <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-          <span className="text-[11px] font-bold tracking-widest text-violet-300 uppercase">Welcome back</span>
-        </div>
+          Welcome back
+        </Eyebrow>
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 pb-2">
           Dashboard
         </h1>
@@ -52,51 +54,32 @@ export default async function DashboardPage() {
           
           {/* Stat 1: Watched this Year */}
           <BentoGridItem delay={0.1} className="col-span-1 md:col-span-2 lg:col-span-1">
-            <SpotlightCard className="h-full group">
-              <Link href="/stats" className="block p-7 h-full flex flex-col justify-between cursor-pointer">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/20 group-hover:scale-110 transition-transform duration-500">
-                    <Calendar className="w-5 h-5 text-orange-400" />
-                  </div>
-                  <span className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase bg-zinc-900 px-2 py-1 rounded-md border border-white/5">Year {new Date().getFullYear()}</span>
-                </div>
-                <div>
-                  <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-orange-400 to-orange-600 tracking-tighter">
-                    {thisYearEntries?.length ?? 0}
-                  </p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <TrendingUp className="w-3.5 h-3.5 text-orange-500" />
-                    <p className="text-xs font-semibold text-zinc-400">Watched this year</p>
-                  </div>
-                </div>
-              </Link>
-            </SpotlightCard>
+            <Link href="/stats" className="block cursor-pointer h-full">
+              <StatTile
+                style={{ height: '100%' }}
+                label={`Year ${new Date().getFullYear()}`}
+                value={thisYearEntries?.length ?? 0}
+                icon={<Calendar className="w-5 h-5 text-orange-400" />}
+              />
+            </Link>
           </BentoGridItem>
 
           {/* Stat 2: Must Watch */}
           <BentoGridItem delay={0.2} className="col-span-1 lg:col-span-1">
-            <SpotlightCard className="h-full group" spotlightColor="rgba(139, 92, 246, 0.15)">
-              <Link href="/watchlist" className="block p-7 h-full flex flex-col justify-between cursor-pointer">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center border border-violet-500/20 group-hover:scale-110 transition-transform duration-500">
-                    <Flame className="w-5 h-5 text-violet-400" />
-                  </div>
-                  <span className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase bg-zinc-900 px-2 py-1 rounded-md border border-white/5">Priority</span>
-                </div>
-                <div>
-                  <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-violet-300 to-violet-600 tracking-tighter">
-                    {priorityCounts.must_watch}
-                  </p>
-                  <p className="text-xs font-semibold text-zinc-400 mt-2">Must Watch titles</p>
-                </div>
-              </Link>
-            </SpotlightCard>
+            <Link href="/watchlist" className="block cursor-pointer h-full">
+              <StatTile
+                style={{ height: '100%' }}
+                label="Must Watch"
+                value={priorityCounts.must_watch}
+                icon={<Flame className="w-5 h-5 text-violet-400" />}
+              />
+            </Link>
           </BentoGridItem>
 
           {/* Stat 3: Currently Watching */}
           <BentoGridItem delay={0.3} className="col-span-1 md:col-span-2">
-            <SpotlightCard className="h-full group" spotlightColor="rgba(244, 63, 94, 0.1)">
-              <Link href={currentShow?.media ? `/show/${currentShow.media_id}` : '/shows'} className="block p-7 h-full flex flex-col justify-between cursor-pointer relative overflow-hidden">
+            <Card style={{ padding: 0, overflow: 'hidden', height: '100%' }}>
+              <Link href={currentShow?.media ? `/show/${currentShow.media_id}` : '/shows'} className="block p-7 h-full flex flex-col justify-between cursor-pointer relative overflow-hidden group">
                 {/* Background image if there's a show */}
                 {currentShow?.media?.poster_url && (
                   <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-700 blur-sm mix-blend-luminosity">
@@ -141,7 +124,7 @@ export default async function DashboardPage() {
                   )}
                 </div>
               </Link>
-            </SpotlightCard>
+            </Card>
           </BentoGridItem>
 
         </BentoGrid>
@@ -165,7 +148,7 @@ export default async function DashboardPage() {
         <DashboardRecentCards entries={recent ?? []} />
         
         {(recent ?? []).length === 0 && (
-          <SpotlightCard className="p-12 text-center border-dashed border-white/10 mt-4">
+          <Card style={{ padding: '48px', textAlign: 'center', borderStyle: 'dashed', marginTop: '16px' }}>
             <MonitorPlay className="w-12 h-12 text-zinc-600 mx-auto mb-4 opacity-50" />
             <p className="text-zinc-400 text-base font-medium">Nothing watched yet.</p>
             <Link
@@ -175,7 +158,7 @@ export default async function DashboardPage() {
               <span>Start searching</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
-          </SpotlightCard>
+          </Card>
         )}
       </div>
 

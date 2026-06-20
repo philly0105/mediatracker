@@ -6,6 +6,7 @@ import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2 } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority, TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import { Card } from '@/components/ui/Card'
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -276,7 +277,7 @@ function WatchlistSection({
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {[0, 1, 2, 3].map((j) => (
             <div key={j} className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md animate-pulse border border-white/5">
               <div className="w-14 h-20 rounded-xl bg-white/5 shrink-0" />
@@ -294,7 +295,7 @@ function WatchlistSection({
         <p className="text-zinc-600 text-xs italic pl-1 py-2">No matching items.</p>
       ) : (
         <>
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
                 const isActioning = actioningId === item.id
@@ -316,74 +317,79 @@ function WatchlistSection({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ duration: 0.2 }}
-                    onClick={() => setSelectedItem(item)}
-                    className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md select-none group hover:scale-[1.015] hover:border-white/10 transition-all duration-300 cursor-pointer relative bg-white/[0.02]"
+                    style={{ height: '100%' }}
                   >
-                    {item.media?.poster_url ? (
-                      <img
-                        src={item.media?.poster_url}
-                        alt={item.media?.title}
-                        className="w-14 h-20 rounded-xl object-cover shadow-md shadow-black/20 border border-white/5 shrink-0 bg-zinc-900"
-                      />
-                    ) : (
-                      <div className="w-14 h-20 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                        No Poster
-                      </div>
-                    )}
-                    <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5 pr-14">
-                      <div>
-                        <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
-                          {item.media?.title}
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {item.media?.release_year}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                        {item.media?.type === 'show' ? (
-                          <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
-                        ) : (
-                          <><Film className="w-3.5 h-3.5 text-violet-500/80" /><span>Movie</span></>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions row on hover */}
-                    <div className="absolute top-3.5 right-3.5 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
-                      {isActioning ? (
-                        <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
+                    <Card
+                      onClick={() => setSelectedItem(item)}
+                      style={{ padding: '14px', display: 'flex', gap: '16px', position: 'relative', height: '100%', userSelect: 'none' }}
+                      className="group cursor-pointer"
+                    >
+                      {item.media?.poster_url ? (
+                        <img
+                          src={item.media?.poster_url}
+                          alt={item.media?.title}
+                          className="w-14 h-20 rounded-xl object-cover shadow-md shadow-black/20 border border-white/5 shrink-0 bg-zinc-900"
+                        />
                       ) : (
-                        <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10">
-                          {priority !== 'must_watch' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                              title="Move to Must Watch"
-                            ><Flame className="w-3.5 h-3.5" /></button>
-                          )}
-                          {priority !== 'want_to_watch' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
-                              title="Move to Want to Watch"
-                            ><Sparkles className="w-3.5 h-3.5" /></button>
-                          )}
-                          {priority !== 'someday' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
-                              title="Move to Someday"
-                            ><Inbox className="w-3.5 h-3.5" /></button>
-                          )}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                            title="Remove"
-                          ><Trash2 className="w-3.5 h-3.5" /></button>
+                        <div className="w-14 h-20 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                          No Poster
                         </div>
                       )}
-                    </div>
+                      <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5 pr-14">
+                        <div>
+                          <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+                            {item.media?.title}
+                          </p>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            {item.media?.release_year}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                          {item.media?.type === 'show' ? (
+                            <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
+                          ) : (
+                            <><Film className="w-3.5 h-3.5 text-violet-500/80" /><span>Movie</span></>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions row on hover */}
+                      <div className="absolute top-3.5 right-3.5 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200" onClick={e => e.stopPropagation()}>
+                        {isActioning ? (
+                          <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
+                        ) : (
+                          <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10">
+                            {priority !== 'must_watch' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                title="Move to Must Watch"
+                              ><Flame className="w-3.5 h-3.5" /></button>
+                            )}
+                            {priority !== 'want_to_watch' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+                                title="Move to Want to Watch"
+                              ><Sparkles className="w-3.5 h-3.5" /></button>
+                            )}
+                            {priority !== 'someday' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
+                                title="Move to Someday"
+                              ><Inbox className="w-3.5 h-3.5" /></button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              title="Remove"
+                            ><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
                   </motion.div>
                   </SelectableOverlay>
                 )
