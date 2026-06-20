@@ -8,6 +8,7 @@ interface PosterCardProps {
   rating?: number | null
   overlay?: string
   onClick?: () => void
+  children?: React.ReactNode
 }
 
 export function PosterCard({
@@ -17,6 +18,7 @@ export function PosterCard({
   rating = null,
   overlay,
   onClick,
+  children,
 }: PosterCardProps) {
   const [hover, setHover] = useState(false)
   const [imgErr, setImgErr] = useState(false)
@@ -77,6 +79,7 @@ export function PosterCard({
             }}>{overlay}</span>
           </div>
         )}
+        {children}
       </div>
       <div style={{
         padding: '14px', borderTop: '1px solid var(--border-subtle)',

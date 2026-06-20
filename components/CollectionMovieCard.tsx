@@ -1,12 +1,12 @@
 'use client'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
-import { CheckCircle2, BookmarkCheck } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import MediaInfoModal from './MediaInfoModal'
 import type { TmdbCollectionPart, TmdbSearchResult } from '@/types'
 import SelectableOverlay from './SelectableOverlay'
+import { PosterCard } from './ui/PosterCard'
+import { Badge } from './ui/Badge'
 
 interface Props {
   part: TmdbCollectionPart
@@ -30,45 +30,22 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
   return (
     <>
       <SelectableOverlay item={item}>
-      <motion.div
-        whileHover={{ scale: 1.015, y: -2 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        className="glass-card rounded-2xl overflow-hidden cursor-pointer relative select-none"
-        onClick={() => setShowInfo(true)}
-      >
-        <div className="relative aspect-[2/3]">
-          {part.poster_url ? (
-            <img
-              src={part.poster_url}
-              alt={part.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-              <span className="text-xs text-zinc-600">No Poster</span>
-            </div>
-          )}
+        <PosterCard
+          title={part.title}
+          year={part.release_year ?? undefined}
+          posterUrl={part.poster_url}
+          onClick={() => setShowInfo(true)}
+        >
           {(isWatched || isWatchlisted) && (
-            <div className="absolute top-2 right-2">
+            <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
               {isWatched ? (
-                <div className="bg-black/60 rounded-full p-0.5">
-                  <CheckCircle2 className="w-4 h-4 text-violet-400" />
-                </div>
+                <Badge tone="success">Watched</Badge>
               ) : (
-                <div className="bg-black/60 rounded-full p-0.5">
-                  <BookmarkCheck className="w-4 h-4 text-orange-400" />
-                </div>
+                <Badge tone="rating">Watchlisted</Badge>
               )}
             </div>
           )}
-        </div>
-        <div className="p-3">
-          <p className="font-semibold text-white text-sm line-clamp-2 leading-snug">{part.title}</p>
-          {part.release_year && (
-            <p className="text-xs text-zinc-500 mt-0.5">{part.release_year}</p>
-          )}
-        </div>
-      </motion.div>
+        </PosterCard>
       </SelectableOverlay>
 
       {showInfo && createPortal(
