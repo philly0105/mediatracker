@@ -1,0 +1,19 @@
+<!-- @dsCard group="Spacing" viewport="700x170" name="Corner radii" subtitle="Tight & editorial — 4 / 6 / 8 / 10 / 12 + pill (tags only)" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary);padding:24px 28px;box-sizing:border-box;display:flex;align-items:center;gap:16px}
+  .col{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .box{width:74px;height:74px;background:var(--glass-card);border:1px solid var(--border-strong);backdrop-filter:blur(12px)}
+  .t{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
+  .pill{width:96px;height:40px;border-radius:9999px;background:var(--btn-primary-bg)}
+</style></head>
+<body>
+  <div class="col"><div class="box" style="border-radius:4px"></div><span class="t">sm · 4</span></div>
+  <div class="col"><div class="box" style="border-radius:6px"></div><span class="t">md · 6</span></div>
+  <div class="col"><div class="box" style="border-radius:8px"></div><span class="t">lg · 8</span></div>
+  <div class="col"><div class="box" style="border-radius:10px"></div><span class="t">xl · 10</span></div>
+  <div class="col"><div class="box" style="border-radius:12px"></div><span class="t">2xl · 12</span></div>
+  <div class="col"><div class="pill"></div><span class="t">pill · tags</span></div>
+</body></html>

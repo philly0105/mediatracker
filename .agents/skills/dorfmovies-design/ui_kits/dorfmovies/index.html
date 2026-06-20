@@ -1,0 +1,74 @@
+<!-- @dsCard group="DorfMovies App" viewport="1280x720" name="DorfMovies — App" subtitle="Interactive dashboard, search, library & detail modal" -->
+<!-- @startingPoint section="DorfMovies" subtitle="Full app shell — sidebar, dashboard, search, library, detail modal" viewport="1280x720" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DorfMovies</title>
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg-void);
+    background-image: var(--page-radial);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  /* film-grain warmth over the whole canvas */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-image: var(--grain);
+    background-size: 180px;
+    opacity: var(--grain-opacity);
+    mix-blend-mode: overlay;
+  }
+  .dorf-grid {
+    background-size: 40px 40px;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script src="data.js"></script>
+  <script type="text/babel" src="Sidebar.jsx"></script>
+  <script type="text/babel" src="DashboardScreen.jsx"></script>
+  <script type="text/babel" src="SearchScreen.jsx"></script>
+  <script type="text/babel" src="LibraryScreen.jsx"></script>
+  <script type="text/babel" src="DetailModal.jsx"></script>
+  <script type="text/babel" src="App.jsx"></script>
+  <script type="text/babel" data-presets="react">
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    function mount() {
+      if (!window.DorfApp) { setTimeout(mount, 40); return; }
+      const App = window.DorfApp;
+      root.render(<App />);
+      const tick = () => window.lucide && window.lucide.createIcons();
+      requestAnimationFrame(tick);
+      setTimeout(tick, 200);
+      setTimeout(tick, 600);
+    }
+    mount();
+  </script>
+</body>
+</html>

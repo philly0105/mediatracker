@@ -1,0 +1,147 @@
+/* ============================================================
+   DorfMovies — Color tokens  ·  "Autumn Pine" earthy theme
+   Warm brown-black canvas, film-grain warmth, soft & low-contrast.
+   Deep PINE-GREEN primary, with a small playful accent set:
+   AMBER, RUST, and DUSTY-TEAL. Rust is reserved for "live",
+   teal for "watched", amber for star ratings.
+   ============================================================ */
+
+:root {
+  /* ---- Warm brown-black canvas ---- */
+  --black: #000000;
+  --bg-void: #100e09;     /* deepest page base */
+  --bg-base: #15120c;     /* app shell / sidebar */
+  --bg-raised: #1b1711;   /* cards */
+  --bg-elevated: #201b13; /* modals / popovers */
+  --bg-bar: #241f17;      /* bars / chips */
+
+  /* ---- Warm stone neutral ramp (text scale) ---- */
+  --zinc-100: #e9e2d3;
+  --zinc-200: #dcd3c1;
+  --zinc-300: #c8bda7;
+  --zinc-400: #9d9079;
+  --zinc-500: #7a6f5b;
+  --zinc-600: #564e3f;
+  --zinc-700: #3d362b;
+  --zinc-800: #2a241b;
+  --zinc-900: #1a160f;
+  --white: #ffffff;
+
+  /* ---- Pine green — the primary brand accent ---- */
+  --green-300: #b3c79f;
+  --green-400: #97b27e;
+  --green-500: #7c9a6a;  /* primary */
+  --green-600: #5f7c4f;
+  --green-700: #47603b;
+
+  /* ---- Amber — playful accent + star ratings ---- */
+  --amber-300: #e6c489;
+  --amber-400: #d3a85c;
+  --amber-500: #bf9248;
+  --amber-yellow: #ddb866;
+
+  /* ---- Rust — playful accent, reserved for "live / now watching" ---- */
+  --rust-300: #d8a18a;
+  --rust-400: #c4805f;
+  --rust-500: #ad6647;
+  --rust-600: #8c4f36;
+
+  /* ---- Dusty teal — playful accent + "watched" success ---- */
+  --teal-300: #9ab8b1;
+  --teal-400: #6f9089;
+  --teal-500: #577670;
+
+  /* ---- Live + Sage aliases (kept for legacy semantic names) ---- */
+  --rose-400: var(--rust-400);
+  --rose-500: var(--rust-500);
+  --rose-600: var(--rust-600);
+  --emerald-400: var(--teal-400);
+  --emerald-500: var(--teal-500);
+
+  /* ---- Legacy accent aliases → pine green (older violet/orange/gold callers) ---- */
+  --gold-300: var(--green-300);
+  --gold-400: var(--green-400);
+  --gold-500: var(--green-500);
+  --gold-600: var(--green-600);
+  --gold-700: var(--green-700);
+  --violet-300: var(--green-300);
+  --violet-400: var(--green-400);
+  --violet-500: var(--green-500);
+  --violet-600: var(--green-600);
+  --violet-700: var(--green-700);
+  --orange-400: var(--amber-400);
+  --orange-500: var(--amber-400);
+  --orange-600: var(--amber-500);
+
+  /* ---- Flat surfaces (solid, opaque — NO blur) ---- */
+  --glass-card: #1b1711;
+  --glass-card-hover: #241f17;
+  --glass-panel: #18140e;
+  --glass-input: #211c14;
+  --glass-chip: #211c14;
+  --glass-modal: #201b13;
+  --scrim: rgba(10, 8, 5, 0.82);
+
+  /* ---- Hairline borders (warm cream at low alpha; emphasis = green) ---- */
+  --border-faint: rgba(236, 231, 218, 0.04);
+  --border-subtle: rgba(236, 231, 218, 0.07);
+  --border-soft: rgba(236, 231, 218, 0.10);
+  --border-default: rgba(236, 231, 218, 0.13);
+  --border-strong: rgba(124, 154, 106, 0.42);
+  --border-focus: rgba(124, 154, 106, 0.65);
+
+  /* ---- Semantic aliases ---- */
+  --text-primary: var(--zinc-100);
+  --text-secondary: var(--zinc-400);
+  --text-muted: var(--zinc-500);
+  --text-faint: var(--zinc-600);
+  --text-inverse: var(--bg-elevated);
+
+  --surface-page: var(--bg-void);
+  --surface-shell: var(--bg-base);
+  --surface-card: var(--glass-card);
+  --surface-modal: var(--glass-modal);
+  --surface-input: var(--glass-input);
+
+  --accent: var(--green-500);
+  --accent-hover: var(--green-400);
+  --brand-mark: var(--green-500);
+  --live: var(--rust-400);
+  --rating: var(--amber-400);
+  --success: var(--teal-400);
+
+  /* Primary button = solid pine green; ghost = warm hairline */
+  --btn-primary-bg: var(--green-500);
+  --btn-primary-fg: #11160d;
+  --btn-primary-bg-hover: var(--green-400);
+  --btn-ghost-bg: rgba(236, 231, 218, 0.05);
+  --btn-ghost-bg-hover: rgba(236, 231, 218, 0.10);
+
+  /* ---- Accent tints (bg/border pairs for badges & icon chips) ---- */
+  --green-tint-bg: rgba(124, 154, 106, 0.14);
+  --green-tint-border: rgba(124, 154, 106, 0.30);
+  --amber-tint-bg: rgba(211, 168, 92, 0.14);
+  --amber-tint-border: rgba(211, 168, 92, 0.30);
+  --rust-tint-bg: rgba(196, 128, 95, 0.15);
+  --rust-tint-border: rgba(196, 128, 95, 0.32);
+  --teal-tint-bg: rgba(111, 144, 137, 0.14);
+  --teal-tint-border: rgba(111, 144, 137, 0.30);
+
+  /* legacy tint aliases */
+  --gold-tint-bg: var(--green-tint-bg);
+  --gold-tint-border: var(--green-tint-border);
+  --violet-tint-bg: var(--green-tint-bg);
+  --violet-tint-border: var(--green-tint-border);
+  --orange-tint-bg: var(--amber-tint-bg);
+  --orange-tint-border: var(--amber-tint-border);
+  --rose-tint-bg: var(--rust-tint-bg);
+  --rose-tint-border: var(--rust-tint-border);
+  --emerald-tint-bg: var(--teal-tint-bg);
+  --emerald-tint-border: var(--teal-tint-border);
+
+  /* ---- Ambient warmth (very subtle, behind everything) ---- */
+  --orb-violet: rgba(124, 154, 106, 0.13);
+  --orb-orange: rgba(196, 128, 95, 0.12);
+  --orb-rose: rgba(211, 168, 92, 0.10);
+  --page-radial: radial-gradient(circle at 50% -10%, rgba(42, 33, 20, 0.9) 0%, rgba(16, 14, 9, 1) 55%); /* @kind other */
+}
