@@ -24,15 +24,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body className={`${outfit.className} bg-[#09090B] text-zinc-100 min-h-screen relative antialiased`}>
+      <body className={`${outfit.className} bg-[var(--surface-page)] text-zinc-100 min-h-screen relative antialiased bg-[var(--page-radial)] bg-fixed`}>
         {/* Ambient gradient orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
           <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[150px] opacity-20"
-            style={{ background: 'rgba(139, 92, 246, 0.25)' }} />
+            style={{ background: 'var(--orb-violet)' }} />
           <div className="absolute -bottom-32 -right-32 w-[600px] h-[600px] rounded-full blur-[130px] opacity-20"
-            style={{ background: 'rgba(249, 115, 22, 0.18)' }} />
+            style={{ background: 'var(--orb-rose)' }} />
           <div className="absolute top-1/2 left-1/3 w-[500px] h-[500px] rounded-full blur-[120px] opacity-10"
-            style={{ background: 'rgba(244, 63, 94, 0.12)' }} />
+            style={{ background: 'var(--orb-orange)' }} />
         </div>
 
         {/* Layout wrapper */}
