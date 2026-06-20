@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import RatingStars from '@/components/RatingStars'
 import { Badge } from './Badge'
+import { Calendar } from 'lucide-react'
 
 interface MediaRowProps {
   title: string
@@ -42,7 +43,7 @@ export function MediaRow({
         display: 'flex',
         gap: 'var(--space-4)',
         padding: '14px',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--radius-md)',
         background: hover ? 'var(--glass-card-hover)' : 'var(--glass-card)',
         border: `1px solid ${hover ? 'var(--border-strong)' : 'var(--border-subtle)'}`,
         backdropFilter: 'blur(var(--blur-md))',
@@ -103,7 +104,7 @@ export function MediaRow({
           )}
           {watchedAt && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-2xs)', color: 'var(--text-faint)' }}>
-              📅 Watched {watchedAt}
+              <Calendar style={{ width: 12, height: 12 }} /> Watched {watchedAt}
             </span>
           )}
         </div>

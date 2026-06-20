@@ -32,7 +32,7 @@ export function SpotlightCard({
     position: 'relative',
     overflow: 'hidden',
     minWidth: 0,
-    borderRadius: 'var(--radius-2xl)',
+    borderRadius: 'var(--radius-lg)',
     background: 'var(--glass-card)',
     backdropFilter: 'blur(var(--blur-lg))',
     WebkitBackdropFilter: 'blur(var(--blur-lg))',
