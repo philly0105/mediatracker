@@ -44,7 +44,7 @@ export default function ListsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {lists.map(list => (
           <Link key={list.id} href={`/lists/${list.id}`} className="block">
-            <Card style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+            <Card style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 'var(--radius-md)' }}>
               <span className="text-white font-medium">{list.name}</span>
               {list.is_shared && (
                 <Badge tone="brand">Shared</Badge>

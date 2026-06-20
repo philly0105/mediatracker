@@ -111,6 +111,7 @@ function SearchRow({ r, watched, listed, onClick }: { r: TmdbSearchResult, watch
   const [hover, setHover] = useState(false)
   return (
     <button
+      type="button"
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -121,7 +122,7 @@ function SearchRow({ r, watched, listed, onClick }: { r: TmdbSearchResult, watch
         gap: '14px',
         padding: '12px',
         textAlign: 'left',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--radius-md)',
         cursor: 'pointer',
         background: hover ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
         border: '1px solid var(--border-soft)',
@@ -130,9 +131,9 @@ function SearchRow({ r, watched, listed, onClick }: { r: TmdbSearchResult, watch
       }}
     >
       {r.poster_url ? (
-        <img src={r.poster_url} alt="" className="w-10 h-14 object-cover rounded-lg flex-shrink-0" />
+        <img src={r.poster_url} alt="" className="w-10 h-14 object-cover rounded-[var(--radius-xl)] flex-shrink-0" />
       ) : (
-        <div className="w-10 h-14 rounded-lg flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-black border border-white/5 text-zinc-600 text-xs">
+        <div className="w-10 h-14 rounded-[var(--radius-xl)] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-black border border-white/5 text-zinc-600 text-xs">
           No Poster
         </div>
       )}

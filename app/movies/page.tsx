@@ -33,7 +33,7 @@ export default function MoviesPage() {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="h-32 rounded-2xl bg-white/5 border border-white/10 animate-pulse"
+              className="h-32 rounded-[var(--radius-md)] bg-white/5 border border-white/10 animate-pulse"
             />
           ))}
         </div>

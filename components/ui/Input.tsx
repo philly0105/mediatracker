@@ -42,7 +42,7 @@ export function Input({
         placeholder={placeholder}
         onFocus={() => setFocus(true)}
         onBlur={() => setFocus(false)}
-        style={{ ...base, resize: 'none' as React.CSSProperties['resize'], borderRadius: 'var(--radius-lg)', padding: '12px 18px', ...style }}
+        style={{ ...base, resize: 'none' as React.CSSProperties['resize'], borderRadius: 'var(--radius-sm)', padding: '12px 18px', ...style }}
         {...rest}
       />
     )

@@ -279,8 +279,8 @@ function WatchlistSection({
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {[0, 1, 2, 3].map((j) => (
-            <div key={j} className="glass-card rounded-2xl p-3.5 flex gap-4 backdrop-blur-md animate-pulse border border-white/5">
-              <div className="w-14 h-20 rounded-xl bg-white/5 shrink-0" />
+            <div key={j} className="glass-card rounded-lg p-3.5 flex gap-4 backdrop-blur-md animate-pulse border border-white/5">
+              <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-white/5 shrink-0" />
               <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
                 <div className="space-y-2">
                   <div className="h-4 bg-white/10 rounded w-2/3" />
@@ -328,10 +328,10 @@ function WatchlistSection({
                         <img
                           src={item.media?.poster_url}
                           alt={item.media?.title}
-                          className="w-14 h-20 rounded-xl object-cover shadow-md shadow-black/20 border border-white/5 shrink-0 bg-zinc-900"
+                          className="w-14 h-20 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/20 border border-white/5 shrink-0 bg-zinc-900"
                         />
                       ) : (
-                        <div className="w-14 h-20 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                        <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
                           No Poster
                         </div>
                       )}
@@ -363,27 +363,27 @@ function WatchlistSection({
                             {priority !== 'must_watch' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                className="p-1.5 rounded-sm text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                                 title="Move to Must Watch"
                               ><Flame className="w-3.5 h-3.5" /></button>
                             )}
                             {priority !== 'want_to_watch' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+                                className="p-1.5 rounded-sm text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
                                 title="Move to Want to Watch"
                               ><Sparkles className="w-3.5 h-3.5" /></button>
                             )}
                             {priority !== 'someday' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
+                                className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
                                 title="Move to Someday"
                               ><Inbox className="w-3.5 h-3.5" /></button>
                             )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              className="p-1.5 rounded-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                               title="Remove"
                             ><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
