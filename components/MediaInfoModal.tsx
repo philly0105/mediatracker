@@ -9,7 +9,6 @@ import {
   Plus,
   Check,
   Loader2,
-  Film,
   Tv,
   X,
   Flame,
@@ -199,10 +198,10 @@ export default function MediaInfoModal({
               <img
                 src={item.poster_url}
                 alt={item.title}
-                className="w-32 md:w-40 rounded-2xl object-cover shadow-2xl shadow-black/50 border border-white/5 mx-auto md:mx-0 shrink-0 self-start"
+                className="w-32 md:w-40 rounded-[var(--radius-xl)] object-cover shadow-2xl shadow-black/50 border border-white/5 mx-auto md:mx-0 shrink-0 self-start"
               />
             ) : (
-              <div className="w-32 h-48 md:w-40 md:h-60 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-xs text-zinc-600 mx-auto md:mx-0 shrink-0">
+              <div className="w-32 h-48 md:w-40 md:h-60 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-xs text-zinc-600 mx-auto md:mx-0 shrink-0">
                 No Poster
               </div>
             )}
@@ -268,7 +267,7 @@ export default function MediaInfoModal({
                       href={details.trailer_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors border border-rose-500/20"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors border border-rose-500/20"
                     >
                       <Play className="w-3.5 h-3.5 fill-rose-500" />
                       Watch Trailer
@@ -279,7 +278,7 @@ export default function MediaInfoModal({
                       href={`http://localhost:3003/?q=${encodeURIComponent(item.title)}#movies`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold text-xs transition-colors border border-violet-500/20"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold text-xs transition-colors border border-violet-500/20"
                     >
                       <Tv className="w-3.5 h-3.5" />
                       Watch on IPTV

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Calendar, Flame, Play, Clock, ArrowRight, Sparkles, TrendingUp, MonitorPlay } from 'lucide-react'
+import { Calendar, Flame, Play, Clock, ArrowRight, Sparkles, MonitorPlay } from 'lucide-react'
 import DashboardRecentCards from '@/components/DashboardRecentCards'
 import { BentoGrid, BentoGridItem } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
             <p className="text-zinc-400 text-base font-medium">Nothing watched yet.</p>
             <Link
               href="/search"
-              className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-400 hover:text-violet-300 transition-colors bg-violet-500/10 px-4 py-2 rounded-full border border-violet-500/20 hover:bg-violet-500/20"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-400 hover:text-violet-300 transition-colors bg-violet-500/10 px-4 py-2 rounded-sm border border-violet-500/20 hover:bg-violet-500/20"
             >
               <span>Start searching</span>
               <ArrowRight className="w-4 h-4" />
