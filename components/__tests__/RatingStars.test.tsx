@@ -24,8 +24,9 @@ describe('RatingStars', () => {
 
   it('renders filled stars for current value', () => {
     const { container } = render(<RatingStars value={3.5} onChange={vi.fn()} />)
-    const filled = container.querySelectorAll('.text-yellow-400')
-    expect(filled.length).toBeGreaterThan(0)
+    const stars = container.querySelectorAll('span')
+    const filledStars = Array.from(stars).filter(s => s.style.color === 'var(--amber-400)')
+    expect(filledStars.length).toBeGreaterThan(0)
   })
 
   it('does not call onChange when readOnly', () => {

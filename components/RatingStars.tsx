@@ -18,11 +18,11 @@ export default function RatingStars({ value, onChange, readOnly = false }: Props
         const half = !full && display >= star - 0.5
         return (
           <div key={star} className="relative w-6 h-6">
-            <span className="text-gray-600 text-2xl leading-none">★</span>
+            <span className="text-2xl leading-none" style={{ color: 'var(--zinc-700)' }}>★</span>
             {(full || half) && (
               <span
-                className="absolute inset-0 text-yellow-400 text-2xl leading-none overflow-hidden"
-                style={{ width: full ? '100%' : '50%' }}
+                className="absolute inset-0 text-2xl leading-none overflow-hidden"
+                style={{ width: full ? '100%' : '50%', color: 'var(--amber-400)' }}
               >★</span>
             )}
             <div
