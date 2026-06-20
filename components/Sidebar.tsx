@@ -105,7 +105,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 padding: '10px 12px',
                 marginTop: 8,
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(255,255,255,0.01)',
+                background: 'rgba(236, 231, 218, 0.01)',
                 border: '1px solid var(--border-faint)',
               }}
             >
@@ -156,7 +156,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-4 flex items-center justify-between"
         style={{
-          background: 'rgba(21, 18, 12, 0.9)',
+          background: 'rgba(36, 31, 23, 0.9)',
           backdropFilter: 'blur(var(--blur-md))',
           borderBottom: '1px solid var(--border-subtle)',
         }}
@@ -174,7 +174,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             }}
           >
             {userEmail ? (
-              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${userEmail}`} alt="User Avatar" className="w-full h-full object-cover" />
+              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(userEmail)}`} alt="User Avatar" className="w-full h-full object-cover" />
             ) : (
               <User className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
             )}
@@ -210,7 +210,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>More</span>
                 <button
                   onClick={() => setMoreOpen(false)}
-                  className="p-1 rounded-lg hover:text-white transition-colors"
+                  className="p-1 rounded-sm hover:text-white transition-colors"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   <X className="w-5 h-5" />
@@ -225,7 +225,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                       key={item.href}
                       href={item.href}
                       onClick={() => setMoreOpen(false)}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl text-[10px] font-medium transition-colors"
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-md text-[10px] font-medium transition-colors"
                       style={{
                         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                         background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
@@ -259,7 +259,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className="relative flex flex-col items-center gap-1 p-2 rounded-xl text-[10px] font-medium transition-colors"
+              className="relative flex flex-col items-center gap-1 p-2 rounded-md text-[10px] font-medium transition-colors"
               style={{
                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
               }}
@@ -271,7 +271,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         })}
         <button
           onClick={() => setMoreOpen(true)}
-          className="relative flex flex-col items-center gap-1 p-2 rounded-xl text-[10px] font-medium transition-colors"
+          className="relative flex flex-col items-center gap-1 p-2 rounded-md text-[10px] font-medium transition-colors"
           style={{
             color: moreDrawerItems.some((i) => i.href === pathname) ? 'var(--text-primary)' : 'var(--text-secondary)',
           }}
