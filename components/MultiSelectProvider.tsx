@@ -51,19 +51,27 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       const today = new Date().toISOString().split('T')[0]
 
       await Promise.all(
-        items.map((item) => {
+        items.map(async (item) => {
           if (action === 'watched') {
-            return fetch('/api/watch', {
+            const resWatch = await fetch('/api/watch', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tmdb_id: item.tmdb_id, type: item.type, watched_at: today }),
             })
+            if (!resWatch.ok) throw new Error('Failed to mark as watched')
+
+            await fetch('/api/watchlist', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: item.tmdb_id, type: item.type }),
+            })
           } else {
-            return fetch('/api/watchlist', {
+            const resWatchlist = await fetch('/api/watchlist', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tmdb_id: item.tmdb_id, type: item.type, priority: 'want_to_watch' }),
             })
+            if (!resWatchlist.ok) throw new Error('Failed to add to watchlist')
           }
         })
       )

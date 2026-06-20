@@ -80,13 +80,34 @@ export async function DELETE(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id } = await request.json()
-  const { error } = await supabase
-    .from('watchlist_items')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
+  const { id, tmdb_id, type } = await request.json()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (id) {
+    const { error } = await supabase
+      .from('watchlist_items')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  } else if (tmdb_id && type) {
+    const { data: media } = await supabase
+      .from('media')
+      .select('id')
+      .eq('tmdb_id', tmdb_id)
+      .eq('type', type)
+      .single()
+
+    if (media) {
+      const { error } = await supabase
+        .from('watchlist_items')
+        .delete()
+        .eq('media_id', media.id)
+        .eq('user_id', user.id)
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
