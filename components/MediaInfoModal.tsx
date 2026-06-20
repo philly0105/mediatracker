@@ -376,7 +376,7 @@ export default function MediaInfoModal({
                         key={actor}
                         href={`/person/${encodeURIComponent(actor)}`}
                         {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
-                        className="px-3 py-1 rounded-xl text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04] hover:bg-white/10 hover:text-white transition-colors"
+                        className="px-3 py-1 rounded-sm text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04] hover:bg-white/10 hover:text-white transition-colors"
                       >
                         {actor}
                       </Link>

@@ -58,7 +58,7 @@ export default function WatchlistPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
-            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[120px]"
+            className="px-4 py-2 rounded-sm bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[120px]"
           >
             <option value="all" className="bg-zinc-900">All Types</option>
             <option value="movie" className="bg-zinc-900">Movies Only</option>
@@ -68,7 +68,7 @@ export default function WatchlistPage() {
           <select
             value={genreFilter}
             onChange={(e) => setGenreFilter(e.target.value)}
-            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[140px]"
+            className="px-4 py-2 rounded-sm bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[140px]"
           >
             <option value="All" className="bg-zinc-900">All Genres</option>
             {GENRES.map(g => <option key={g} value={g} className="bg-zinc-900">{g}</option>)}
@@ -359,7 +359,7 @@ function WatchlistSection({
                         {isActioning ? (
                           <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
                         ) : (
-                          <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10">
+                          <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-sm border border-white/10">
                             {priority !== 'must_watch' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}

@@ -6,6 +6,7 @@ import type { TmdbSearchResult } from '@/types'
 import { ReactNode } from 'react'
 
 export default function SelectableOverlay({ item, children }: { item: TmdbSearchResult, children: ReactNode }) {
+  if (!item) return <>{children}</>
   const { selectedItems, toggleSelection, isSelectMode } = useMultiSelect()
   const key = `${item.type}-${item.tmdb_id}`
   const isSelected = selectedItems.has(key)
