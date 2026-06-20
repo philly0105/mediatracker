@@ -1,19 +1,15 @@
 'use client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
 import Link from 'next/link'
+import { Card } from '@/components/ui/Card'
 
-const COLORS = ['#f97316', '#e4e4e7', '#fb7185', '#a3a3a3', '#fbbf24', '#d4d4d8', '#f87171', '#71717a']
+const COLORS = ['#7c9a6a', '#d3a85c', '#c4805f', '#6f9089', '#c8bda7', '#97b27e', '#e6c489', '#d8a18a']
 
 const tooltipStyle = {
-  background: 'rgba(13,13,15,0.95)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '12px',
-  color: '#f4f4f5',
-}
-
-const glassCard = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'rgba(27,23,17,0.95)',
+  border: '1px solid rgba(236,231,218,0.1)',
+  borderRadius: '4px',
+  color: '#e9e2d3',
 }
 
 interface StatsData {
@@ -28,23 +24,23 @@ interface StatsData {
 export default function StatsCharts({ data }: { data: StatsData }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl p-6 backdrop-blur-md" style={glassCard}>
-        <h2 className="text-lg font-semibold tracking-tight mb-5">Monthly Activity</h2>
+      <Card>
+        <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Monthly Activity</h2>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data.monthlyActivity}>
-            <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="month" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-            <Legend wrapperStyle={{ color: '#a3a3a3', fontSize: 12 }} />
-            <Bar dataKey="movies" fill="#f97316" name="Movies" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="episodes" fill="#a3a3a3" name="Episodes" radius={[4, 4, 0, 0]} />
+            <Legend wrapperStyle={{ color: '#9d9079', fontSize: 12 }} />
+            <Bar dataKey="movies" fill="#7c9a6a" name="Movies" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="episodes" fill="#6f9089" name="Episodes" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-2xl p-6 backdrop-blur-md" style={glassCard}>
-          <h2 className="text-lg font-semibold tracking-tight mb-5">Genres</h2>
+        <Card>
+          <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Genres</h2>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={data.genreBreakdown.slice(0, 8)} dataKey="count" nameKey="genre"
@@ -55,19 +51,19 @@ export default function StatsCharts({ data }: { data: StatsData }) {
               <Tooltip contentStyle={tooltipStyle} />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl p-6 backdrop-blur-md" style={glassCard}>
-          <h2 className="text-lg font-semibold tracking-tight mb-5">Ratings</h2>
+        <Card>
+          <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Ratings</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.ratingDist}>
-              <XAxis dataKey="rating" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="rating" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="count" fill="#fbbf24" name="Films" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#d3a85c" name="Films" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -75,20 +71,20 @@ export default function StatsCharts({ data }: { data: StatsData }) {
           { title: 'Top Directors', items: data.topDirectors },
           { title: 'Top Actors', items: data.topActors },
         ].map(({ title, items }) => (
-          <div key={title} className="rounded-2xl p-6 backdrop-blur-md" style={glassCard}>
-            <h2 className="text-lg font-semibold tracking-tight mb-4">{title}</h2>
+          <Card key={title}>
+            <h2 className="text-lg font-semibold tracking-tight mb-4 text-white">{title}</h2>
             <div className="space-y-2.5">
               {items.map(({ name, count }) => (
                 <div key={name} className="flex items-center justify-between">
-                  <Link href={`/person/${encodeURIComponent(name)}`} className="text-zinc-300 text-sm hover:text-white hover:underline transition-colors">
+                  <Link href={`/person/${encodeURIComponent(name)}`} className="text-zinc-200 text-sm hover:text-zinc-100 hover:underline transition-colors">
                     {name}
                   </Link>
-                  <span className="text-zinc-600 text-sm tabular-nums">{count}</span>
+                  <span className="text-zinc-500 text-sm tabular-nums">{count}</span>
                 </div>
               ))}
-              {items.length === 0 && <p className="text-zinc-600 text-sm">Not enough data yet.</p>}
+              {items.length === 0 && <p className="text-zinc-500 text-sm">Not enough data yet.</p>}
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

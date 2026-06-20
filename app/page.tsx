@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 relative z-10 pl-2">
         <Eyebrow style={{ marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-          <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+          <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
           Welcome back
         </Eyebrow>
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 pb-2">
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
                 style={{ height: '100%' }}
                 label={`Year ${new Date().getFullYear()}`}
                 value={thisYearEntries?.length ?? 0}
-                icon={<Calendar className="w-5 h-5 text-orange-400" />}
+                icon={<Calendar className="w-5 h-5 text-[var(--accent)]" />}
               />
             </Link>
           </BentoGridItem>
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
                 style={{ height: '100%' }}
                 label="Must Watch"
                 value={priorityCounts.must_watch}
-                icon={<Flame className="w-5 h-5 text-violet-400" />}
+                icon={<Flame className="w-5 h-5 text-[var(--live)]" />}
               />
             </Link>
           </BentoGridItem>
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
             <p className="text-zinc-400 text-base font-medium">Nothing watched yet.</p>
             <Link
               href="/search"
-              className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-violet-400 hover:text-violet-300 transition-colors bg-violet-500/10 px-4 py-2 rounded-sm border border-violet-500/20 hover:bg-violet-500/20"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[var(--accent)] hover:text-[var(--accent)] transition-opacity hover:opacity-80 bg-[var(--accent)]/10 px-4 py-2 rounded-sm border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20"
             >
               <span>Start searching</span>
               <ArrowRight className="w-4 h-4" />

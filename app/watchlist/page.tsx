@@ -16,9 +16,9 @@ const PRIORITY_LABELS = {
 const PRIORITY_ORDER: Array<keyof typeof PRIORITY_LABELS> = ['must_watch', 'want_to_watch', 'someday']
 
 const PRIORITY_CONFIG = {
-  must_watch: { color: 'text-rose-400 border-rose-500/20 bg-rose-500/5', icon: Flame },
-  want_to_watch: { color: 'text-orange-400 border-orange-500/20 bg-orange-500/5', icon: Sparkles },
-  someday: { color: 'text-zinc-400 border-zinc-800 bg-zinc-800/10', icon: Inbox },
+  must_watch: { color: 'text-[var(--rust-300)] border-[var(--rust-tint-border)] bg-[var(--rust-tint-bg)]', icon: Flame },
+  want_to_watch: { color: 'text-[var(--amber-300)] border-[var(--amber-tint-border)] bg-[var(--amber-tint-bg)]', icon: Sparkles },
+  someday: { color: 'text-zinc-400 border-[var(--border-subtle)] bg-white/5', icon: Inbox },
 }
 
 const GENRES = [
@@ -44,7 +44,7 @@ export default function WatchlistPage() {
   return (
     <div className="space-y-8">
       {/* Header & Filters */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between sticky top-0 z-40 bg-[#09090B]/95 backdrop-blur-xl pt-2 pb-6 border-b border-white/[0.04]">
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between sticky top-0 z-40 bg-[var(--bg-void)]/95 backdrop-blur-xl pt-2 pb-6 border-b border-[var(--border-subtle)]">
         <div className="flex flex-col gap-1.5">
           <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
             Watchlist
@@ -58,20 +58,20 @@ export default function WatchlistPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
-            className="px-4 py-2 rounded-sm bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[120px]"
+            className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[120px]"
           >
-            <option value="all" className="bg-zinc-900">All Types</option>
-            <option value="movie" className="bg-zinc-900">Movies Only</option>
-            <option value="show" className="bg-zinc-900">TV Shows Only</option>
+            <option value="all" className="bg-[var(--bg-void)]">All Types</option>
+            <option value="movie" className="bg-[var(--bg-void)]">Movies Only</option>
+            <option value="show" className="bg-[var(--bg-void)]">TV Shows Only</option>
           </select>
 
           <select
             value={genreFilter}
             onChange={(e) => setGenreFilter(e.target.value)}
-            className="px-4 py-2 rounded-sm bg-white/5 border border-white/10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none min-w-[140px]"
+            className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[140px]"
           >
-            <option value="All" className="bg-zinc-900">All Genres</option>
-            {GENRES.map(g => <option key={g} value={g} className="bg-zinc-900">{g}</option>)}
+            <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
+            {GENRES.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
           </select>
         </div>
       </div>
@@ -264,14 +264,14 @@ function WatchlistSection({
   return (
     <div className="space-y-5">
       {/* Group Header */}
-      <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+      <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
         <div className={`p-1.5 rounded-lg border ${config.color.split(' ')[1]} ${config.color.split(' ')[2]}`}>
           <Icon className={`w-4 h-4 ${config.color.split(' ')[0]}`} />
         </div>
         <h2 className="text-lg font-bold tracking-tight text-white">
           {PRIORITY_LABELS[priority]}
         </h2>
-        <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-[var(--border-subtle)] px-2 py-0.5 rounded-full">
           {loading ? '...' : total}
         </span>
       </div>
@@ -279,14 +279,14 @@ function WatchlistSection({
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
           {[0, 1, 2, 3].map((j) => (
-            <div key={j} className="glass-card rounded-lg p-3.5 flex gap-4 backdrop-blur-md animate-pulse border border-white/5">
-              <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-white/5 shrink-0" />
+            <div key={j} className="bg-[var(--glass-card)] border border-[var(--border-subtle)] rounded-lg p-3.5 flex gap-4 animate-pulse">
+              <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-[var(--bg-void)] shrink-0" />
               <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
                 <div className="space-y-2">
-                  <div className="h-4 bg-white/10 rounded w-2/3" />
-                  <div className="h-3 bg-white/5 rounded w-1/4" />
+                  <div className="h-4 bg-[var(--bg-void)] rounded w-2/3" />
+                  <div className="h-3 bg-[var(--bg-void)] rounded w-1/4" />
                 </div>
-                <div className="h-3.5 bg-white/5 rounded w-1/3" />
+                <div className="h-3.5 bg-[var(--bg-void)] rounded w-1/3" />
               </div>
             </div>
           ))}
@@ -328,16 +328,16 @@ function WatchlistSection({
                         <img
                           src={item.media?.poster_url}
                           alt={item.media?.title}
-                          className="w-14 h-20 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/20 border border-white/5 shrink-0 bg-zinc-900"
+                          className="w-14 h-20 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/20 border border-[var(--border-subtle)] shrink-0 bg-[var(--bg-void)]"
                         />
                       ) : (
-                        <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                        <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
                           No Poster
                         </div>
                       )}
                       <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5 pr-14">
                         <div>
-                          <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+                          <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
                             {item.media?.title}
                           </p>
                           <p className="text-xs text-zinc-500 mt-0.5">
@@ -347,9 +347,9 @@ function WatchlistSection({
 
                         <div className="flex items-center gap-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
                           {item.media?.type === 'show' ? (
-                            <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
+                            <><Tv className="w-3.5 h-3.5 text-[var(--live)]" /><span>TV Show</span></>
                           ) : (
-                            <><Film className="w-3.5 h-3.5 text-violet-500/80" /><span>Movie</span></>
+                            <><Film className="w-3.5 h-3.5 text-[var(--accent)]" /><span>Movie</span></>
                           )}
                         </div>
                       </div>
@@ -359,31 +359,31 @@ function WatchlistSection({
                         {isActioning ? (
                           <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
                         ) : (
-                          <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-sm border border-white/10">
+                          <div className="flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-sm border border-[var(--border-subtle)]">
                             {priority !== 'must_watch' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
-                                className="p-1.5 rounded-sm text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--rust-300)] hover:bg-[var(--rust-tint-bg)] transition-colors"
                                 title="Move to Must Watch"
                               ><Flame className="w-3.5 h-3.5" /></button>
                             )}
                             {priority !== 'want_to_watch' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
-                                className="p-1.5 rounded-sm text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-colors"
+                                className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--amber-300)] hover:bg-[var(--amber-tint-bg)] transition-colors"
                                 title="Move to Want to Watch"
                               ><Sparkles className="w-3.5 h-3.5" /></button>
                             )}
                             {priority !== 'someday' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
-                                className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors"
+                                className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-300 hover:bg-white/10 transition-colors"
                                 title="Move to Someday"
                               ><Inbox className="w-3.5 h-3.5" /></button>
                             )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
-                              className="p-1.5 rounded-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--live)] hover:bg-[var(--rust-tint-bg)] transition-colors"
                               title="Remove"
                             ><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>

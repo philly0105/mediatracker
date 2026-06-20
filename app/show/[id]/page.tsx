@@ -79,19 +79,19 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="space-y-6 max-w-3xl">
       <button onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors">
+        className="flex items-center gap-1.5 text-sm font-semibold text-zinc-400 hover:text-white transition-colors">
         ← Back
       </button>
       <div className="flex gap-4">
-        {media.poster_url && <img src={media.poster_url} alt={media.title} className="w-32 rounded-2xl" />}
+        {media.poster_url && <img src={media.poster_url} alt={media.title} className="w-32 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-lg" />}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-white">{media.title}</h1>
           <p className="text-zinc-400">{media.release_year} · TV Show</p>
           {media.genres.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {media.genres.map(g => (
-                <span key={g} className="px-2 py-0.5 text-xs text-zinc-400 rounded-full"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span key={g} className="px-2 py-0.5 text-xs text-zinc-400 rounded-full border border-[var(--border-faint)]"
+                  style={{ background: 'rgba(255,255,255,0.03)' }}>
                   {g}
                 </span>
               ))}

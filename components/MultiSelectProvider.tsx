@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Plus, X, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/Button'
 
 interface MultiSelectContextType {
   selectedItems: Map<string, TmdbSearchResult>
@@ -90,10 +91,10 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 p-2 bg-black/80 backdrop-blur-xl border border-white/15 rounded-full shadow-2xl shadow-black/50"
+            className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 p-2 bg-[var(--bg-void)]/95 backdrop-blur-xl border border-[var(--border-strong)] rounded-lg shadow-2xl shadow-black/50"
           >
             <div className="flex items-center gap-2 pl-4 pr-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 font-bold text-xs border border-violet-500/30">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs border border-[var(--accent)]/30">
                 {selectedItems.size}
               </span>
               <span className="text-sm font-semibold text-white mr-2">Selected</span>
@@ -101,31 +102,33 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             
             <div className="h-6 w-px bg-white/10" />
 
-            <button
+            <Button
               disabled={loadingAction !== null}
               onClick={() => handleBatchAction('watchlist')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-sm font-semibold disabled:opacity-50"
+              variant="ghost"
+              size="sm"
             >
               {loadingAction === 'watchlist' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               <span className="hidden sm:inline">Add to Watchlist</span>
               <span className="sm:hidden">Watchlist</span>
-            </button>
+            </Button>
             
-            <button
+            <Button
               disabled={loadingAction !== null}
               onClick={() => handleBatchAction('watched')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-sm font-semibold disabled:opacity-50"
+              variant="ghost"
+              size="sm"
             >
               {loadingAction === 'watched' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               <span className="hidden sm:inline">Mark as Watched</span>
               <span className="sm:hidden">Watched</span>
-            </button>
+            </Button>
 
             <div className="h-6 w-px bg-white/10" />
 
             <button
               onClick={clearSelection}
-              className="p-2 rounded-full hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors"
+              className="p-2 rounded-sm hover:bg-[var(--live)]/20 text-zinc-400 hover:text-[var(--live)] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>

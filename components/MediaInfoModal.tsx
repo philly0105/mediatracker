@@ -267,9 +267,9 @@ export default function MediaInfoModal({
                       href={details.trailer_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors border border-rose-500/20"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--live)]/10 hover:bg-[var(--live)]/20 text-[var(--live)] font-bold text-xs transition-colors border border-[var(--live)]/20"
                     >
-                      <Play className="w-3.5 h-3.5 fill-rose-500" />
+                      <Play className="w-3.5 h-3.5 fill-[var(--live)]" />
                       Watch Trailer
                     </a>
                   )}
@@ -278,7 +278,7 @@ export default function MediaInfoModal({
                       href={`http://localhost:3003/?q=${encodeURIComponent(item.title)}#movies`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 font-bold text-xs transition-colors border border-violet-500/20"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs transition-colors border border-[var(--accent)]/20"
                     >
                       <Tv className="w-3.5 h-3.5" />
                       Watch on IPTV
@@ -392,7 +392,7 @@ export default function MediaInfoModal({
                     <Tv className="w-3.5 h-3.5" /> Where to Watch
                   </h3>
                   {details?.watch_providers?.link && (
-                    <a href={details.watch_providers.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-violet-400 hover:text-violet-300 hover:underline">
+                    <a href={details.watch_providers.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[var(--accent)] hover:underline">
                       Provided by JustWatch
                     </a>
                   )}

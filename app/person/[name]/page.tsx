@@ -5,6 +5,7 @@ import type { TmdbSearchResult } from '@/types'
 import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv, Plus, Check, Loader2 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import { Card } from '@/components/ui/Card'
 
 export default function PersonPage() {
   const params = useParams()
@@ -52,7 +53,7 @@ export default function PersonPage() {
         {showSeeAllButton && items.length > 0 && (
           <button
             onClick={() => setViewMode('all')}
-            className="text-xs font-bold text-violet-400 hover:text-violet-300 transition-colors uppercase tracking-widest bg-violet-500/10 hover:bg-violet-500/20 px-3 py-1.5 rounded-full"
+            className="text-xs font-bold text-[var(--accent)] hover:text-[var(--accent)] transition-colors uppercase tracking-widest bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 px-3 py-1.5 rounded-sm"
           >
             See All {allMovies.length} Credits
           </button>
@@ -61,23 +62,24 @@ export default function PersonPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
           <SelectableOverlay key={`${item.tmdb_id}-${item.type}`} item={item}>
-          <div
+          <Card
             onClick={() => setSelectedItem(item)}
-            className="glass-card rounded-2xl p-3 flex gap-3 cursor-pointer hover:border-violet-500/30 transition-colors group"
+            style={{ padding: '12px' }}
+            className="flex gap-3 cursor-pointer group"
           >
             {item.poster_url ? (
               <img
                 src={item.poster_url}
                 alt={item.title}
-                className="w-16 h-24 rounded-xl object-cover shadow-md border border-white/5 shrink-0 group-hover:scale-[1.02] transition-transform"
+                className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-[var(--border-subtle)] shrink-0 group-hover:scale-[1.02] transition-transform"
               />
             ) : (
-              <div className="w-16 h-24 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0 text-center p-1">
+              <div className="w-16 h-24 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0 text-center p-1">
                 No Poster
               </div>
             )}
             <div className="flex flex-col justify-center min-w-0">
-              <span className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+              <span className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
                 {item.title}
               </span>
               <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500">
@@ -88,21 +90,21 @@ export default function PersonPage() {
                   </span>
                 )}
                 {item.vote_average !== undefined && item.vote_average > 0 && (
-                  <span className="flex items-center gap-0.5 text-amber-400 font-semibold">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span className="flex items-center gap-0.5 text-[var(--rating)] font-semibold">
+                    <Star className="w-3.5 h-3.5 fill-[var(--rating)] text-[var(--rating)]" />
                     <span>{item.vote_average.toFixed(1)}</span>
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-1.5 mt-2 text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">
                 {item.type === 'show' ? (
-                  <><Tv className="w-3 h-3 text-rose-500/80" /><span>TV Show</span></>
+                  <><Tv className="w-3 h-3 text-[var(--live)]" /><span>TV Show</span></>
                 ) : (
-                  <><Film className="w-3 h-3 text-violet-500/80" /><span>Movie</span></>
+                  <><Film className="w-3 h-3 text-[var(--accent)]" /><span>Movie</span></>
                 )}
               </div>
             </div>
-          </div>
+          </Card>
           </SelectableOverlay>
         ))}
         {items.length === 0 && (
@@ -130,15 +132,15 @@ export default function PersonPage() {
         </button>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-white/[0.02] border border-white/5 p-6 rounded-3xl">
+      <Card className="flex flex-col md:flex-row items-center md:items-start gap-6 p-6">
         {profileUrl ? (
           <img
             src={profileUrl}
             alt={name}
-            className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-lg border-2 border-white/10"
+            className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-lg border-2 border-[var(--border-subtle)]"
           />
         ) : (
-          <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-zinc-900 border-2 border-white/5 flex items-center justify-center text-zinc-600 shadow-inner">
+          <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[var(--bg-void)] border-2 border-[var(--border-subtle)] flex items-center justify-center text-zinc-600 shadow-inner">
             <User className="w-10 h-10 md:w-12 md:h-12" />
           </div>
         )}
@@ -148,20 +150,20 @@ export default function PersonPage() {
             {viewMode === 'highlights' ? 'Top Rated and Most Recent Credits' : `All ${allMovies.length} Credits`}
           </p>
         </div>
-      </div>
+      </Card>
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-32 rounded-2xl bg-white/5 border border-white/10 animate-pulse" />
+            <div key={i} className="h-32 rounded-lg bg-[var(--glass-card)] border border-[var(--border-subtle)] animate-pulse" />
           ))}
         </div>
       ) : error ? (
-        <div className="glass-card rounded-2xl p-8 border border-red-500/20 text-center space-y-4">
+        <Card className="p-8 border border-[var(--live)]/20 text-center space-y-4">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400">{error}</p>
-        </div>
+        </Card>
       ) : viewMode === 'highlights' ? (
         <div className="space-y-12">
           {renderMovieGrid(topMovies, 'Top Rated', true)}

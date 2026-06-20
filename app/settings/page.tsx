@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import ShareToggle from '@/components/ShareToggle'
 import PasswordChangeForm from '@/components/PasswordChangeForm'
 import { KeyRound, Share2 } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -32,28 +33,28 @@ export default async function SettingsPage() {
         {/* Account Section */}
         <section className="space-y-4">
           <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
-            <div className="p-1.5 rounded-lg border border-violet-500/20 bg-violet-500/5">
-              <KeyRound className="w-4 h-4 text-violet-400" />
+            <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
+              <KeyRound className="w-4 h-4 text-[var(--accent)]" />
             </div>
             <h2 className="text-lg font-bold tracking-tight text-white">Account</h2>
           </div>
           
-          <div className="glass-card rounded-3xl p-6 border border-white/5">
+          <Card>
             <h3 className="text-sm font-bold text-white mb-4">Change Password</h3>
             <PasswordChangeForm />
-          </div>
+          </Card>
         </section>
 
         {/* Sharing Section */}
         <section className="space-y-4">
           <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
-            <div className="p-1.5 rounded-lg border border-teal-500/20 bg-teal-500/5">
-              <Share2 className="w-4 h-4 text-teal-400" />
+            <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
+              <Share2 className="w-4 h-4 text-[var(--accent)]" />
             </div>
             <h2 className="text-lg font-bold tracking-tight text-white">Sharing</h2>
           </div>
 
-          <div className="glass-card rounded-3xl p-6 border border-white/5 space-y-6">
+          <Card className="space-y-6">
             <p className="text-xs text-zinc-400 leading-relaxed font-medium">
               Create public links to share your library with friends. Anyone with the link can view your items, but they cannot edit them.
             </p>
@@ -72,7 +73,7 @@ export default async function SettingsPage() {
                 shareUrl={settings?.watchlist_share_token ? `${appUrl}/share/watchlist/${settings.watchlist_share_token}` : null}
               />
             </div>
-          </div>
+          </Card>
         </section>
       </div>
     </div>

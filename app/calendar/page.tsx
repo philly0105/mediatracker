@@ -15,6 +15,7 @@ import Link from 'next/link'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import type { TmdbSearchResult } from '@/types'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import { Card } from '@/components/ui/Card'
 
 interface UpcomingRelease {
   tmdb_id: number
@@ -71,8 +72,8 @@ export default function CalendarPage() {
   return (
     <div className="space-y-10 pb-12">
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-emerald-400 via-emerald-200 to-teal-500 bg-clip-text text-transparent flex items-center gap-2.5">
-          <CalendarIcon className="w-7 h-7 text-emerald-400 fill-emerald-400/10" />
+        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-green-400 via-zinc-200 to-teal-500 bg-clip-text text-transparent flex items-center gap-2.5">
+          <CalendarIcon className="w-7 h-7 text-green-500 fill-green-500/10" />
           <span>Upcoming Releases</span>
         </h1>
         <p className="text-sm text-zinc-400">
@@ -81,7 +82,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Type filter */}
-      <div className="flex bg-black/40 p-1.5 rounded-2xl w-fit">
+      <div className="flex bg-black/40 p-1.5 rounded-sm w-fit">
         {([
           { value: 'all', label: 'All', Icon: LayoutGrid },
           { value: 'movie', label: 'Movies', Icon: Film },
@@ -90,9 +91,9 @@ export default function CalendarPage() {
           <button
             key={value}
             onClick={() => setFilter(value)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-sm transition-all ${
               filter === value
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                ? 'bg-green-500 text-zinc-950 shadow-lg shadow-green-500/20'
                 : 'text-zinc-500 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -109,8 +110,8 @@ export default function CalendarPage() {
               <div className="h-6 bg-zinc-900 rounded w-48" />
               <div className="space-y-3">
                 {[1, 2].map((j) => (
-                  <div key={j} className="glass-card rounded-2xl p-4 flex gap-4">
-                    <div className="w-16 h-24 bg-zinc-900 rounded-xl shrink-0" />
+                  <div key={j} className="rounded-lg p-4 flex gap-4 border border-white/5 bg-[var(--glass-card)]">
+                    <div className="w-16 h-24 bg-zinc-900 rounded-[var(--radius-xl)] shrink-0" />
                     <div className="flex-1 space-y-3 py-1">
                       <div className="h-4 bg-zinc-900 rounded w-1/3" />
                       <div className="h-3 bg-zinc-900 rounded w-1/4" />
@@ -122,19 +123,19 @@ export default function CalendarPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="glass-card rounded-2xl p-8 border border-red-500/20 text-center max-w-md mx-auto space-y-4">
+        <Card style={{ maxWidth: '448px', margin: '0 auto', textAlign: 'center' }} className="space-y-4 border-red-500/20">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400">{error}</p>
-        </div>
+        </Card>
       ) : filtered.length === 0 ? (
-        <div className="glass-card rounded-2xl p-10 text-center border border-dashed border-white/10 max-w-md mx-auto space-y-4">
-          <Clock className="w-10 h-10 text-emerald-400 mx-auto opacity-50" />
+        <Card style={{ maxWidth: '448px', margin: '0 auto', textAlign: 'center', borderStyle: 'dashed' }} className="space-y-4">
+          <Clock className="w-10 h-10 text-green-500 mx-auto opacity-50" />
           <h2 className="text-lg font-bold text-white">No Upcoming Releases</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">
             Nothing scheduled in this category right now. Check back later!
           </p>
-        </div>
+        </Card>
       ) : (
         <div className="space-y-12 relative before:absolute before:inset-0 before:ml-[23px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
           {Object.entries(groupedReleases).map(([monthYear, items]) => (
@@ -160,8 +161,8 @@ export default function CalendarPage() {
                       item.followed
                         ? 'bg-teal-400 shadow-teal-400/20'
                         : item.type === 'show'
-                        ? 'bg-rose-500 shadow-rose-500/20'
-                        : 'bg-emerald-500 shadow-emerald-500/20'
+                        ? 'bg-rust-400 shadow-rust-400/20'
+                        : 'bg-green-500 shadow-green-500/20'
                     }`} />
 
                     {/* Card Container */}
@@ -169,28 +170,22 @@ export default function CalendarPage() {
                       <SelectableOverlay item={item as unknown as TmdbSearchResult}>
                       <div
                         onClick={() => setSelectedItem(item as unknown as TmdbSearchResult)}
-                        className={`glass-card rounded-2xl p-3 flex gap-4 transition-colors cursor-pointer ${
-                          item.followed
-                            ? 'hover:border-teal-500/30'
-                            : item.type === 'show'
-                            ? 'hover:border-rose-500/30'
-                            : 'hover:border-emerald-500/30'
-                        }`}
+                        className="p-3 flex gap-4 transition-colors cursor-pointer rounded-lg bg-[var(--glass-card)] border border-white/5 hover:border-zinc-500/30"
                       >
                         {item.poster_url ? (
                           <img
                             src={item.poster_url}
                             alt={item.title}
-                            className="w-16 h-24 rounded-xl object-cover shadow-md border border-white/5 shrink-0"
+                            className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-white/5 shrink-0"
                           />
                         ) : (
-                          <div className="w-16 h-24 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                          <div className="w-16 h-24 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
                             No Poster
                           </div>
                         )}
                         <div className="flex flex-col justify-center gap-1">
                           <p className={`text-xs font-bold mb-0.5 tracking-wider uppercase ${
-                            item.followed ? 'text-teal-400' : item.type === 'show' ? 'text-rose-400' : 'text-emerald-400'
+                            item.followed ? 'text-teal-400' : item.type === 'show' ? 'text-rust-400' : 'text-green-400'
                           }`}>
                             {new Date(item.full_release_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
@@ -199,9 +194,9 @@ export default function CalendarPage() {
                           </span>
                           <div className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex-wrap">
                             {item.type === 'show' ? (
-                              <><Tv className="w-3.5 h-3.5 text-rose-500/80" /><span>TV Show</span></>
+                              <><Tv className="w-3.5 h-3.5 text-rust-500/80" /><span>TV Show</span></>
                             ) : (
-                              <><Film className="w-3.5 h-3.5 text-violet-500/80" /><span>Movie</span></>
+                              <><Film className="w-3.5 h-3.5 text-green-500/80" /><span>Movie</span></>
                             )}
                             {item.followed && (
                               <span className="flex items-center gap-1 text-teal-400 bg-teal-400/10 border border-teal-400/20 px-1.5 py-0.5 rounded-md normal-case tracking-normal font-semibold">

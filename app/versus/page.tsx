@@ -16,6 +16,9 @@ import {
 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 
 const GENRE_OPTIONS = [
   { id: 'any', name: 'Surprise Me (Any)' },
@@ -168,8 +171,8 @@ export default function VersusPage() {
   return (
     <div className="space-y-10 pb-12 overflow-hidden flex flex-col min-h-[80vh]">
       <div className="flex flex-col gap-1.5 items-center text-center">
-        <h1 className="text-4xl font-black tracking-tight text-white bg-gradient-to-r from-rose-400 via-orange-400 to-amber-500 bg-clip-text text-transparent flex items-center gap-3">
-          <Swords className="w-8 h-8 text-rose-500 fill-rose-500/20" />
+        <h1 className="text-4xl font-black tracking-tight text-white bg-gradient-to-r from-green-400 via-zinc-200 to-teal-500 bg-clip-text text-transparent flex items-center gap-3">
+          <Swords className="w-8 h-8 text-green-500 fill-green-500/10" />
           <span>Tournament</span>
         </h1>
         <p className="text-sm text-zinc-400 max-w-lg mx-auto">
@@ -181,37 +184,37 @@ export default function VersusPage() {
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-rose-500" />
+          <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)]" />
         </div>
       ) : error ? (
-        <div className="glass-card rounded-2xl p-8 border border-red-500/20 text-center max-w-md mx-auto space-y-6">
+        <Card style={{ maxWidth: '448px', margin: '0 auto', textAlign: 'center' }} className="space-y-6 border-red-500/20">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <div>
             <h2 className="text-lg font-bold text-white mb-2">Something went wrong</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">{error}</p>
           </div>
-          <button onClick={() => setError(null)} className="px-6 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors">
+          <Button onClick={() => setError(null)}>
             Try Again
-          </button>
-        </div>
+          </Button>
+        </Card>
       ) : gameState === 'setup' ? (
         <div className="flex-1 flex flex-col items-center justify-center w-full max-w-lg mx-auto px-4">
-          <div className="glass-card rounded-[2rem] p-8 w-full border border-white/5 space-y-8">
+          <Card className="w-full space-y-8">
             <div className="space-y-4">
-              <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest block text-center">What are we watching?</label>
-              <div className="flex bg-black/40 p-1.5 rounded-2xl">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block text-center">What are we watching?</label>
+              <div className="flex bg-black/40 p-1.5 rounded-sm">
                 <button
                   onClick={() => setSelectedType('movie')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
-                    selectedType === 'movie' ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-sm font-bold text-sm transition-all ${
+                    selectedType === 'movie' ? 'bg-[var(--green-500)] text-zinc-950 shadow-lg shadow-green-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <Film className="w-4 h-4" /> Movies
                 </button>
                 <button
                   onClick={() => setSelectedType('show')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
-                    selectedType === 'show' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-sm font-bold text-sm transition-all ${
+                    selectedType === 'show' ? 'bg-[var(--green-500)] text-zinc-950 shadow-lg shadow-green-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <Tv className="w-4 h-4" /> TV Shows
@@ -220,11 +223,11 @@ export default function VersusPage() {
             </div>
 
             <div className="space-y-4">
-              <label className="text-sm font-bold text-zinc-400 uppercase tracking-widest block text-center">Preferred Vibe (Optional)</label>
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest block text-center">Preferred Vibe (Optional)</label>
               <select
                 value={selectedGenreId}
                 onChange={(e) => setSelectedGenreId(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-white text-sm font-semibold outline-none focus:border-rose-500/50 transition-colors appearance-none"
+                className="w-full bg-[var(--surface-input)] border border-white/10 rounded-sm px-4 py-4 text-white text-sm font-semibold outline-none focus:border-[var(--border-focus)] transition-colors appearance-none"
               >
                 {GENRE_OPTIONS.map(genre => (
                   <option key={genre.id} value={genre.id} className="bg-zinc-900 text-white">
@@ -234,13 +237,14 @@ export default function VersusPage() {
               </select>
             </div>
 
-            <button
+            <Button
               onClick={startTournament}
-              className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-400 hover:to-orange-400 text-white font-black text-lg transition-all shadow-xl shadow-rose-500/20 active:scale-95"
+              fullWidth
+              size="lg"
             >
               <Play className="w-5 h-5 fill-current" /> Let the Battles Begin
-            </button>
-          </div>
+            </Button>
+          </Card>
         </div>
       ) : gameState === 'results' && finalWinner ? (
         <motion.div 
@@ -249,58 +253,58 @@ export default function VersusPage() {
           className="w-full max-w-5xl mx-auto space-y-12 px-4"
         >
           {/* Winner Section */}
-          <div className="flex flex-col md:flex-row items-center md:items-stretch gap-8 bg-white/[0.02] border border-white/5 p-8 rounded-3xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-rose-500/10 pointer-events-none" />
+          <Card className="flex flex-col md:flex-row items-center md:items-stretch gap-8 p-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent)]/5 to-[var(--live)]/5 pointer-events-none" />
             
             <div className="w-48 shrink-0 relative z-10">
-              <div className="absolute -inset-4 bg-amber-500/20 blur-xl rounded-full" />
+              <div className="absolute -inset-4 bg-[var(--accent)]/10 blur-xl rounded-full" />
               {finalWinner.poster_url ? (
-                <img src={finalWinner.poster_url} className="w-full rounded-2xl shadow-2xl border-2 border-amber-500/50 relative z-10" alt="Winner" />
+                <img src={finalWinner.poster_url} className="w-full rounded-[var(--radius-xl)] shadow-2xl border border-[var(--border-subtle)] relative z-10" alt="Winner" />
               ) : (
-                <div className="w-full aspect-[2/3] bg-zinc-900 rounded-2xl border-2 border-amber-500/50 flex items-center justify-center relative z-10">No Poster</div>
+                <div className="w-full aspect-[2/3] bg-[var(--bg-void)] rounded-[var(--radius-xl)] border border-[var(--border-subtle)] flex items-center justify-center relative z-10">No Poster</div>
               )}
             </div>
 
             <div className="flex-1 flex flex-col justify-center text-center md:text-left relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-widest mb-4 mx-auto md:mx-0">
-                <Trophy className="w-4 h-4" />
-                <span>Ultimate Winner</span>
+              <div className="mb-4 mx-auto md:mx-0">
+                <Badge tone="rating">
+                  <Trophy className="w-3.5 h-3.5 mr-1 inline" /> Ultimate Winner
+                </Badge>
               </div>
-              <h2 className="text-3xl md:text-4xl font-black text-white mb-4">{finalWinner.title}</h2>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">{finalWinner.title}</h2>
               <p className="text-sm text-zinc-300 leading-relaxed max-w-2xl mb-8">{finalWinner.overview}</p>
               
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                <button
+                <Button
                   disabled={watchlistSet.has(finalWinner.tmdb_id) || actioningId === finalWinner.tmdb_id}
                   onClick={() => handleAddToWatchlist(finalWinner)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold transition-all disabled:opacity-50"
                 >
                   {actioningId === finalWinner.tmdb_id ? <Loader2 className="w-5 h-5 animate-spin" /> : watchlistSet.has(finalWinner.tmdb_id) ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                  <span>{watchlistSet.has(finalWinner.tmdb_id) ? 'On Watchlist' : 'Add to Watchlist'}</span>
-                </button>
-                <button
+                  <span className="ml-2">{watchlistSet.has(finalWinner.tmdb_id) ? 'On Watchlist' : 'Add to Watchlist'}</span>
+                </Button>
+                <Button
                   onClick={() => setInfoModalItem(finalWinner)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-all"
+                  variant="ghost"
                 >
                   More Info
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Vibe Section */}
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center gap-2">
-              <h3 className="text-2xl font-bold text-white">Your Vibe: <span className="text-rose-400">{topGenre || 'Mixed'}</span></h3>
+              <h3 className="text-2xl font-bold text-white">Your Vibe: <span className="text-[var(--accent)]">{topGenre || 'Mixed'}</span></h3>
               <p className="text-sm text-zinc-400">Based on your choices throughout the tournament, we found some other titles you might love.</p>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {bonusRecs.map(item => (
-                <div key={item.tmdb_id} className="glass-card rounded-2xl p-3 flex flex-col gap-3 relative group">
-                  <div className="relative aspect-[2/3] w-full rounded-xl overflow-hidden cursor-pointer" onClick={() => setInfoModalItem(item)}>
+                <Card key={item.tmdb_id} className="p-3 flex flex-col gap-3 relative group">
+                  <div className="relative aspect-[2/3] w-full rounded-[var(--radius-xl)] overflow-hidden cursor-pointer" onClick={() => setInfoModalItem(item)}>
                     {item.poster_url ? (
-                      <img src={item.poster_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                       <img src={item.poster_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-xs text-zinc-600">No Poster</div>
                     )}
@@ -310,33 +314,36 @@ export default function VersusPage() {
                   </div>
                   <div className="flex-1 flex flex-col justify-between">
                     <h4 className="font-bold text-white text-sm line-clamp-1">{item.title}</h4>
-                    <button
+                    <Button
                       disabled={watchlistSet.has(item.tmdb_id) || actioningId === item.tmdb_id}
                       onClick={() => handleAddToWatchlist(item)}
-                      className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-zinc-300 hover:text-white transition-all disabled:opacity-50"
+                      variant="ghost"
+                      size="sm"
+                      fullWidth
+                      style={{ marginTop: '12px' }}
                     >
                       {actioningId === item.tmdb_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : watchlistSet.has(item.tmdb_id) ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                      {watchlistSet.has(item.tmdb_id) ? 'Added' : 'Watchlist'}
-                    </button>
+                      <span className="ml-1.5">{watchlistSet.has(item.tmdb_id) ? 'Added' : 'Watchlist'}</span>
+                    </Button>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </div>
 
           <div className="flex justify-center pt-8">
-            <button
+            <Button
               onClick={resetGame}
-              className="px-8 py-3 rounded-full bg-white text-zinc-950 font-black hover:bg-zinc-200 transition-colors shadow-xl"
+              size="lg"
             >
               Play Again
-            </button>
+            </Button>
           </div>
         </motion.div>
       ) : gameState === 'playing' ? (
         <div className="flex-1 flex flex-col items-center w-full max-w-5xl mx-auto relative px-4">
           <div className="mb-8 px-6 py-2 rounded-full bg-white/5 border border-white/10 flex items-center gap-2 shadow-lg backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[var(--live)] animate-pulse" />
             <span className="text-xs font-bold text-white tracking-widest uppercase">Round {round} / 10</span>
           </div>
 
@@ -350,7 +357,7 @@ export default function VersusPage() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 250, damping: 25, delay: idx * 0.05 }}
                   onClick={() => handlePick(item)}
-                  className="w-full flex glass-card rounded-2xl overflow-hidden relative group cursor-pointer border-white/5 hover:border-rose-500/40 hover:shadow-2xl hover:shadow-rose-500/10 transition-all duration-300 active:scale-95 h-40 sm:h-48"
+                  className="w-full flex rounded-lg overflow-hidden relative group cursor-pointer border border-white/5 bg-[var(--glass-card)] hover:border-[var(--border-strong)] hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-300 active:scale-95 h-40 sm:h-48"
                 >
                   <div className="w-28 sm:w-32 shrink-0 relative bg-zinc-900">
                     {item.poster_url ? (
@@ -363,26 +370,26 @@ export default function VersusPage() {
                         e.stopPropagation()
                         setInfoModalItem(item)
                       }}
-                      className="absolute top-2 left-2 bg-black/60 hover:bg-black/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg border border-white/10 transition-colors z-20"
+                      className="absolute top-2 left-2 bg-black/60 hover:bg-black/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-sm border border-white/10 transition-colors z-20"
                     >
                       Info
                     </button>
                   </div>
 
-                  <div className="p-4 flex flex-col flex-1 min-w-0 bg-black/20 group-hover:bg-rose-500/5 transition-colors">
+                  <div className="p-4 flex flex-col flex-1 min-w-0 bg-black/20 group-hover:bg-[var(--green-tint-bg)] transition-colors">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h2 className="text-base sm:text-lg font-bold text-white line-clamp-2 leading-tight group-hover:text-rose-400 transition-colors">{item.title}</h2>
+                      <h2 className="text-base sm:text-lg font-bold text-white line-clamp-2 leading-tight group-hover:text-[var(--accent)] transition-colors">{item.title}</h2>
                     </div>
                     
                     <div className="flex items-center gap-3 text-[10px] font-semibold text-zinc-500 mb-3 uppercase tracking-wider">
                       {item.type === 'show' ? (
-                        <span className="flex items-center gap-1"><Tv className="w-3 h-3 text-rose-400" /> Show</span>
+                        <span className="flex items-center gap-1"><Tv className="w-3 h-3 text-[var(--live)]" /> Show</span>
                       ) : (
-                        <span className="flex items-center gap-1"><Film className="w-3 h-3 text-violet-400" /> Movie</span>
+                        <span className="flex items-center gap-1"><Film className="w-3 h-3 text-[var(--accent)]" /> Movie</span>
                       )}
                       {item.vote_average !== undefined && item.vote_average > 0 && (
-                        <span className="flex items-center gap-1 text-amber-400/80">
-                          <Star className="w-3 h-3 fill-amber-400/80" /> {item.vote_average.toFixed(1)}
+                        <span className="flex items-center gap-1 text-[var(--rating)]">
+                          <Star className="w-3 h-3 fill-[var(--rating)]" /> {item.vote_average.toFixed(1)}
                         </span>
                       )}
                     </div>

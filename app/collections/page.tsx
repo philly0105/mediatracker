@@ -46,13 +46,13 @@ export default async function CollectionsPage() {
 
       {/* Your Active Collections */}
       <section className="space-y-5">
-        <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
-          <div className="p-1.5 rounded-lg border border-violet-500/20 bg-violet-500/5">
-            <Layers className="w-4 h-4 text-violet-400" />
+        <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
+          <div className="p-1.5 rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5">
+            <Layers className="w-4 h-4 text-[var(--accent)]" />
           </div>
           <h2 className="text-lg font-bold tracking-tight text-white">Your Active Collections</h2>
           {activeCollections.length > 0 && (
-            <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-[var(--border-subtle)] px-2 py-0.5 rounded-full">
               {activeCollections.length}
             </span>
           )}
@@ -63,7 +63,7 @@ export default async function CollectionsPage() {
             No collections yet. Log franchise movies to discover your series.{' '}
             <Link
               href="/search"
-              className="text-violet-400 hover:text-violet-300 transition-colors not-italic underline underline-offset-2"
+              className="text-[var(--accent)] hover:underline transition-all not-italic"
             >
               Search to add one.
             </Link>

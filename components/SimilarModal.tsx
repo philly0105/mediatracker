@@ -113,12 +113,12 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-md" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className="glass-card rounded-3xl w-full max-w-lg overflow-hidden relative border border-white/15 max-h-[80vh] flex flex-col shadow-2xl"
+        className="rounded-[var(--radius-2xl)] w-full max-w-lg overflow-hidden relative border border-white/5 bg-[var(--surface-modal)] max-h-[80vh] flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
@@ -127,7 +127,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
+            className="p-1.5 rounded-sm text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
           >
             <X className="w-4 h-4" />
           </button>
@@ -138,7 +138,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
             <div className="grid grid-cols-4 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="animate-pulse space-y-2">
-                  <div className="aspect-[2/3] rounded-xl bg-zinc-900" />
+                  <div className="aspect-[2/3] rounded-[var(--radius-xl)] bg-zinc-900" />
                   <div className="h-2.5 bg-zinc-900 rounded w-3/4" />
                 </div>
               ))}
@@ -158,28 +158,28 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
                       <img
                         src={item.poster_url}
                         alt={item.title}
-                        className="w-full aspect-[2/3] rounded-xl object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
+                        className="w-full aspect-[2/3] rounded-[var(--radius-xl)] object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
                       />
                     ) : (
-                      <div className="w-full aspect-[2/3] rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
+                      <div className="w-full aspect-[2/3] rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
                         No Poster
                       </div>
                     )}
                     
                     <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
                       {watchedIds.has(item.tmdb_id) && (
-                        <div className="bg-emerald-500/90 backdrop-blur-md p-1 rounded-lg shadow-md border border-emerald-400/30">
+                        <div className="bg-emerald-500/90 backdrop-blur-md p-1 rounded-sm shadow-md border border-emerald-400/30">
                           <CheckCircle2 className="w-3 h-3 text-white" />
                         </div>
                       )}
                       {!watchedIds.has(item.tmdb_id) && watchlistIds.has(item.tmdb_id) && (
-                        <div className="bg-violet-500/90 backdrop-blur-md p-1 rounded-lg shadow-md border border-violet-400/30">
+                        <div className="bg-violet-500/90 backdrop-blur-md p-1 rounded-sm shadow-md border border-violet-400/30">
                           <Bookmark className="w-3 h-3 text-white" />
                         </div>
                       )}
                     </div>
                   </div>
-                  <p className="text-[11px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-rose-400 transition-colors">
+                  <p className="text-[11px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-[var(--accent)] transition-colors">
                     {item.title}
                   </p>
                   <div className="flex items-center gap-1">

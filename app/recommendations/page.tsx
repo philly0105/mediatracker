@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 
 interface Recommendation {
   tmdb_id: number
@@ -152,8 +154,8 @@ export default function RecommendationsPage() {
     <div className="space-y-10 pb-12">
       {/* Header */}
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent flex items-center gap-2.5">
-          <Sparkles className="w-7 h-7 text-violet-400 fill-violet-400/10" />
+        <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 flex items-center gap-2.5">
+          <Sparkles className="w-7 h-7 text-[var(--accent)] fill-[var(--accent)]/10" />
           <span>Recommendations</span>
         </h1>
         <p className="text-sm text-zinc-400">
@@ -167,14 +169,14 @@ export default function RecommendationsPage() {
         /* Shimmer loading layout */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="glass-card rounded-2xl p-4 flex gap-4 animate-pulse">
-              <div className="w-20 h-28 bg-zinc-900 rounded-xl" />
+            <div key={i} className="bg-[var(--glass-card)] border border-[var(--border-subtle)] rounded-lg p-4 flex gap-4 animate-pulse">
+              <div className="w-20 h-28 bg-[var(--bg-void)] rounded-[var(--radius-xl)]" />
               <div className="flex-1 space-y-3 py-1">
-                <div className="h-4 bg-zinc-900 rounded w-3/4" />
-                <div className="h-3 bg-zinc-900 rounded w-1/2" />
+                <div className="h-4 bg-[var(--bg-void)] rounded w-3/4" />
+                <div className="h-3 bg-[var(--bg-void)] rounded w-1/2" />
                 <div className="space-y-2 pt-2">
-                  <div className="h-3 bg-zinc-900 rounded w-full" />
-                  <div className="h-3 bg-zinc-900 rounded w-5/6" />
+                  <div className="h-3 bg-[var(--bg-void)] rounded w-full" />
+                  <div className="h-3 bg-[var(--bg-void)] rounded w-5/6" />
                 </div>
               </div>
             </div>
@@ -182,32 +184,29 @@ export default function RecommendationsPage() {
         </div>
       ) : error ? (
         /* Error Layout */
-        <div className="glass-card rounded-2xl p-8 border border-red-500/20 text-center max-w-md mx-auto space-y-4">
+        <Card className="p-8 border border-[var(--live)]/20 text-center max-w-md mx-auto space-y-4">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">{error}</p>
-          <button
-            onClick={loadRecommendations}
-            className="px-5 py-2.5 rounded-xl bg-white text-zinc-950 font-semibold text-xs transition-colors hover:bg-zinc-200"
-          >
+          <Button onClick={loadRecommendations}>
             Try Again
-          </button>
-        </div>
+          </Button>
+        </Card>
       ) : items.length === 0 ? (
         /* Empty state */
-        <div className="glass-card rounded-2xl p-10 text-center border border-dashed border-white/10 max-w-md mx-auto space-y-4">
-          <Sparkles className="w-10 h-10 text-violet-400 mx-auto opacity-50" />
+        <Card className="p-10 text-center border border-dashed border-[var(--border-default)] max-w-md mx-auto space-y-4">
+          <Sparkles className="w-10 h-10 text-[var(--accent)] mx-auto opacity-50" />
           <h2 className="text-lg font-bold text-white">All Caught Up</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">
             No recommendations remaining! Try logging more movies or TV shows to refresh your feed.
           </p>
-        </div>
+        </Card>
       ) : (
         /* Main Recommendations Grid */
         <div className="space-y-8">
           {/* Media Type Switch */}
           <div className="flex justify-start">
-            <div className="inline-flex p-1 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md select-none">
+            <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] select-none">
               {([
                 { id: 'all', label: 'All Recommendations' },
                 { id: 'movie', label: 'Movies' },
@@ -220,7 +219,7 @@ export default function RecommendationsPage() {
                     setActiveGenre('All')
                     setVisibleCount(10)
                   }}
-                  className={`relative px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 active:scale-95 whitespace-nowrap ${
+                  className={`relative px-4 py-2 rounded-sm font-bold text-xs transition-all duration-300 active:scale-95 whitespace-nowrap ${
                     activeType === type.id
                       ? 'text-white'
                       : 'text-zinc-400 hover:text-white'
@@ -229,7 +228,7 @@ export default function RecommendationsPage() {
                   {activeType === type.id && (
                     <motion.div
                       layoutId="activeTypeHighlight"
-                      className="absolute inset-0 bg-white/10 rounded-xl -z-10 shadow-md"
+                      className="absolute inset-0 bg-white/10 rounded-sm -z-10 shadow-md"
                       transition={{ type: 'spring', stiffness: 350, damping: 28 }}
                     />
                   )}
@@ -247,7 +246,7 @@ export default function RecommendationsPage() {
                   setActiveGenre(genre)
                   setVisibleCount(10)
                 }}
-                className={`relative px-4 py-2 rounded-full font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
+                className={`relative px-4 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
                   activeGenre === genre
                     ? 'text-white'
                     : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
@@ -256,7 +255,7 @@ export default function RecommendationsPage() {
                 {activeGenre === genre && (
                   <motion.div
                     layoutId="activeGenreTab"
-                    className="absolute inset-0 bg-violet-600 rounded-full -z-10 shadow-lg shadow-violet-600/20"
+                    className="absolute inset-0 bg-[var(--accent)] rounded-sm -z-10 shadow-lg shadow-green-600/20"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -266,13 +265,13 @@ export default function RecommendationsPage() {
           </div>
 
           {filteredItems.length === 0 ? (
-            <div className="glass-card rounded-2xl p-10 text-center border border-dashed border-white/10 max-w-sm mx-auto space-y-3">
-              <Sparkles className="w-8 h-8 text-violet-400 mx-auto opacity-50 animate-pulse" />
+            <Card className="p-10 text-center border border-dashed border-[var(--border-default)] max-w-sm mx-auto space-y-3">
+              <Sparkles className="w-8 h-8 text-[var(--accent)] mx-auto opacity-50 animate-pulse" />
               <p className="text-sm font-bold text-white">Genre Cleared</p>
               <p className="text-xs text-zinc-400 leading-relaxed">
                 No recommendations left in {activeGenre}. Try exploring other categories!
               </p>
-            </div>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
@@ -285,17 +284,17 @@ export default function RecommendationsPage() {
                     exit={{ opacity: 0, scale: 0.9, y: 15 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     onClick={() => setSelectedItem(item)}
-                    className="glass-card rounded-2xl p-4 flex gap-4 relative overflow-hidden group select-none hover:border-white/10 hover:shadow-lg hover:shadow-violet-500/[0.02] cursor-pointer"
+                    className="bg-[var(--glass-card)] hover:bg-[var(--glass-card-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-lg p-4 flex gap-4 relative overflow-hidden group select-none hover:shadow-[var(--glow-violet)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
                   >
                     {/* Poster image */}
                     {item.poster_url ? (
                       <img
                         src={item.poster_url}
                         alt={item.title}
-                        className="w-20 h-28 rounded-xl object-cover shadow-md shadow-black/30 border border-white/5 shrink-0"
+                        className="w-20 h-28 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/30 border border-[var(--border-subtle)] shrink-0"
                       />
                     ) : (
-                      <div className="w-20 h-28 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                      <div className="w-20 h-28 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
                         No Poster
                       </div>
                     )}
@@ -304,7 +303,7 @@ export default function RecommendationsPage() {
                     <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                       <div className="space-y-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-violet-400 transition-colors">
+                          <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
                             {item.title}
                           </h2>
                           <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
@@ -319,8 +318,8 @@ export default function RecommendationsPage() {
                             </span>
                           )}
                           {item.vote_average !== undefined && item.vote_average > 0 && (
-                            <span className="flex items-center gap-0.5 text-amber-400 font-semibold">
-                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <span className="flex items-center gap-0.5 text-[var(--rating)] font-semibold">
+                              <Star className="w-3.5 h-3.5 fill-[var(--rating)] text-[var(--rating)]" />
                               <span>{item.vote_average.toFixed(1)}</span>
                             </span>
                           )}
@@ -332,13 +331,15 @@ export default function RecommendationsPage() {
 
                       {/* Actions Row */}
                       <div className="flex flex-wrap gap-2 pt-3">
-                        <button
+                        <Button
                           disabled={actioningId !== null}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleAddToWatchlist(item.tmdb_id, item.type)
                           }}
-                          className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-violet-600 hover:border-violet-500 hover:text-white disabled:opacity-50"
+                          variant="ghost"
+                          size="sm"
+                          style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
                         >
                           {actioningId === item.tmdb_id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -346,15 +347,17 @@ export default function RecommendationsPage() {
                             <Plus className="w-3 h-3" />
                           )}
                           <span>Watchlist</span>
-                        </button>
+                        </Button>
                         
-                        <button
+                        <Button
                           disabled={actioningId !== null}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleMarkAsWatched(item.tmdb_id, item.type)
                           }}
-                          className="flex-1 min-w-[75px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-zinc-300 font-semibold text-[11px] transition-all duration-300 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white disabled:opacity-50"
+                          variant="ghost"
+                          size="sm"
+                          style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
                         >
                           {actioningId === item.tmdb_id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -362,7 +365,7 @@ export default function RecommendationsPage() {
                             <Check className="w-3 h-3" />
                           )}
                           <span>Watched</span>
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -375,7 +378,7 @@ export default function RecommendationsPage() {
           {/* Infinite Scroll Trigger */}
           {visibleCount < filteredItems.length && (
             <div ref={loadMoreRef} className="flex justify-center pt-8 pb-4">
-              <Loader2 className="w-6 h-6 text-violet-500/50 animate-spin" />
+              <Loader2 className="w-6 h-6 text-[var(--accent)]/50 animate-spin" />
             </div>
           )}
         </div>

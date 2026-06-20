@@ -28,6 +28,7 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
   async function copyUrl() {
     if (!url) return
     await navigator.clipboard.writeText(url)
+
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -38,9 +39,9 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
         <span className="text-sm font-semibold text-zinc-300">{label}</span>
         <button 
           onClick={toggle} 
-          className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+          className={`px-3 py-1.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
             token 
-              ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30 hover:bg-violet-500/30' 
+              ? 'bg-[var(--green-tint-bg)] text-green-300 border border-[var(--green-tint-border)] hover:bg-white/10' 
               : 'bg-white/5 text-zinc-500 border border-white/10 hover:bg-white/10 hover:text-zinc-300'
           }`}
         >
@@ -52,11 +53,11 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
           <input 
             readOnly 
             value={url} 
-            className="flex-1 px-3 py-2 bg-black/40 text-zinc-300 rounded-xl text-xs font-medium border border-white/5 focus:outline-none focus:border-violet-500/50 transition-colors" 
+            className="flex-1 px-3 py-2 bg-[var(--surface-input)] text-zinc-300 rounded-sm text-xs font-medium border border-white/5 focus:outline-none focus:border-[var(--border-focus)] transition-colors" 
           />
           <button 
             onClick={copyUrl} 
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-white rounded-xl transition-colors shrink-0"
+            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-white rounded-sm transition-colors shrink-0"
           >
             {copied ? 'Copied!' : 'Copy'}
           </button>
