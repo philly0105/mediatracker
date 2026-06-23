@@ -56,10 +56,10 @@ export default async function DashboardPage() {
 
       {/* Bento Grid Stats */}
       <div className="relative z-10">
-        <BentoGrid className="grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
+        <BentoGrid className="grid-cols-1 md:grid-cols-3">
           
           {/* Stat 1: Watched this Year */}
-          <BentoGridItem delay={0.1} className="col-span-1 md:col-span-2 lg:col-span-1">
+          <BentoGridItem delay={0.1} className="col-span-1 md:order-1">
             <Link href="/stats" className="block cursor-pointer h-full">
               <StatTile
                 style={{ height: '100%' }}
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
           </BentoGridItem>
 
           {/* Stat 2: Must Watch */}
-          <BentoGridItem delay={0.2} className="col-span-1 lg:col-span-1">
+          <BentoGridItem delay={0.2} className="col-span-1 md:order-3">
             <Link href="/watchlist" className="block cursor-pointer h-full">
               <StatTile
                 style={{ height: '100%' }}
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
           </BentoGridItem>
 
           {/* Stat 3: Upcoming Releases / Release Calendar */}
-          <BentoGridItem delay={0.3} className="col-span-1 md:col-span-2">
+          <BentoGridItem delay={0.3} className="col-span-1 md:col-span-2 md:row-span-2 md:order-2">
             <Card style={{ padding: 0, overflow: 'hidden', height: '100%' }}>
               <DashboardUpcomingWidget releases={upcomingReleases} />
             </Card>

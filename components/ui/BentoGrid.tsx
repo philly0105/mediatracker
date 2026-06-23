@@ -10,9 +10,10 @@ export function BentoGrid({
   children: React.ReactNode
   className?: string
 }) {
+  const hasGridCols = className.split(' ').some(c => c.includes('grid-cols-'))
   return (
     <div
-      className={`grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto ${className}`}
+      className={`grid gap-4 max-w-7xl mx-auto ${!hasGridCols ? 'grid-cols-1 md:grid-cols-4' : ''} ${className}`}
     >
       {children}
     </div>
