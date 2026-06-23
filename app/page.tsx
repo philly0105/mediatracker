@@ -36,7 +36,7 @@ export default async function DashboardPage() {
       <div className="absolute inset-0 bg-grid pointer-events-none opacity-[0.15] z-0 h-[500px]" />
       
       {/* Header with integrated Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10 pl-2">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-30 pl-2">
         <div className="flex flex-col gap-2">
           <Eyebrow style={{ marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
