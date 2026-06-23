@@ -195,6 +195,39 @@ export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
     }))
 }
 
+export async function discoverStreaming(
+  provider: string,
+  type: MediaType,
+  page = 1
+): Promise<{ results: TmdbSearchResult[]; total_pages: number }> {
+  const endpoint = type === 'movie' ? '/discover/movie' : '/discover/tv'
+  const res = await fetch(apiUrl(endpoint, {
+    watch_region: 'US',
+    with_watch_providers: provider,
+    with_watch_monetization_types: 'flatrate',
+    sort_by: 'popularity.desc',
+    page: String(page),
+  }))
+  if (!res.ok) return { results: [], total_pages: 0 }
+  const data = await res.json()
+  const results = (data.results ?? []).map((r: any): TmdbSearchResult => ({
+    tmdb_id: r.id,
+    type,
+    title: r.title ?? r.name,
+    overview: r.overview ?? '',
+    poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
+    release_year: r.release_date
+      ? parseInt(r.release_date.split('-')[0])
+      : r.first_air_date
+      ? parseInt(r.first_air_date.split('-')[0])
+      : null,
+    genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+    vote_average: r.vote_average,
+  }))
+  // TMDB caps discover pagination at 500
+  return { results, total_pages: Math.min(data.total_pages ?? 0, 500) }
+}
+
 export async function getCollectionDetails(id: number): Promise<TmdbCollectionDetails> {
   const res = await fetch(apiUrl(`/collection/${id}`))
   if (!res.ok) throw new Error(`TMDB collection failed: ${res.status}`)

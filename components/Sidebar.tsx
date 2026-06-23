@@ -18,6 +18,7 @@ import {
   Sparkles,
   Calendar,
   Swords,
+  Clapperboard,
   MoreHorizontal,
   X
 } from 'lucide-react'
@@ -36,6 +37,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     { name: 'Search', href: '/search', icon: Search },
     { name: 'Movies', href: '/movies', icon: Film },
     { name: 'Shows', href: '/shows', icon: Tv },
+    { name: 'Streaming', href: '/streaming', icon: Clapperboard },
     { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Collections', href: '/collections', icon: Library },
