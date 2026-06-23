@@ -185,11 +185,11 @@ export default function StreamingPage() {
                       </div>
                     )}
                     {watched ? (
-                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-[var(--teal-300)] bg-[var(--teal-tint-bg)] border border-[var(--teal-tint-border)] backdrop-blur-sm">
+                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-[var(--teal-300)] bg-black/70 border border-[var(--teal-tint-border)] backdrop-blur-sm shadow-md shadow-black/40">
                         <CheckCircle2 className="w-3 h-3" /> Watched
                       </span>
                     ) : listed ? (
-                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-200 bg-black/50 border border-white/10 backdrop-blur-sm">
+                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-200 bg-black/70 border border-white/10 backdrop-blur-sm shadow-md shadow-black/40">
                         <Bookmark className="w-3 h-3" /> Watchlist
                       </span>
                     ) : null}
