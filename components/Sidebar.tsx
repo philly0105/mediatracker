@@ -34,10 +34,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const navItems = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Search', href: '/search', icon: Search },
-    { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Movies', href: '/movies', icon: Film },
     { name: 'Shows', href: '/shows', icon: Tv },
     { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Collections', href: '/collections', icon: Library },
     { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
     { name: 'Versus', href: '/versus', icon: Swords },
