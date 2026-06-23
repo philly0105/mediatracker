@@ -120,7 +120,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className="rounded-[var(--radius-2xl)] w-full max-w-lg overflow-hidden relative border border-white/5 bg-[var(--surface-modal)] max-h-[80vh] flex flex-col shadow-2xl"
+        className="rounded-[var(--radius-2xl)] w-full max-w-lg overflow-hidden relative border border-white/5 bg-[var(--surface-modal)] max-h-[calc(100dvh-2rem)] md:max-h-[80vh] flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">

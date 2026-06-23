@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
   Calendar,
@@ -58,11 +59,16 @@ export default function MediaInfoModal({
   onRemoveFromWatchlist,
   newTabLinks = false
 }: Props) {
+  const [mounted, setMounted] = useState(false)
   const [details, setDetails] = useState<FullDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSimilar, setShowSimilar] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     async function fetchDetails() {
@@ -168,7 +174,9 @@ export default function MediaInfoModal({
     return `${hrs}h ${remainingMins}m`
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{ background: 'var(--scrim)' }}>
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
@@ -179,7 +187,7 @@ export default function MediaInfoModal({
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         style={{ background: 'var(--surface-modal)' }}
-        className="glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[90vh] flex flex-col shadow-2xl shadow-violet-500/[0.05]"
+        className="glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[calc(100dvh-2rem)] md:max-h-[90vh] flex flex-col shadow-2xl shadow-violet-500/[0.05]"
       >
         {/* Close Button */}
         <button
@@ -530,6 +538,7 @@ export default function MediaInfoModal({
       {showSimilar && (
         <SimilarModal tmdbId={item.tmdb_id} type={item.type} onClose={() => setShowSimilar(false)} />
       )}
-    </div>
+    </div>,
+    document.body
   )
 }
