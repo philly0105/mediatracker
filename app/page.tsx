@@ -30,9 +30,9 @@ export default async function DashboardPage() {
   const currentShow = (inProgress ?? []).find((e: any) => e.media?.type === 'show')
 
   return (
-    <div className="space-y-12 pt-16 md:pt-0 relative">
+    <div className="space-y-12 relative">
       {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-grid pointer-events-none opacity-[0.15] z-0 -mt-16 md:mt-0 h-[500px]" />
+      <div className="absolute inset-0 bg-grid pointer-events-none opacity-[0.15] z-0 h-[500px]" />
       
       {/* Header */}
       <div className="flex flex-col gap-2 relative z-10 pl-2">
