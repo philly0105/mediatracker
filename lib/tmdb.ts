@@ -254,3 +254,76 @@ export async function getPopularCollections(page: number): Promise<TmdbCollectio
   return collections
 }
 
+export async function fetchUpcomingReleases(): Promise<any[]> {
+  const tmdbKey = process.env.TMDB_API_KEY
+  if (!tmdbKey) return []
+
+  const today = new Date()
+  const threeMonthsOut = new Date(today)
+  threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
+  const todayStr = today.toISOString().split('T')[0]
+  const endStr = threeMonthsOut.toISOString().split('T')[0]
+
+  const qs = (path: string, params: Record<string, string>) => {
+    const q = new URLSearchParams({ api_key: tmdbKey, language: 'en-US', ...params })
+    return `${BASE}${path}?${q}`
+  }
+
+  try {
+    const [moviesRes, showsRes] = await Promise.all([
+      fetch(qs('/discover/movie', {
+        region: 'US', sort_by: 'popularity.desc',
+        'primary_release_date.gte': todayStr, 'primary_release_date.lte': endStr,
+        'with_release_type': '2|3', with_original_language: 'en', page: '1'
+      })).then(r => r.json()),
+      fetch(qs('/discover/tv', {
+        sort_by: 'popularity.desc',
+        'first_air_date.gte': todayStr, 'first_air_date.lte': endStr,
+        with_original_language: 'en', page: '1'
+      })).then(r => r.json())
+    ])
+
+    const seen = new Set<string>()
+
+    const movies = (moviesRes.results ?? [])
+      .filter((r: any) => {
+        const key = `movie-${r.id}`
+        if (!r.release_date || r.release_date < todayStr || seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .map((r: any) => ({
+        tmdb_id: r.id, type: 'movie' as const,
+        title: r.title, overview: r.overview || '',
+        poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
+        full_release_date: r.release_date,
+        release_year: parseInt(r.release_date.split('-')[0]),
+        genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+        vote_average: r.vote_average, priority: 'upcoming',
+      }))
+
+    const shows = (showsRes.results ?? [])
+      .filter((r: any) => {
+        const key = `show-${r.id}`
+        if (!r.first_air_date || r.first_air_date < todayStr || seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      .map((r: any) => ({
+        tmdb_id: r.id, type: 'show' as const,
+        title: r.name, overview: r.overview || '',
+        poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
+        full_release_date: r.first_air_date,
+        release_year: parseInt(r.first_air_date.split('-')[0]),
+        genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+        vote_average: r.vote_average, priority: 'upcoming',
+      }))
+
+    return [...movies, ...shows].sort((a, b) => a.full_release_date.localeCompare(b.full_release_date))
+  } catch (err) {
+    console.error('Error fetching upcoming releases:', err)
+    return []
+  }
+}
+
+
