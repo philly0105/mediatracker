@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
+import { useMultiSelect } from './MultiSelectProvider'
 
 interface Props {
   tmdbId: number
@@ -25,6 +26,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
+  const { isSelectMode } = useMultiSelect()
   const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
   const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
 
@@ -150,7 +152,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
               {items.slice(0, visibleCount).map(item => (
                 <SelectableOverlay key={item.tmdb_id} item={item}>
                 <button
-                  onClick={() => setSelected(item)}
+                  onClick={() => { if (!isSelectMode) setSelected(item) }}
                   className="text-left space-y-1.5 group w-full h-full"
                 >
                   <div className="relative">
