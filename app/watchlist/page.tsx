@@ -44,7 +44,7 @@ export default function WatchlistPage() {
   return (
     <div className="space-y-8">
       {/* Header & Filters */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between sticky top-0 z-40 backdrop-blur-xl pt-2 pb-6 border-b border-[var(--border-subtle)]" style={{ background: 'rgba(16, 14, 9, 0.85)' }}>
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between pt-2 pb-6 border-b border-[var(--border-subtle)]">
         <div className="flex flex-col gap-1.5">
           <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
             Watchlist
