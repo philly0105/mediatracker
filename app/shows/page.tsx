@@ -2,9 +2,12 @@
 import { useState, useEffect } from 'react'
 import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
+import { Input } from '@/components/ui/Input'
+import { Search } from 'lucide-react'
 
 export default function ShowsPage() {
   const [entries, setEntries] = useState<WatchEntry[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,12 +22,29 @@ export default function ShowsPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const filteredEntries = entries.filter((entry) =>
+    entry.media?.title.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">TV Shows</h1>
-        {!loading && (
-          <span className="text-zinc-500 text-sm">{entries.length} watched</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">TV Shows</h1>
+          {!loading && (
+            <span className="text-zinc-500 text-sm mt-1">{entries.length} watched</span>
+          )}
+        </div>
+        {!loading && entries.length > 0 && (
+          <div className="w-full sm:w-64">
+            <Input
+              icon={<Search className="w-4 h-4 text-zinc-500" />}
+              placeholder="Search logged shows..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
+            />
+          </div>
         )}
       </div>
 
@@ -40,7 +60,7 @@ export default function ShowsPage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
-            {entries.map((entry) => (
+            {filteredEntries.map((entry) => (
               <MediaCard key={entry.id} entry={entry} hideWatchedDate={true} />
             ))}
           </div>
@@ -52,9 +72,15 @@ export default function ShowsPage() {
               </a>
             </p>
           )}
+          {entries.length > 0 && filteredEntries.length === 0 && (
+            <p className="text-zinc-400">
+              No logged shows match &ldquo;{searchQuery}&rdquo;.
+            </p>
+          )}
         </>
       )}
 
     </div>
   )
 }
+
