@@ -77,6 +77,7 @@ export interface TmdbWatchProviders {
 
 export interface TmdbFullDetails {
   tmdb_id: number
+  imdb_id: string | null
   type: MediaType
   title: string
   overview: string
@@ -96,7 +97,7 @@ export interface TmdbFullDetails {
 
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`
-  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos,watch/providers' }))
+  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos,watch/providers,external_ids' }))
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
   
@@ -115,6 +116,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
     const director = d.credits?.crew?.find((c: any) => c.job === 'Director')?.name ?? null
     return {
       tmdb_id: d.id, type: 'movie',
+      imdb_id: d.imdb_id ?? null,
       title: d.title, overview: d.overview ?? '',
       poster_url: d.poster_path ? `${IMG}${d.poster_path}` : null,
       genres: (d.genres ?? []).map((g: any) => g.name),
@@ -133,6 +135,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
   } else {
     return {
       tmdb_id: d.id, type: 'show',
+      imdb_id: d.external_ids?.imdb_id ?? null,
       title: d.name, overview: d.overview ?? '',
       poster_url: d.poster_path ? `${IMG}${d.poster_path}` : null,
       genres: (d.genres ?? []).map((g: any) => g.name),

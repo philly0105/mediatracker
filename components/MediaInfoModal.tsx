@@ -38,6 +38,7 @@ interface Props {
 }
 
 interface FullDetails {
+  imdb_id: string | null
   runtime_mins: number | null
   director: string | null
   cast_members: string[]
@@ -78,6 +79,7 @@ export default function MediaInfoModal({
         if (!res.ok) throw new Error('Failed to load movie details')
         const data = await res.json()
         setDetails({
+          imdb_id: data.imdb_id ?? null,
           runtime_mins: data.runtime_mins ?? null,
           director: data.director ?? null,
           cast_members: data.cast_members ?? [],
@@ -140,6 +142,7 @@ export default function MediaInfoModal({
     try {
       setActioning('remove')
       await onRemoveFromWatchlist()
+      if (details) setDetails({ ...details, isWatchlisted: false })
       // Modal stays open after action
     } catch (err) {
       console.error(err)
@@ -221,10 +224,22 @@ export default function MediaInfoModal({
                   {item.type === 'show' ? 'TV Show' : 'Movie'}
                 </span>
                 {item.vote_average !== undefined && item.vote_average > 0 && (
-                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span>{item.vote_average.toFixed(1)} TMDB / IMDb</span>
-                  </span>
+                  details?.imdb_id ? (
+                    <a
+                      href={`https://www.imdb.com/title/${details.imdb_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-amber-400/10 hover:border-amber-400/20 transition-colors"
+                    >
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span>{item.vote_average.toFixed(1)} TMDB / IMDb</span>
+                    </a>
+                  ) : (
+                    <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span>{item.vote_average.toFixed(1)} TMDB / IMDb</span>
+                    </span>
+                  )
                 )}
               </div>
 
@@ -430,7 +445,7 @@ export default function MediaInfoModal({
         {/* Footer Actions */}
         <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3 flex-wrap">
           {currentPriority || details?.isWatchlisted ? (
-            currentPriority ? (
+            currentPriority || onRemoveFromWatchlist ? (
               <Button
                 disabled={loading || actioning !== null}
                 onClick={handleRemoveClick}

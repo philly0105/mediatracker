@@ -250,6 +250,18 @@ export default function StreamingPage() {
             })
             setWatchedIds((prev) => new Set(prev).add(selected.tmdb_id))
           }}
+          onRemoveFromWatchlist={async () => {
+            await fetch('/api/watchlist', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type }),
+            })
+            setWatchlistIds((prev) => {
+              const next = new Set(prev)
+              next.delete(selected.tmdb_id)
+              return next
+            })
+          }}
         />
       )}
     </div>
