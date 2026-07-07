@@ -8,7 +8,44 @@ import { Eyebrow } from '@/components/ui/Eyebrow'
 import { StatTile } from '@/components/ui/StatTile'
 import DashboardSearchBar from '@/components/DashboardSearchBar'
 import DashboardUpcomingWidget from '@/components/DashboardUpcomingWidget'
+import ContinueWatchingRow, { type ContinueWatchingShow } from '@/components/ContinueWatchingRow'
 import { fetchUpcomingReleases } from '@/lib/tmdb'
+
+type ProgressWithSeason = {
+  season_id: string
+  episode_number: number
+  seasons: { media_id: string } | { media_id: string }[] | null
+}
+
+type SeasonWithMedia = {
+  id: string
+  media_id: string
+  season_number: number
+  episode_count: number
+  media: { id: string; title: string; poster_url: string | null } | { id: string; title: string; poster_url: string | null }[] | null
+}
+
+function joinedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value ?? null
+}
+
+function findNextUp(seasons: ContinueWatchingShow['seasons'], watchedKeys: Set<string>) {
+  for (const season of seasons) {
+    if (season.episode_count <= 0) continue
+    for (let episode = 1; episode <= season.episode_count; episode++) {
+      if (!watchedKeys.has(`${season.id}-${episode}`)) {
+        return {
+          season_id: season.id,
+          season_number: season.season_number,
+          episode_number: episode,
+        }
+      }
+    }
+  }
+
+  return null
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -24,6 +61,68 @@ export default async function DashboardPage() {
     supabase.from('watch_entries').select('id').gte('watched_at', `${new Date().getFullYear()}-01-01`),
     fetchUpcomingReleases(),
   ])
+
+  const { data: episodeProgressData } = await supabase
+    .from('episode_progress')
+    .select('season_id, episode_number, seasons!inner(media_id)')
+    .order('watched_at', { ascending: false })
+
+  const episodeProgress = (episodeProgressData ?? []) as ProgressWithSeason[]
+  const mediaIds = Array.from(new Set(
+    episodeProgress
+      .map((progress) => joinedOne(progress.seasons)?.media_id)
+      .filter((mediaId): mediaId is string => Boolean(mediaId))
+  ))
+
+  let continueWatchingShows: ContinueWatchingShow[] = []
+  if (mediaIds.length > 0) {
+    const { data: seasonsData } = await supabase
+      .from('seasons')
+      .select('id, media_id, season_number, episode_count, media!inner(id, title, poster_url)')
+      .in('media_id', mediaIds)
+      .order('season_number', { ascending: true })
+
+    const seasonsByMediaId = new Map<string, ContinueWatchingShow['seasons']>()
+    const mediaById = new Map<string, ContinueWatchingShow['media']>()
+    for (const season of ((seasonsData ?? []) as SeasonWithMedia[])) {
+      const media = joinedOne(season.media)
+      if (!media) continue
+
+      mediaById.set(season.media_id, media)
+      const seasons = seasonsByMediaId.get(season.media_id) ?? []
+      seasons.push({
+        id: season.id,
+        season_number: season.season_number,
+        episode_count: season.episode_count,
+      })
+      seasonsByMediaId.set(season.media_id, seasons)
+    }
+
+    const watchedKeysByMediaId = new Map<string, Set<string>>()
+    for (const progress of episodeProgress) {
+      const mediaId = joinedOne(progress.seasons)?.media_id
+      if (!mediaId) continue
+
+      const watchedKeys = watchedKeysByMediaId.get(mediaId) ?? new Set<string>()
+      watchedKeys.add(`${progress.season_id}-${progress.episode_number}`)
+      watchedKeysByMediaId.set(mediaId, watchedKeys)
+    }
+
+    continueWatchingShows = mediaIds.flatMap((mediaId) => {
+      const media = mediaById.get(mediaId)
+      const seasons = seasonsByMediaId.get(mediaId) ?? []
+      const watchedKeys = watchedKeysByMediaId.get(mediaId) ?? new Set<string>()
+      const nextUp = findNextUp(seasons, watchedKeys)
+      if (!media || !nextUp) return []
+
+      return [{
+        media,
+        seasons,
+        watchedEpisodeKeys: Array.from(watchedKeys),
+        nextUp,
+      }]
+    })
+  }
 
   const priorityCounts = { must_watch: 0, want_to_watch: 0, someday: 0 }
   for (const item of (watchlistCounts ?? [])) {
@@ -91,6 +190,10 @@ export default async function DashboardPage() {
 
         </BentoGrid>
       </div>
+
+      {continueWatchingShows.length > 0 && (
+        <ContinueWatchingRow shows={continueWatchingShows} />
+      )}
 
       {/* Recently Watched */}
       <div className="relative z-10 pt-4">
