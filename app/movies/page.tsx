@@ -1,9 +1,10 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
-import { Search } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Search, RefreshCw, Loader2 } from 'lucide-react'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 
 const sortOptions: { id: WatchEntrySort; label: string }[] = [
@@ -18,18 +19,32 @@ export default function MoviesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<WatchEntrySort>('recent')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchEntries = useCallback(
+    () =>
+      fetch('/api/watch?type=movie')
+        .then((r) => r.json())
+        .then((data) =>
+          ((data.entries ?? []) as WatchEntry[]).filter(
+            (e) => e.media?.type === 'movie'
+          )
+        ),
+    []
+  )
 
   useEffect(() => {
-    fetch('/api/watch?type=movie')
-      .then((r) => r.json())
-      .then((data) => {
-        const movies = (data.entries ?? []).filter(
-          (e: WatchEntry) => e.media?.type === 'movie'
-        )
-        setEntries(movies)
-      })
+    fetchEntries()
+      .then(setEntries)
       .finally(() => setLoading(false))
-  }, [])
+  }, [fetchEntries])
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true)
+    fetchEntries()
+      .then(setEntries)
+      .finally(() => setRefreshing(false))
+  }, [fetchEntries])
 
   const filteredEntries = useMemo(() => {
     const filtered = entries.filter((entry) =>
@@ -75,6 +90,19 @@ export default function MoviesPage() {
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
               />
             </div>
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              variant="ghost"
+              size="sm"
+            >
+              {refreshing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              <span>{refreshing ? 'Refreshing' : 'Refresh'}</span>
+            </Button>
           </div>
         )}
       </div>
