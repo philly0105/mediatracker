@@ -1,11 +1,11 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Bookmark, ChevronLeft, ChevronRight, Clapperboard, EyeOff, Star } from 'lucide-react'
+import { CheckCircle2, Bookmark, Clapperboard, EyeOff, Loader2, Star } from 'lucide-react'
 
 const PROVIDERS = [
   { id: '8', name: 'Netflix' },
@@ -35,7 +35,9 @@ export default function StreamingPage() {
   const [results, setResults] = useState<TmdbSearchResult[]>([])
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
   const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
@@ -65,7 +67,11 @@ export default function StreamingPage() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      setLoading(true)
+      if (page === 1) {
+        setLoading(true)
+      } else {
+        setLoadingMore(true)
+      }
       try {
         const params = new URLSearchParams({
           provider,
@@ -76,12 +82,20 @@ export default function StreamingPage() {
         const res = await fetch(`/api/streaming?${params}`)
         const data = await res.json()
         if (cancelled) return
-        setResults(data.results ?? [])
+        const nextResults = (data.results ?? []) as TmdbSearchResult[]
+        setResults((prev) => {
+          if (page === 1) return nextResults
+          const seen = new Set(prev.map((item) => item.tmdb_id))
+          return [...prev, ...nextResults.filter((item) => !seen.has(item.tmdb_id))]
+        })
         setTotalPages(data.total_pages ?? 0)
       } catch {
-        if (!cancelled) setResults([])
+        if (!cancelled && page === 1) setResults([])
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          setLoadingMore(false)
+        }
       }
     }
     load()
@@ -90,23 +104,47 @@ export default function StreamingPage() {
     }
   }, [provider, type, page, sortBy])
 
+  useEffect(() => {
+    if (loading || loadingMore || page >= totalPages) return
+    const node = loadMoreRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setPage((currentPage) => Math.min(currentPage + 1, totalPages))
+        }
+      },
+      { rootMargin: '600px 0px' }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [loading, loadingMore, page, totalPages, results.length])
+
   const visibleResults = useMemo(
     () => (hideWatched ? results.filter((item) => !watchedIds.has(item.tmdb_id)) : results),
     [hideWatched, results, watchedIds]
   )
 
   function changeProvider(id: string) {
+    if (id === provider) return
     setProvider(id)
+    setResults([])
     setPage(1)
   }
 
   function changeType(t: 'movie' | 'show') {
+    if (t === type) return
     setType(t)
+    setResults([])
     setPage(1)
   }
 
   function changeSort(sort: StreamingSort) {
+    if (sort === sortBy) return
     setSortBy(sort)
+    setResults([])
     setPage(1)
   }
 
@@ -284,26 +322,14 @@ export default function StreamingPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      {!loading && results.length > 0 && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 pt-4">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-sm text-xs font-semibold text-zinc-300 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" /> Prev
-          </button>
-          <span className="text-xs text-zinc-400 tabular-nums">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-sm text-xs font-semibold text-zinc-300 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            Next <ChevronRight className="w-4 h-4" />
-          </button>
+      {!loading && results.length > 0 && page < totalPages && (
+        <div ref={loadMoreRef} className="flex items-center justify-center py-6 text-xs font-semibold text-zinc-400">
+          {loadingMore && (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading more
+            </span>
+          )}
         </div>
       )}
 
