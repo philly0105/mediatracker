@@ -1,9 +1,89 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { fetchTmdbRecommendations, fetchTmdbTrending } from '@/lib/tmdb'
-import type { TmdbSearchResult } from '@/types'
+import { discoverByGenre, fetchTmdbRecommendations, fetchTmdbTrending } from '@/lib/tmdb'
+import type { MediaType, TmdbSearchResult } from '@/types'
+
+type TypeFilter = MediaType | 'all'
+type ScoredRecommendation = { item: TmdbSearchResult; score: number }
+
+const RESULT_LIMIT = 100
+const GENRE_TARGET_COUNT = 12
+
+function parseExcludeIds(value: string | null) {
+  return new Set(
+    (value ?? '')
+      .split(',')
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id))
+  )
+}
+
+function parseTypeFilter(value: string | null): TypeFilter {
+  return value === 'movie' || value === 'show' ? value : 'all'
+}
+
+function parsePage(value: string | null) {
+  const page = Number.parseInt(value ?? '1', 10)
+  return Number.isFinite(page) && page > 0 ? page : 1
+}
+
+function matchesGenreFilter(item: TmdbSearchResult, genre: string, type: TypeFilter) {
+  return (type === 'all' || item.type === type) && (item.genres ?? []).includes(genre)
+}
+
+function shuffleWithinScoreBands(items: ScoredRecommendation[]) {
+  const bands = new Map<number, ScoredRecommendation[]>()
+  items.forEach((entry) => {
+    const band = Math.round(entry.score * 10) / 10
+    bands.set(band, [...(bands.get(band) ?? []), entry])
+  })
+
+  return Array.from(bands.entries())
+    .sort(([a], [b]) => b - a)
+    .flatMap(([, band]) => shuffleItems(band))
+}
+
+function shuffleItems<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5)
+}
+
+async function addGenreTopUp(
+  baseResults: TmdbSearchResult[],
+  genre: string | null,
+  type: TypeFilter,
+  page: number,
+  excludedIds: Set<number>
+) {
+  if (!genre) return { results: baseResults, hasMoreDiscover: false }
+
+  let matchingCount = baseResults.filter((item) => matchesGenreFilter(item, genre, type)).length
+  if (matchingCount >= GENRE_TARGET_COUNT) return { results: baseResults, hasMoreDiscover: false }
+
+  const seenIds = new Set([...excludedIds, ...baseResults.map((item) => item.tmdb_id)])
+  const types: MediaType[] = type === 'all' ? ['movie', 'show'] : [type]
+  const discovered = await Promise.all(types.map((mediaType) => discoverByGenre(genre, mediaType, page)))
+  const hasMoreDiscover = discovered.some((batch) => page < batch.total_pages)
+  const topUps: TmdbSearchResult[] = []
+
+  for (const item of discovered.flatMap((batch) => batch.results)) {
+    if (seenIds.has(item.tmdb_id) || !matchesGenreFilter(item, genre, type)) continue
+    seenIds.add(item.tmdb_id)
+    topUps.push(item)
+    matchingCount += 1
+    if (matchingCount >= GENRE_TARGET_COUNT) break
+  }
+
+  return { results: [...baseResults, ...topUps], hasMoreDiscover }
+}
 
 export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams
+  const excludeIds = parseExcludeIds(searchParams.get('excludeIds'))
+  const genre = searchParams.get('genre')?.trim() || null
+  const type = parseTypeFilter(searchParams.get('type'))
+  const page = parsePage(searchParams.get('page'))
+  const refresh = Boolean(searchParams.get('refresh'))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -27,6 +107,7 @@ export async function GET(request: NextRequest) {
 
   const watchedIds = new Set((watchedList ?? []).map((w: any) => w.media.tmdb_id))
   const watchlistIds = new Set((watchlistList ?? []).map((w: any) => w.media.tmdb_id))
+  const excludedIds = new Set([...watchedIds, ...watchlistIds, ...excludeIds])
 
   // Fallback: If user has watched nothing, return weekly trending items
   if (!recentWatched || recentWatched.length === 0) {
@@ -39,9 +120,22 @@ export async function GET(request: NextRequest) {
     ])
     const trending = [...trending1, ...trending2, ...trending3, ...trending4, ...trending5]
     const filteredTrending = trending.filter(
-      (item) => !watchedIds.has(item.tmdb_id) && !watchlistIds.has(item.tmdb_id)
+      (item) => !excludedIds.has(item.tmdb_id)
     )
-    return NextResponse.json({ results: filteredTrending.slice(0, 100), fallback: true })
+    const sortedTrending = refresh ? shuffleItems(filteredTrending) : filteredTrending
+    const baseResults = sortedTrending.slice(0, RESULT_LIMIT)
+    const { results, hasMoreDiscover } = await addGenreTopUp(
+      baseResults,
+      genre,
+      type,
+      page,
+      excludedIds
+    )
+    return NextResponse.json({
+      results,
+      fallback: true,
+      hasMore: filteredTrending.length > RESULT_LIMIT || hasMoreDiscover,
+    })
   }
 
   // 2. Fetch TMDB recommendations in parallel for recently watched items
@@ -66,7 +160,7 @@ export async function GET(request: NextRequest) {
 
     list.forEach((item) => {
       // Exclude already watched or watchlisted items
-      if (watchedIds.has(item.tmdb_id) || watchlistIds.has(item.tmdb_id)) return
+      if (excludedIds.has(item.tmdb_id)) return
 
       const existing = scoredItems.get(item.tmdb_id)
       if (existing) {
@@ -78,10 +172,24 @@ export async function GET(request: NextRequest) {
   })
 
   // 4. Sort by score descending and return the top 100 results
-  const sortedResults = Array.from(scoredItems.values())
-    .sort((a, b) => b.score - a.score)
-    .map((entry) => entry.item)
-    .slice(0, 100)
+  const scoredResults = Array.from(scoredItems.values())
+  const sortedResults = (refresh
+    ? shuffleWithinScoreBands(scoredResults)
+    : scoredResults.sort((a, b) => b.score - a.score)
+  ).map((entry) => entry.item)
 
-  return NextResponse.json({ results: sortedResults, fallback: false })
+  const baseResults = sortedResults.slice(0, RESULT_LIMIT)
+  const { results, hasMoreDiscover } = await addGenreTopUp(
+    baseResults,
+    genre,
+    type,
+    page,
+    excludedIds
+  )
+
+  return NextResponse.json({
+    results,
+    fallback: false,
+    hasMore: sortedResults.length > RESULT_LIMIT || hasMoreDiscover,
+  })
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -11,7 +11,8 @@ import {
   Calendar,
   AlertCircle,
   Plus,
-  Star
+  Star,
+  RefreshCw
 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -39,17 +40,30 @@ export default function RecommendationsPage() {
   const [activeGenre, setActiveGenre] = useState('All')
   const [selectedItem, setSelectedItem] = useState<Recommendation | null>(null)
   const [activeType, setActiveType] = useState<'all' | 'movie' | 'show'>('all')
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [discoverPageByFilter, setDiscoverPageByFilter] = useState<Record<string, number>>({})
+  const [hasMoreByFilter, setHasMoreByFilter] = useState<Record<string, boolean>>({})
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  async function loadRecommendations() {
+  const loadRecommendations = useCallback(async (refresh = false) => {
     try {
-      setLoading(true)
-      const res = await fetch('/api/recommendations')
+      if (refresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+      setError(null)
+      const res = await fetch(`/api/recommendations${refresh ? '?refresh=1' : ''}`)
       if (!res.ok) throw new Error('Failed to load recommendations')
       const data = await res.json()
       setItems(data.results ?? [])
       setFallback(data.fallback ?? false)
+      setHasMore(data.hasMore ?? false)
+      setDiscoverPageByFilter({})
+      setHasMoreByFilter({})
       setVisibleCount(10)
       setActiveGenre('All')
       setActiveType('all')
@@ -57,13 +71,17 @@ export default function RecommendationsPage() {
     } catch (err: any) {
       setError(err.message)
     } finally {
-      setLoading(false)
+      if (refresh) {
+        setRefreshing(false)
+      } else {
+        setLoading(false)
+      }
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadRecommendations()
-  }, [])
+  }, [loadRecommendations])
 
   async function handleAddToWatchlist(tmdbId: number, type: 'movie' | 'show') {
     try {
@@ -132,6 +150,100 @@ export default function RecommendationsPage() {
     : typeFilteredItems.filter((item) => (item.genres ?? []).includes(activeGenre))
 
   const visibleItems = filteredItems.slice(0, visibleCount)
+  const filterKey = `${activeType}:${activeGenre}`
+  const canLoadMoreForFilter = activeGenre === 'All'
+    ? hasMore
+    : hasMoreByFilter[filterKey] ?? true
+
+  const loadMoreRecommendations = useCallback(async () => {
+    if (loadingMore) return
+
+    if (visibleCount < filteredItems.length) {
+      setVisibleCount((prev) => prev + 10)
+      return
+    }
+
+    if (!canLoadMoreForFilter) return
+
+    try {
+      setLoadingMore(true)
+      const params = new URLSearchParams()
+      const excludeIds = items.map((item) => item.tmdb_id).join(',')
+      if (excludeIds) params.set('excludeIds', excludeIds)
+      if (activeGenre !== 'All') {
+        params.set('genre', activeGenre)
+        params.set('page', String(discoverPageByFilter[filterKey] ?? 1))
+      }
+      if (activeType !== 'all') params.set('type', activeType)
+
+      const res = await fetch(`/api/recommendations?${params}`)
+      if (!res.ok) throw new Error('Failed to load more recommendations')
+      const data = await res.json()
+      const existingIds = new Set(items.map((item) => item.tmdb_id))
+      const newResults: Recommendation[] = (data.results ?? []).filter(
+        (item: Recommendation) => !existingIds.has(item.tmdb_id)
+      )
+      const newMatchingCount = newResults.filter((item) => {
+        const typeMatches = activeType === 'all' || item.type === activeType
+        const genreMatches = activeGenre === 'All' || (item.genres ?? []).includes(activeGenre)
+        return typeMatches && genreMatches
+      }).length
+
+      if (newResults.length === 0) {
+        if (activeGenre === 'All') {
+          setHasMore(false)
+        } else {
+          setHasMoreByFilter((prev) => ({ ...prev, [filterKey]: false }))
+        }
+        return
+      }
+
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.tmdb_id))
+        return [
+          ...prev,
+          ...newResults.filter((item) => {
+            if (seen.has(item.tmdb_id)) return false
+            seen.add(item.tmdb_id)
+            return true
+          }),
+        ]
+      })
+
+      if (activeGenre === 'All') {
+        setHasMore(data.hasMore ?? false)
+      } else {
+        setHasMoreByFilter((prev) => ({
+          ...prev,
+          [filterKey]: newMatchingCount > 0 ? data.hasMore ?? false : false,
+        }))
+        setDiscoverPageByFilter((prev) => ({
+          ...prev,
+          [filterKey]: (prev[filterKey] ?? 1) + 1,
+        }))
+      }
+      if (newMatchingCount > 0) setVisibleCount((prev) => prev + Math.max(10, newMatchingCount))
+    } catch (err) {
+      console.error(err)
+      if (activeGenre === 'All') {
+        setHasMore(false)
+      } else {
+        setHasMoreByFilter((prev) => ({ ...prev, [filterKey]: false }))
+      }
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [
+    activeGenre,
+    activeType,
+    canLoadMoreForFilter,
+    discoverPageByFilter,
+    filteredItems.length,
+    filterKey,
+    items,
+    loadingMore,
+    visibleCount,
+  ])
 
   // Infinite Scroll logic
   useEffect(() => {
@@ -139,30 +251,44 @@ export default function RecommendationsPage() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleCount < filteredItems.length) {
-          setVisibleCount((prev) => prev + 10)
-        }
+        if (entries[0].isIntersecting) loadMoreRecommendations()
       },
       { threshold: 0.1 }
     )
 
     observer.observe(loadMoreRef.current)
     return () => observer.disconnect()
-  }, [visibleCount, filteredItems.length])
+  }, [loadMoreRecommendations])
 
   return (
     <div className="space-y-10 pb-12">
       {/* Header */}
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 flex items-center gap-2.5">
-          <Sparkles className="w-7 h-7 text-[var(--accent)] fill-[var(--accent)]/10" />
-          <span>Recommendations</span>
-        </h1>
-        <p className="text-sm text-zinc-400">
-          {fallback 
-            ? 'We compiled this week\'s overall trending items to get you started!' 
-            : 'Personalized recommendations based on similar titles from your watch history.'}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 flex items-center gap-2.5">
+            <Sparkles className="w-7 h-7 text-[var(--accent)] fill-[var(--accent)]/10" />
+            <span>Recommendations</span>
+          </h1>
+          <p className="text-sm text-zinc-400">
+            {fallback
+              ? 'We compiled this week\'s overall trending items to get you started!'
+              : 'Personalized recommendations based on similar titles from your watch history.'}
+          </p>
+        </div>
+        <Button
+          onClick={() => loadRecommendations(true)}
+          disabled={loading || refreshing}
+          variant="ghost"
+          size="sm"
+          style={{ alignSelf: 'flex-start' }}
+        >
+          {refreshing ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          <span>{refreshing ? 'Refreshing' : 'Refresh'}</span>
+        </Button>
       </div>
 
       {loading ? (
@@ -188,7 +314,7 @@ export default function RecommendationsPage() {
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">{error}</p>
-          <Button onClick={loadRecommendations}>
+          <Button onClick={() => loadRecommendations()}>
             Try Again
           </Button>
         </Card>
@@ -217,6 +343,8 @@ export default function RecommendationsPage() {
                   onClick={() => {
                     setActiveType(type.id)
                     setActiveGenre('All')
+                    setDiscoverPageByFilter({})
+                    setHasMoreByFilter({})
                     setVisibleCount(10)
                   }}
                   className={`relative px-4 py-2 rounded-sm font-bold text-xs transition-all duration-300 active:scale-95 whitespace-nowrap ${
@@ -244,6 +372,12 @@ export default function RecommendationsPage() {
                 key={genre}
                 onClick={() => {
                   setActiveGenre(genre)
+                  setDiscoverPageByFilter((prev) => ({ ...prev, [`${activeType}:${genre}`]: 1 }))
+                  setHasMoreByFilter((prev) => {
+                    const next = { ...prev }
+                    delete next[`${activeType}:${genre}`]
+                    return next
+                  })
                   setVisibleCount(10)
                 }}
                 className={`relative px-4 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
@@ -376,7 +510,7 @@ export default function RecommendationsPage() {
           )}
 
           {/* Infinite Scroll Trigger */}
-          {visibleCount < filteredItems.length && (
+          {(visibleCount < filteredItems.length || canLoadMoreForFilter || loadingMore) && filteredItems.length > 0 && (
             <div ref={loadMoreRef} className="flex justify-center pt-8 pb-4">
               <Loader2 className="w-6 h-6 text-[var(--accent)]/50 animate-spin" />
             </div>

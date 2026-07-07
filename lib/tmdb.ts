@@ -4,6 +4,18 @@ const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
 const BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 
+type TmdbListItem = {
+  id: number
+  title?: string
+  name?: string
+  overview?: string
+  poster_path?: string | null
+  release_date?: string
+  first_air_date?: string
+  genre_ids?: number[]
+  vote_average?: number
+}
+
 export const TMDB_GENRES: Record<number, string> = {
   28: 'Action & Sci-Fi',
   12: 'Action & Sci-Fi',
@@ -32,6 +44,29 @@ export const TMDB_GENRES: Record<number, string> = {
   10766: 'Soap',
   10767: 'Talk',
   10768: 'War',
+}
+
+export const TMDB_GENRE_NAME_TO_ID: Record<string, number> = Object.entries(TMDB_GENRES).reduce(
+  (acc, [id, name]) => {
+    if (acc[name] === undefined) acc[name] = Number(id)
+    return acc
+  },
+  {} as Record<string, number>
+)
+
+const TMDB_MOVIE_GENRE_IDS = new Set([
+  28, 12, 16, 35, 80, 99, 18, 10751, 14, 36, 27, 10402, 9648, 10749, 878, 10770, 53, 10752, 37,
+])
+const TMDB_SHOW_GENRE_IDS = new Set([
+  10759, 16, 35, 80, 99, 18, 10751, 10762, 9648, 10763, 10764, 10765, 10766, 10767, 10768, 37,
+])
+
+function getGenreIdForType(genreName: string, type: MediaType) {
+  const allowedIds = type === 'movie' ? TMDB_MOVIE_GENRE_IDS : TMDB_SHOW_GENRE_IDS
+  const match = Object.entries(TMDB_GENRES).find(
+    ([id, name]) => name === genreName && allowedIds.has(Number(id))
+  )
+  return match ? Number(match[0]) : TMDB_GENRE_NAME_TO_ID[genreName]
 }
 
 function apiUrl(path: string, params: Record<string, string> = {}) {
@@ -217,6 +252,40 @@ export async function discoverStreaming(
     tmdb_id: r.id,
     type,
     title: r.title ?? r.name,
+    overview: r.overview ?? '',
+    poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
+    release_year: r.release_date
+      ? parseInt(r.release_date.split('-')[0])
+      : r.first_air_date
+      ? parseInt(r.first_air_date.split('-')[0])
+      : null,
+    genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+    vote_average: r.vote_average,
+  }))
+  // TMDB caps discover pagination at 500
+  return { results, total_pages: Math.min(data.total_pages ?? 0, 500) }
+}
+
+export async function discoverByGenre(
+  genreName: string,
+  type: MediaType,
+  page = 1
+): Promise<{ results: TmdbSearchResult[]; total_pages: number }> {
+  const genreId = getGenreIdForType(genreName, type)
+  if (!genreId) return { results: [], total_pages: 0 }
+
+  const endpoint = type === 'movie' ? '/discover/movie' : '/discover/tv'
+  const res = await fetch(apiUrl(endpoint, {
+    with_genres: String(genreId),
+    sort_by: 'popularity.desc',
+    page: String(page),
+  }))
+  if (!res.ok) return { results: [], total_pages: 0 }
+  const data = await res.json()
+  const results = (data.results ?? []).map((r: TmdbListItem): TmdbSearchResult => ({
+    tmdb_id: r.id,
+    type,
+    title: r.title ?? r.name ?? '',
     overview: r.overview ?? '',
     poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
     release_year: r.release_date
