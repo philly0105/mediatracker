@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections } from '@/lib/tmdb'
+import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -200,5 +200,37 @@ describe('getPopularCollections', () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 })
     const result = await getPopularCollections(1)
     expect(result).toEqual([])
+  })
+})
+
+describe('discoverStreaming', () => {
+  it('requests highest rated streaming movies with a vote count floor', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ results: [], total_pages: 1 }),
+    })
+
+    await discoverStreaming('1899', 'movie', 2, 'rating')
+
+    const url = new URL(mockFetch.mock.calls[0][0])
+    expect(url.pathname).toBe('/3/discover/movie')
+    expect(url.searchParams.get('with_watch_providers')).toBe('1899')
+    expect(url.searchParams.get('sort_by')).toBe('vote_average.desc')
+    expect(url.searchParams.get('vote_count.gte')).toBe('100')
+    expect(url.searchParams.get('page')).toBe('2')
+  })
+
+  it('requests latest streaming shows by first air date', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ results: [], total_pages: 1 }),
+    })
+
+    await discoverStreaming('8', 'show', 1, 'latest')
+
+    const url = new URL(mockFetch.mock.calls[0][0])
+    expect(url.pathname).toBe('/3/discover/tv')
+    expect(url.searchParams.get('sort_by')).toBe('first_air_date.desc')
+    expect(url.searchParams.has('vote_count.gte')).toBe(false)
   })
 })

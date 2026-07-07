@@ -1,11 +1,11 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Bookmark, ChevronLeft, ChevronRight, Loader2, Clapperboard } from 'lucide-react'
+import { CheckCircle2, Bookmark, ChevronLeft, ChevronRight, Clapperboard, EyeOff, Star } from 'lucide-react'
 
 const PROVIDERS = [
   { id: '8', name: 'Netflix' },
@@ -17,9 +17,19 @@ const PROVIDERS = [
   { id: '386', name: 'Peacock' },
 ]
 
+type StreamingSort = 'popular' | 'rating' | 'latest'
+
+const SORT_OPTIONS: { id: StreamingSort; label: string }[] = [
+  { id: 'popular', label: 'Popular' },
+  { id: 'rating', label: 'Highest rated' },
+  { id: 'latest', label: 'Latest release' },
+]
+
 export default function StreamingPage() {
   const [provider, setProvider] = useState('8')
   const [type, setType] = useState<'movie' | 'show'>('movie')
+  const [sortBy, setSortBy] = useState<StreamingSort>('popular')
+  const [hideWatched, setHideWatched] = useState(false)
   const [page, setPage] = useState(1)
 
   const [results, setResults] = useState<TmdbSearchResult[]>([])
@@ -57,7 +67,13 @@ export default function StreamingPage() {
     async function load() {
       setLoading(true)
       try {
-        const res = await fetch(`/api/streaming?provider=${provider}&type=${type}&page=${page}`)
+        const params = new URLSearchParams({
+          provider,
+          type,
+          page: String(page),
+          sort: sortBy,
+        })
+        const res = await fetch(`/api/streaming?${params}`)
         const data = await res.json()
         if (cancelled) return
         setResults(data.results ?? [])
@@ -72,7 +88,12 @@ export default function StreamingPage() {
     return () => {
       cancelled = true
     }
-  }, [provider, type, page])
+  }, [provider, type, page, sortBy])
+
+  const visibleResults = useMemo(
+    () => (hideWatched ? results.filter((item) => !watchedIds.has(item.tmdb_id)) : results),
+    [hideWatched, results, watchedIds]
+  )
 
   function changeProvider(id: string) {
     setProvider(id)
@@ -81,6 +102,16 @@ export default function StreamingPage() {
 
   function changeType(t: 'movie' | 'show') {
     setType(t)
+    setPage(1)
+  }
+
+  function changeSort(sort: StreamingSort) {
+    setSortBy(sort)
+    setPage(1)
+  }
+
+  function toggleHideWatched() {
+    setHideWatched((hidden) => !hidden)
     setPage(1)
   }
 
@@ -148,6 +179,40 @@ export default function StreamingPage() {
         </div>
       </div>
 
+      {/* Sort and filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {SORT_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => changeSort(option.id)}
+              aria-pressed={sortBy === option.id}
+              className={`relative px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
+                sortBy === option.id
+                  ? 'text-white bg-[var(--accent)] border border-transparent shadow-lg shadow-green-600/20'
+                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={toggleHideWatched}
+          aria-pressed={hideWatched}
+          className={`inline-flex w-fit items-center gap-2 px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
+            hideWatched
+              ? 'text-white bg-[var(--accent)] border border-transparent shadow-lg shadow-green-600/20'
+              : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
+          }`}
+        >
+          <EyeOff className="w-3.5 h-3.5" />
+          <span>Hide watched</span>
+        </button>
+      </div>
+
       {/* Poster grid */}
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
@@ -158,11 +223,15 @@ export default function StreamingPage() {
             />
           ))}
         </div>
-      ) : results.length === 0 ? (
-        <p className="text-zinc-400 py-8 text-center">No titles found for this service.</p>
+      ) : visibleResults.length === 0 ? (
+        <p className="text-zinc-400 py-8 text-center">
+          {results.length === 0
+            ? 'No titles found for this service.'
+            : 'No unwatched titles found on this page.'}
+        </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
-          {results.map((item) => {
+          {visibleResults.map((item) => {
             const watched = watchedIds.has(item.tmdb_id)
             const listed = watchlistIds.has(item.tmdb_id)
             return (
@@ -198,7 +267,15 @@ export default function StreamingPage() {
                     <p className="text-sm font-semibold text-white line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
                       {item.title}
                     </p>
-                    <p className="text-xs text-zinc-500">{item.release_year ?? '—'}</p>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                      <span>{item.release_year ?? '—'}</span>
+                      {item.vote_average !== undefined && item.vote_average > 0 && (
+                        <span className="inline-flex items-center gap-1 text-zinc-400">
+                          <Star className="w-3 h-3 fill-current text-[var(--accent)]" />
+                          {item.vote_average.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               </SelectableOverlay>

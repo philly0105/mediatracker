@@ -130,6 +130,8 @@ export interface TmdbFullDetails {
   vote_average?: number
 }
 
+export type StreamingSort = 'popular' | 'rating' | 'latest'
+
 export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`
   const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos,watch/providers,external_ids' }))
@@ -236,16 +238,29 @@ export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
 export async function discoverStreaming(
   provider: string,
   type: MediaType,
-  page = 1
+  page = 1,
+  sort: StreamingSort = 'popular'
 ): Promise<{ results: TmdbSearchResult[]; total_pages: number }> {
   const endpoint = type === 'movie' ? '/discover/movie' : '/discover/tv'
-  const res = await fetch(apiUrl(endpoint, {
+  const sortBy =
+    sort === 'rating'
+      ? 'vote_average.desc'
+      : sort === 'latest'
+        ? type === 'movie'
+          ? 'primary_release_date.desc'
+          : 'first_air_date.desc'
+        : 'popularity.desc'
+  const params: Record<string, string> = {
     watch_region: 'US',
     with_watch_providers: provider,
     with_watch_monetization_types: 'flatrate',
-    sort_by: 'popularity.desc',
+    sort_by: sortBy,
     page: String(page),
-  }))
+  }
+  if (sort === 'rating') {
+    params['vote_count.gte'] = '100'
+  }
+  const res = await fetch(apiUrl(endpoint, params))
   if (!res.ok) return { results: [], total_pages: 0 }
   const data = await res.json()
   const results = (data.results ?? []).map((r: any): TmdbSearchResult => ({
