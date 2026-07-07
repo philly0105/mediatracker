@@ -1,13 +1,22 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Search } from 'lucide-react'
+import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
+
+const sortOptions: { id: WatchEntrySort; label: string }[] = [
+  { id: 'recent', label: 'Recently watched' },
+  { id: 'rating', label: 'Rating' },
+  { id: 'name', label: 'Name' },
+  { id: 'releaseDate', label: 'Release date' },
+]
 
 export default function MoviesPage() {
   const [entries, setEntries] = useState<WatchEntry[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<WatchEntrySort>('recent')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,9 +31,12 @@ export default function MoviesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filteredEntries = entries.filter((entry) =>
-    entry.media?.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredEntries = useMemo(() => {
+    const filtered = entries.filter((entry) =>
+      entry.media?.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    return sortWatchEntries(filtered, sortBy)
+  }, [entries, searchQuery, sortBy])
 
   return (
     <div className="space-y-6">
@@ -36,14 +48,33 @@ export default function MoviesPage() {
           )}
         </div>
         {!loading && entries.length > 0 && (
-          <div className="w-full sm:w-64">
-            <Input
-              icon={<Search className="w-4 h-4 text-zinc-500" />}
-              placeholder="Search logged movies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
-            />
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <div className="flex flex-wrap items-center gap-2">
+              {sortOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSortBy(option.id)}
+                  aria-pressed={sortBy === option.id}
+                  className={`relative px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
+                    sortBy === option.id
+                      ? 'text-white bg-[var(--accent)] border border-transparent shadow-lg shadow-green-600/20'
+                      : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div className="w-full sm:w-64">
+              <Input
+                icon={<Search className="w-4 h-4 text-zinc-500" />}
+                placeholder="Search logged movies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
+              />
+            </div>
           </div>
         )}
       </div>
