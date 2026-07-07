@@ -28,6 +28,7 @@ interface Recommendation {
   release_year: number | null
   genres?: string[]
   vote_average?: number
+  seed_title?: string
 }
 
 export default function RecommendationsPage() {
@@ -458,6 +459,11 @@ export default function RecommendationsPage() {
                             </span>
                           )}
                         </div>
+                        {item.seed_title && (
+                          <p className="text-[11px] text-zinc-500 line-clamp-1">
+                            Because you watched {item.seed_title}
+                          </p>
+                        )}
                         <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
                           {item.overview || 'No description available.'}
                         </p>

@@ -4,7 +4,8 @@ import { discoverByGenre, fetchTmdbRecommendations, fetchTmdbTrending } from '@/
 import type { MediaType, TmdbSearchResult } from '@/types'
 
 type TypeFilter = MediaType | 'all'
-type ScoredRecommendation = { item: TmdbSearchResult; score: number }
+type RecommendationWithSeed = TmdbSearchResult & { seed_title?: string }
+type ScoredRecommendation = { item: RecommendationWithSeed; score: number; seedWeight?: number }
 
 const RESULT_LIMIT = 100
 const GENRE_TARGET_COUNT = 12
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     supabase.from('watchlist_items').select('media!inner(tmdb_id)').eq('user_id', user.id),
     supabase
       .from('watch_entries')
-      .select('rating, media!inner(tmdb_id, type)')
+      .select('rating, media!inner(tmdb_id, type, title)')
       .eq('user_id', user.id)
       .gte('rating', 4)
       .order('created_at', { ascending: false })
@@ -151,12 +152,13 @@ export async function GET(request: NextRequest) {
   )
 
   // 3. Aggregate, score, and deduplicate recommendations
-  const scoredItems = new Map<number, { item: TmdbSearchResult; score: number }>()
+  const scoredItems = new Map<number, ScoredRecommendation>()
 
   recommendationLists.forEach((list, index) => {
     // We can weight recommendations based on user rating if available (default weight 1.0)
     const rating = recentWatched[index]?.rating
     const weight = rating ? Number(rating) / 5.0 : 1.0
+    const seedTitle = (recentWatched[index] as any)?.media?.title
 
     list.forEach((item) => {
       // Exclude already watched or watchlisted items
@@ -165,8 +167,16 @@ export async function GET(request: NextRequest) {
       const existing = scoredItems.get(item.tmdb_id)
       if (existing) {
         existing.score += 1 * weight
+        if (seedTitle && weight > (existing.seedWeight ?? 0)) {
+          existing.item = { ...existing.item, seed_title: seedTitle }
+          existing.seedWeight = weight
+        }
       } else {
-        scoredItems.set(item.tmdb_id, { item, score: 1 * weight })
+        scoredItems.set(item.tmdb_id, {
+          item: seedTitle ? { ...item, seed_title: seedTitle } : item,
+          score: 1 * weight,
+          seedWeight: seedTitle ? weight : undefined,
+        })
       }
     })
   })
