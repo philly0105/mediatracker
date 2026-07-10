@@ -34,13 +34,13 @@ export async function proxy(request: NextRequest) {
 
     if (!user && !isPublic) {
       const redirectToLogin = NextResponse.redirect(new URL('/login', request.url))
-      supabaseResponse.cookies.getAll().forEach(c => redirectToLogin.cookies.set(c.name, c.value))
+      supabaseResponse.cookies.getAll().forEach(c => redirectToLogin.cookies.set(c))
       return redirectToLogin
     }
 
     if (user && path === '/login') {
       const redirectToHome = NextResponse.redirect(new URL('/', request.url))
-      supabaseResponse.cookies.getAll().forEach(c => redirectToHome.cookies.set(c.name, c.value))
+      supabaseResponse.cookies.getAll().forEach(c => redirectToHome.cookies.set(c))
       return redirectToHome
     }
 
@@ -51,5 +51,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // ponytail: no file-extension exclusion — it let /show/[id].png bypass the gate.
+  // Only Next internals + favicon are skipped; the few unused /public svgs would just 307.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
