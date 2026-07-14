@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ShareToggle from '@/components/ShareToggle'
 import PasswordChangeForm from '@/components/PasswordChangeForm'
-import { KeyRound, Share2 } from 'lucide-react'
+import ImportExportPanel from '@/components/ImportExportPanel'
+import { KeyRound, Share2, ArrowLeftRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 export default async function SettingsPage() {
@@ -25,7 +26,7 @@ export default async function SettingsPage() {
           Settings
         </h1>
         <p className="text-sm text-zinc-400">
-          Manage your account and sharing preferences.
+          Manage your account, sharing preferences, and data.
         </p>
       </div>
 
@@ -76,6 +77,17 @@ export default async function SettingsPage() {
           </Card>
         </section>
       </div>
+
+      {/* Import / Export Section */}
+      <section id="import-export" className="space-y-4 scroll-mt-8">
+        <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+          <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
+            <ArrowLeftRight className="w-4 h-4 text-[var(--accent)]" />
+          </div>
+          <h2 className="text-lg font-bold tracking-tight text-white">Import &amp; Export</h2>
+        </div>
+        <ImportExportPanel />
+      </section>
     </div>
   )
 }

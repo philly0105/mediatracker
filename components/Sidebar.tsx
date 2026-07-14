@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Home,
   Search,
@@ -12,7 +12,6 @@ import {
   Library,
   Layers,
   BarChart3,
-  Upload,
   Settings,
   User,
   Sparkles,
@@ -28,31 +27,53 @@ interface SidebarProps {
   userEmail?: string | null
 }
 
+type NavEntry = {
+  name: string
+  href: string
+  icon: React.ComponentType<any>
+}
+
+const PRIMARY_NAV: NavEntry[] = [
+  { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Search', href: '/search', icon: Search },
+  { name: 'Movies', href: '/movies', icon: Film },
+  { name: 'Shows', href: '/shows', icon: Tv },
+  { name: 'Streaming', href: '/streaming', icon: Clapperboard },
+  { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
+  { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
+]
+
+const MORE_NAV: NavEntry[] = [
+  { name: 'Lists', href: '/lists', icon: Layers },
+  { name: 'Versus', href: '/versus', icon: Swords },
+  { name: 'Collections', href: '/collections', icon: Library },
+  { name: 'Stats', href: '/stats', icon: BarChart3 },
+  { name: 'Calendar', href: '/calendar', icon: Calendar },
+]
+
+function isNavActive(pathname: string, href: string) {
+  if (href === '/') return pathname === '/'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 export default function Sidebar({ userEmail }: SidebarProps) {
   const pathname = usePathname()
+  const moreActive = MORE_NAV.some((item) => isNavActive(pathname, item.href))
   const [moreOpen, setMoreOpen] = useState(false)
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(moreActive)
 
-  const navItems = [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Search', href: '/search', icon: Search },
-    { name: 'Movies', href: '/movies', icon: Film },
-    { name: 'Shows', href: '/shows', icon: Tv },
-    { name: 'Streaming', href: '/streaming', icon: Clapperboard },
-    { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
-    { name: 'Calendar', href: '/calendar', icon: Calendar },
-    { name: 'Collections', href: '/collections', icon: Library },
-    { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
-    { name: 'Versus', href: '/versus', icon: Swords },
-    { name: 'Lists', href: '/lists', icon: Layers },
-    { name: 'Stats', href: '/stats', icon: BarChart3 },
-    { name: 'Import', href: '/import', icon: Upload },
-  ]
+  // Keep desktop More expanded when navigating into one of its routes
+  useEffect(() => {
+    if (moreActive) setDesktopMoreOpen(true)
+  }, [moreActive])
 
-  const primaryMobileItems = navItems.slice(0, 5)
-  const moreDrawerItems = [
-    ...navItems.slice(5),
+  const primaryMobileItems = PRIMARY_NAV.slice(0, 4)
+  const moreDrawerItems: NavEntry[] = [
+    ...PRIMARY_NAV.slice(4),
+    ...MORE_NAV,
     { name: 'Settings', href: '/settings', icon: Settings },
   ]
+  const mobileMoreActive = moreDrawerItems.some((item) => isNavActive(pathname, item.href))
 
   return (
     <>
@@ -72,20 +93,46 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 flex flex-col gap-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href
+        <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-none">
+          {PRIMARY_NAV.map((item) => (
+            <Link key={item.href} href={item.href} passHref legacyBehavior>
+              <NavItem
+                icon={item.icon}
+                label={item.name}
+                active={isNavActive(pathname, item.href)}
+              />
+            </Link>
+          ))}
 
-            return (
-              <Link key={item.href} href={item.href} passHref legacyBehavior>
-                <NavItem
-                  icon={item.icon}
-                  label={item.name}
-                  active={isActive}
-                />
-              </Link>
-            )
-          })}
+          {/* More section */}
+          <NavItem
+            icon={MoreHorizontal}
+            label="More"
+            active={moreActive && !desktopMoreOpen}
+            onClick={() => setDesktopMoreOpen((open) => !open)}
+          />
+          <AnimatePresence initial={false}>
+            {desktopMoreOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden flex flex-col gap-1 pl-3 ml-3"
+                style={{ borderLeft: '1px solid var(--border-subtle)' }}
+              >
+                {MORE_NAV.map((item) => (
+                  <Link key={item.href} href={item.href} passHref legacyBehavior>
+                    <NavItem
+                      icon={item.icon}
+                      label={item.name}
+                      active={isNavActive(pathname, item.href)}
+                    />
+                  </Link>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </nav>
 
         {/* Footer Info / Settings */}
@@ -220,7 +267,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
               </div>
               <div className="grid grid-cols-4 gap-2 pb-4">
                 {moreDrawerItems.map((item) => {
-                  const isActive = pathname === item.href
+                  const isActive = isNavActive(pathname, item.href)
                   const Icon = item.icon
                   return (
                     <Link
@@ -254,7 +301,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         }}
       >
         {primaryMobileItems.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = isNavActive(pathname, item.href)
           const Icon = item.icon
 
           return (
@@ -275,12 +322,12 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           onClick={() => setMoreOpen(true)}
           className="relative flex flex-col items-center gap-1 p-2 rounded-md text-[10px] font-medium transition-colors"
           style={{
-            color: moreDrawerItems.some((i) => i.href === pathname) ? 'var(--text-primary)' : 'var(--text-secondary)',
+            color: mobileMoreActive ? 'var(--text-primary)' : 'var(--text-secondary)',
           }}
         >
           <MoreHorizontal
             className="w-5 h-5"
-            style={{ color: moreDrawerItems.some((i) => i.href === pathname) ? 'var(--accent)' : 'var(--text-muted)' }}
+            style={{ color: mobileMoreActive ? 'var(--accent)' : 'var(--text-muted)' }}
           />
           <span>More</span>
         </button>
