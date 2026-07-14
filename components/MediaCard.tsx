@@ -42,6 +42,7 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
     poster_url: media.poster_url,
     release_year: media.release_year,
     genres: media.genres,
+    vote_average: tmdbRating ?? media.vote_average ?? undefined,
   }
 
   async function handleRatingChange(newRating: number) {

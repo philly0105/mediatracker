@@ -254,6 +254,7 @@ function WatchlistSection({
     poster_url: selectedItem.media.poster_url,
     release_year: selectedItem.media.release_year,
     genres: selectedItem.media.genres,
+    vote_average: selectedItem.media.vote_average ?? undefined,
   } as TmdbSearchResult : null;
 
   // Don't render anything if not loading and 0 items (unless it's Must Watch and no filters to avoid totally empty page look)

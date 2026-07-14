@@ -48,6 +48,7 @@ interface FullDetails {
   isFollowed: boolean
   trailer_url: string | null
   watch_providers?: any
+  vote_average?: number | null
 }
 
 export default function MediaInfoModal({
@@ -88,7 +89,8 @@ export default function MediaInfoModal({
           isWatchlisted: data.isWatchlisted ?? false,
           isFollowed: data.isFollowed ?? false,
           trailer_url: data.trailer_url ?? null,
-          watch_providers: data.watch_providers ?? null
+          watch_providers: data.watch_providers ?? null,
+          vote_average: data.vote_average ?? null,
         })
       } catch (err: any) {
         setError(err.message)
@@ -177,6 +179,9 @@ export default function MediaInfoModal({
     return `${hrs}h ${remainingMins}m`
   }
 
+  const score = details?.vote_average ?? item.vote_average
+  const showScore = score !== undefined && score !== null && score > 0
+
   if (!mounted) return null
 
   return createPortal(
@@ -223,7 +228,7 @@ export default function MediaInfoModal({
                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.04] px-2 py-0.5 rounded">
                   {item.type === 'show' ? 'TV Show' : 'Movie'}
                 </span>
-                {item.vote_average !== undefined && item.vote_average > 0 && (
+                {showScore && (
                   details?.imdb_id ? (
                     <a
                       href={`https://www.imdb.com/title/${details.imdb_id}`}
@@ -232,12 +237,12 @@ export default function MediaInfoModal({
                       className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-amber-400/10 hover:border-amber-400/20 transition-colors"
                     >
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{item.vote_average.toFixed(1)} TMDB / IMDb</span>
+                      <span>{score!.toFixed(1)} TMDB / IMDb</span>
                     </a>
                   ) : (
                     <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1">
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{item.vote_average.toFixed(1)} TMDB / IMDb</span>
+                      <span>{score!.toFixed(1)} TMDB / IMDb</span>
                     </span>
                   )
                 )}
