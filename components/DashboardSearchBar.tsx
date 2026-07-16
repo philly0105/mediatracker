@@ -17,6 +17,8 @@ export default function DashboardSearchBar() {
   
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -29,6 +31,14 @@ export default function DashboardSearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Cancel any pending debounce/request on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      abortRef.current?.abort()
+    }
+  }, [])
+
   // Search API fetch
   const search = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
@@ -36,25 +46,46 @@ export default function DashboardSearchBar() {
       setShowDropdown(false)
       return
     }
+
+    // Cancel any in-flight request before starting a new one
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(true)
     setShowDropdown(true)
     try {
-      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`)
+      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`, {
+        signal: controller.signal,
+      })
       if (res.ok) {
         const data = await res.json()
         setResults(data.results?.slice(0, 5) ?? []) // limit to 5 quick results
+      } else {
+        setResults([])
       }
     } catch (err) {
-      console.error(err)
+      // Ignore aborts from superseded requests; log real errors
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error(err)
+        setResults([])
+      }
+      return
     } finally {
-      setLoading(false)
+      if (abortRef.current === controller) {
+        setLoading(false)
+      }
     }
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setQuery(val)
-    search(val)
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      search(val)
+    }, 350)
   }
 
   return (

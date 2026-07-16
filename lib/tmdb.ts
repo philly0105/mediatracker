@@ -389,18 +389,37 @@ export async function fetchUpcomingReleases(): Promise<any[]> {
     return `${BASE}${path}?${q}`
   }
 
+  // Give TMDB a bounded time to respond instead of hanging/queuing indefinitely
+  const safeJson = async (url: string) => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    try {
+      const res = await fetch(url, { signal: controller.signal })
+      if (!res.ok) {
+        console.error(`Error fetching upcoming releases: TMDB responded ${res.status} for ${url}`)
+        return { results: [] }
+      }
+      return await res.json()
+    } catch (err) {
+      console.error('Error fetching upcoming releases:', err)
+      return { results: [] }
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
   try {
     const [moviesRes, showsRes] = await Promise.all([
-      fetch(qs('/discover/movie', {
+      safeJson(qs('/discover/movie', {
         region: 'US', sort_by: 'popularity.desc',
         'primary_release_date.gte': todayStr, 'primary_release_date.lte': endStr,
         'with_release_type': '2|3', with_original_language: 'en', page: '1'
-      })).then(r => r.json()),
-      fetch(qs('/discover/tv', {
+      })),
+      safeJson(qs('/discover/tv', {
         sort_by: 'popularity.desc',
         'first_air_date.gte': todayStr, 'first_air_date.lte': endStr,
         with_original_language: 'en', page: '1'
-      })).then(r => r.json())
+      }))
     ])
 
     const seen = new Set<string>()

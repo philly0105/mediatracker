@@ -12,6 +12,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results: [] })
   }
 
-  const results = await searchTmdb(q.trim())
-  return NextResponse.json({ results })
+  try {
+    const results = await searchTmdb(q.trim())
+    return NextResponse.json({ results })
+  } catch (err) {
+    console.error('TMDB search error:', err)
+    return NextResponse.json({ results: [], error: 'TMDB temporarily unavailable' }, { status: 200 })
+  }
 }
