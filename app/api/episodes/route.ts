@@ -7,7 +7,7 @@ type ParsedBody = {
   batch: boolean
 }
 
-function parseEpisodes(body: Record<string, unknown>): ParsedBody | null {
+export function parseEpisodes(body: Record<string, unknown>): ParsedBody | null {
   const season_id = body.season_id
   if (typeof season_id !== 'string' || !season_id) return null
 

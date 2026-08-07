@@ -6,7 +6,7 @@ type JoinedRow = { media: { tmdb_id: number } | { tmdb_id: number }[] | null }
 
 // The embed comes back as an object or a single-element array depending on how
 // PostgREST resolves the relationship, so normalise both.
-function toIdSet(rows: JoinedRow[] | null): Set<number> {
+export function toIdSet(rows: JoinedRow[] | null): Set<number> {
   return new Set(
     (rows ?? [])
       .map((row) => (Array.isArray(row.media) ? row.media[0] : row.media)?.tmdb_id)
