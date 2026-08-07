@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import EditEntryModal from './EditEntryModal'
-import type { WatchEntry, TmdbSearchResult } from '@/types'
+import type { WatchEntry } from '@/types'
+import { mediaToResult } from '@/lib/mediaToResult'
 import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
@@ -34,16 +35,7 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
     }
   }, [media.tmdb_id, media.type, tmdbRating])
 
-  const mediaAsResult: TmdbSearchResult = {
-    tmdb_id: media.tmdb_id,
-    type: media.type,
-    title: media.title,
-    overview: media.overview ?? '',
-    poster_url: media.poster_url,
-    release_year: media.release_year,
-    genres: media.genres,
-    vote_average: tmdbRating ?? media.vote_average ?? undefined,
-  }
+  const mediaAsResult = mediaToResult(media, { vote_average: tmdbRating })
 
   async function handleRatingChange(newRating: number) {
     setRating(newRating)

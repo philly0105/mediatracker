@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import MediaInfoModal from './MediaInfoModal'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
+import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
 import { PosterCard } from '@/components/ui/PosterCard'
 
@@ -16,15 +17,7 @@ export default function DashboardRecentCards({ entries }: Props) {
 
   function toResult(entry: WatchEntry): TmdbSearchResult {
     const media = entry.media!
-    return {
-      tmdb_id: media.tmdb_id,
-      type: media.type,
-      title: media.title,
-      overview: media.overview ?? '',
-      poster_url: media.poster_url,
-      release_year: media.release_year,
-      genres: media.genres,
-    }
+    return mediaToResult(media)
   }
 
   return (

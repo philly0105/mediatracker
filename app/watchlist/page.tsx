@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2 } from 'lucide-react'
-import type { WatchlistItem, WatchlistPriority, TmdbSearchResult } from '@/types'
+import type { WatchlistItem, WatchlistPriority } from '@/types'
+import { mediaToResult } from '@/lib/mediaToResult'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
@@ -246,16 +247,7 @@ function WatchlistSection({
     }
   }
 
-  const modalItem = selectedItem?.media ? {
-    tmdb_id: selectedItem.media.tmdb_id,
-    type: selectedItem.media.type as 'movie' | 'show',
-    title: selectedItem.media.title,
-    overview: selectedItem.media.overview || '',
-    poster_url: selectedItem.media.poster_url,
-    release_year: selectedItem.media.release_year,
-    genres: selectedItem.media.genres,
-    vote_average: selectedItem.media.vote_average ?? undefined,
-  } as TmdbSearchResult : null;
+  const modalItem = selectedItem?.media ? mediaToResult(selectedItem.media) : null
 
   // Don't render anything if not loading and 0 items (unless it's Must Watch and no filters to avoid totally empty page look)
   if (!loading && items.length === 0 && (typeFilter !== 'all' || genreFilter !== 'All' || priority !== 'must_watch')) {
@@ -300,15 +292,7 @@ function WatchlistSection({
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
                 const isActioning = actioningId === item.id
-                const selectableItem = item.media ? {
-                  tmdb_id: item.media.tmdb_id,
-                  type: item.media.type as 'movie' | 'show',
-                  title: item.media.title,
-                  overview: item.media.overview || '',
-                  poster_url: item.media.poster_url,
-                  release_year: item.media.release_year,
-                  genres: item.media.genres,
-                } : null;
+                const selectableItem = item.media ? mediaToResult(item.media) : null
 
                 return (
                   <SelectableOverlay key={item.id} item={selectableItem}>

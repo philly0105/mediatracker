@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
-import { createClient } from '@/lib/supabase/client'
+import { useLibraryIds } from '@/lib/useLibraryIds'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { motion } from 'framer-motion'
@@ -39,30 +39,7 @@ export default function StreamingPage() {
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
-  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
-
-  useEffect(() => {
-    async function fetchLibraryIds() {
-      const supabase = createClient()
-      const [watchedRes, watchlistRes] = await Promise.all([
-        supabase.from('watch_entries').select('media!inner(tmdb_id)'),
-        supabase.from('watchlist_items').select('media!inner(tmdb_id)'),
-      ])
-      const extract = (rows: any[] | null) =>
-        new Set(
-          (rows ?? [])
-            .map((row: any) => {
-              const m = Array.isArray(row.media) ? row.media[0] : row.media
-              return m?.tmdb_id
-            })
-            .filter(Boolean)
-        )
-      setWatchedIds(extract(watchedRes.data) as Set<number>)
-      setWatchlistIds(extract(watchlistRes.data) as Set<number>)
-    }
-    fetchLibraryIds()
-  }, [])
+  const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
   useEffect(() => {
     let cancelled = false

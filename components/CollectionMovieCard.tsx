@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import MediaInfoModal from './MediaInfoModal'
-import type { TmdbCollectionPart, TmdbSearchResult } from '@/types'
+import type { TmdbCollectionPart } from '@/types'
+import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
 import { PosterCard } from './ui/PosterCard'
 import { Badge } from './ui/Badge'
@@ -18,14 +19,7 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
   const [showInfo, setShowInfo] = useState(false)
   const router = useRouter()
 
-  const item: TmdbSearchResult = {
-    tmdb_id: part.tmdb_id,
-    type: 'movie',
-    title: part.title,
-    overview: part.overview,
-    poster_url: part.poster_url,
-    release_year: part.release_year,
-  }
+  const item = mediaToResult(part, { type: 'movie' })
 
   return (
     <>

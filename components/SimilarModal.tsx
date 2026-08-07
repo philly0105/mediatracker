@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useLibraryIds } from '@/lib/useLibraryIds'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
@@ -27,36 +27,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const { isSelectMode } = useMultiSelect()
-  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
-  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
-
-  useEffect(() => {
-    async function fetchLibraryIds() {
-      const supabase = createClient()
-      const [watchedRes, watchlistRes] = await Promise.all([
-        supabase.from('watch_entries').select('media!inner(tmdb_id)'),
-        supabase.from('watchlist_items').select('media!inner(tmdb_id)')
-      ])
-      
-      if (watchedRes.data) {
-        setWatchedIds(new Set(
-          watchedRes.data.map((row: any) => {
-            const m = Array.isArray(row.media) ? row.media[0] : row.media
-            return m?.tmdb_id
-          }).filter(Boolean)
-        ))
-      }
-      if (watchlistRes.data) {
-        setWatchlistIds(new Set(
-          watchlistRes.data.map((row: any) => {
-            const m = Array.isArray(row.media) ? row.media[0] : row.media
-            return m?.tmdb_id
-          }).filter(Boolean)
-        ))
-      }
-    }
-    fetchLibraryIds()
-  }, [])
+  const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
