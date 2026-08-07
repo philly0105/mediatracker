@@ -25,11 +25,7 @@ export default function ShowsPage() {
     () =>
       fetch('/api/watch?type=show')
         .then((r) => r.json())
-        .then((data) =>
-          ((data.entries ?? []) as WatchEntry[]).filter(
-            (e) => e.media?.type === 'show'
-          )
-        ),
+        .then((data) => (data.entries ?? []) as WatchEntry[]),
     []
   )
 

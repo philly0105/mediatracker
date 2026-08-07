@@ -25,11 +25,7 @@ export default function MoviesPage() {
     () =>
       fetch('/api/watch?type=movie')
         .then((r) => r.json())
-        .then((data) =>
-          ((data.entries ?? []) as WatchEntry[]).filter(
-            (e) => e.media?.type === 'movie'
-          )
-        ),
+        .then((data) => (data.entries ?? []) as WatchEntry[]),
     []
   )
 

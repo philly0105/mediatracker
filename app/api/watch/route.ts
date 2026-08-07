@@ -11,13 +11,18 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') // 'movie' or 'show' or null for all
 
+  const filterByType = type === 'movie' || type === 'show'
+
+  // !inner is what makes .eq('media.type') filter the parent rows. Without it
+  // PostgREST filters only the embedded resource and returns every entry with
+  // media: null on the non-matches.
   let query = supabase
     .from('watch_entries')
-    .select('*, media(*)')
+    .select(filterByType ? '*, media!inner(*)' : '*, media(*)')
     .eq('user_id', user.id)
     .order('watched_at', { ascending: false })
 
-  if (type === 'movie' || type === 'show') {
+  if (filterByType) {
     query = query.eq('media.type', type)
   }
 
