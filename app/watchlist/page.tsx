@@ -311,7 +311,7 @@ function WatchlistSection({
                 } : null;
 
                 return (
-                  <SelectableOverlay key={item.id} item={selectableItem as TmdbSearchResult}>
+                  <SelectableOverlay key={item.id} item={selectableItem}>
                   <motion.div
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
