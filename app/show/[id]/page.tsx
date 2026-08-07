@@ -53,24 +53,37 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
     })
   }, [entry])
 
-  const handleProgressChange = useCallback(async (seasonId: string, episode: number, watched: boolean) => {
+  const handleProgressChange = useCallback(async (seasonId: string, episode: number | number[], watched: boolean) => {
+    const episodes = Array.isArray(episode) ? episode : [episode]
+    if (episodes.length === 0) return
+
     if (watched) {
       const res = await fetch('/api/episodes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ season_id: seasonId, episode_number: episode }),
+        body: JSON.stringify({ season_id: seasonId, episodes }),
       })
       if (res.ok) {
-        const { progress: p } = await res.json()
-        setProgress(prev => [...prev, p])
+        const { progress: rows } = await res.json()
+        const newRows = Array.isArray(rows) ? rows : (rows ? [rows] : [])
+        setProgress(prev => {
+          const next = [...prev]
+          for (const r of newRows) {
+            if (!r || !r.season_id || !r.episode_number) continue
+            const idx = next.findIndex(p => p.season_id === r.season_id && p.episode_number === r.episode_number)
+            if (idx >= 0) next[idx] = r
+            else next.push(r)
+          }
+          return next
+        })
       }
     } else {
       await fetch('/api/episodes', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ season_id: seasonId, episode_number: episode }),
+        body: JSON.stringify({ season_id: seasonId, episodes }),
       })
-      setProgress(prev => prev.filter(p => !(p.season_id === seasonId && p.episode_number === episode)))
+      setProgress(prev => prev.filter(p => !(p.season_id === seasonId && episodes.includes(p.episode_number))))
     }
   }, [])
 

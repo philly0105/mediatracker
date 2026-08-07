@@ -393,9 +393,49 @@ export async function getPopularCollections(page: number): Promise<TmdbCollectio
   return collections
 }
 
-export async function fetchUpcomingReleases(): Promise<any[]> {
+export type UpcomingRelease = {
+  tmdb_id: number
+  type: 'movie' | 'show'
+  title: string
+  overview: string
+  poster_url: string | null
+  full_release_date: string
+  release_year: number | null
+  genres: string[]
+  vote_average?: number
+  priority: string
+  followed?: boolean
+  episode_label?: string
+}
+
+export type FollowedShow = {
+  tmdb_id: number
+  title: string
+  poster_url: string | null
+  release_year: number | null
+  genres?: string[] | null
+  overview?: string | null
+}
+
+type UpcomingOptions = {
+  // How many paginated discover pages to pull per type. Defaults keep the dashboard's
+  // original 1 movie + 1 show page; /calendar passes its richer 3 + 2.
+  pages?: { movie?: number; show?: number }
+  // Followed shows (already joined from followed_shows) whose next_episode_to_air should
+  // be resolved and surfaced as followed releases. None by default (dashboard behaviour).
+  followedShows?: FollowedShow[]
+}
+
+// Cap followed-show detail fetches to bound TMDB API cost, mirroring the old /api/calendar route.
+const MAX_FOLLOWED = 25
+
+export async function fetchUpcomingReleases(options?: UpcomingOptions): Promise<UpcomingRelease[]> {
   const tmdbKey = process.env.TMDB_API_KEY
   if (!tmdbKey) return []
+
+  const { pages = {}, followedShows = [] } = options ?? {}
+  const moviePages = pages.movie ?? 1
+  const showPages = pages.show ?? 1
 
   const today = new Date()
   const threeMonthsOut = new Date(today)
@@ -428,22 +468,29 @@ export async function fetchUpcomingReleases(): Promise<any[]> {
   }
 
   try {
-    const [moviesRes, showsRes] = await Promise.all([
+    const movieRequests = Array.from({ length: moviePages }, (_, i) => i + 1).map(page =>
       safeJson(qs('/discover/movie', {
         region: 'US', sort_by: 'popularity.desc',
         'primary_release_date.gte': todayStr, 'primary_release_date.lte': endStr,
-        'with_release_type': '2|3', with_original_language: 'en', page: '1'
-      })),
+        'with_release_type': '2|3', with_original_language: 'en', page: String(page),
+      }))
+    )
+    const showRequests = Array.from({ length: showPages }, (_, i) => i + 1).map(page =>
       safeJson(qs('/discover/tv', {
         sort_by: 'popularity.desc',
         'first_air_date.gte': todayStr, 'first_air_date.lte': endStr,
-        with_original_language: 'en', page: '1'
+        with_original_language: 'en', page: String(page),
       }))
+    )
+    const [movieResults, showResults] = await Promise.all([
+      Promise.all(movieRequests),
+      Promise.all(showRequests),
     ])
 
     const seen = new Set<string>()
 
-    const movies = (moviesRes.results ?? [])
+    const movies = movieResults
+      .flatMap(d => d.results ?? [])
       .filter((r: any) => {
         const key = `movie-${r.id}`
         if (!r.release_date || r.release_date < todayStr || seen.has(key)) return false
@@ -456,11 +503,12 @@ export async function fetchUpcomingReleases(): Promise<any[]> {
         poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
         full_release_date: r.release_date,
         release_year: parseInt(r.release_date.split('-')[0]),
-        genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+        genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))) as string[],
         vote_average: r.vote_average, priority: 'upcoming',
       }))
 
-    const shows = (showsRes.results ?? [])
+    const shows = showResults
+      .flatMap(d => d.results ?? [])
       .filter((r: any) => {
         const key = `show-${r.id}`
         if (!r.first_air_date || r.first_air_date < todayStr || seen.has(key)) return false
@@ -473,15 +521,50 @@ export async function fetchUpcomingReleases(): Promise<any[]> {
         poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
         full_release_date: r.first_air_date,
         release_year: parseInt(r.first_air_date.split('-')[0]),
-        genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
+        genres: Array.from(new Set((r.genre_ids || []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))) as string[],
         vote_average: r.vote_average, priority: 'upcoming',
       }))
 
-    return [...movies, ...shows].sort((a, b) => a.full_release_date.localeCompare(b.full_release_date))
+    // Followed shows' next episode-to-air (auth-scoped, resolved per show)
+    const followedReleases: UpcomingRelease[] = []
+    if (followedShows.length > 0) {
+      const resolved = await Promise.all(
+        followedShows.slice(0, MAX_FOLLOWED).map(async (show) => {
+          if (!show || !show.tmdb_id) return null
+          try {
+            const d = await safeJson(qs(`/tv/${show.tmdb_id}`, {}))
+            const next = d.next_episode_to_air
+            if (!next?.air_date) return null
+            const key = `show-${show.tmdb_id}`
+            // Don't duplicate if it's already in the new-shows list
+            seen.add(key)
+            return {
+              tmdb_id: show.tmdb_id, type: 'show' as const,
+              title: show.title, overview: show.overview || '',
+              poster_url: show.poster_url,
+              full_release_date: next.air_date,
+              release_year: show.release_year,
+              genres: show.genres ?? [],
+              vote_average: d.vote_average,
+              priority: 'upcoming',
+              followed: true,
+              episode_label: `S${next.season_number} · E${next.episode_number}`,
+            } as UpcomingRelease
+          } catch {
+            return null
+          }
+        })
+      )
+      followedReleases.push(...resolved.filter((r): r is UpcomingRelease => r !== null))
+    }
+
+    return [...movies, ...shows, ...followedReleases]
+      .sort((a, b) => a.full_release_date.localeCompare(b.full_release_date))
   } catch (err) {
     console.error('Error fetching upcoming releases:', err)
     return []
   }
 }
+
 
 
