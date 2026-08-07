@@ -43,7 +43,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ...details, isWatched, isWatchlisted, isFollowed })
+    // media_id lets the client link to /show/[id] for episode tracking without
+    // a second round-trip. Null when the title isn't cached locally yet — in
+    // which case no seasons rows exist to track against either.
+    return NextResponse.json({
+      ...details,
+      media_id: media?.id ?? null,
+      isWatched,
+      isWatchlisted,
+      isFollowed,
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

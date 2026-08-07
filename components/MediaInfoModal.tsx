@@ -39,6 +39,7 @@ interface Props {
 
 interface FullDetails {
   imdb_id: string | null
+  media_id: string | null
   runtime_mins: number | null
   director: string | null
   cast_members: string[]
@@ -81,6 +82,7 @@ export default function MediaInfoModal({
         const data = await res.json()
         setDetails({
           imdb_id: data.imdb_id ?? null,
+          media_id: data.media_id ?? null,
           runtime_mins: data.runtime_mins ?? null,
           director: data.director ?? null,
           cast_members: data.cast_members ?? [],
