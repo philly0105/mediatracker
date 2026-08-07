@@ -19,7 +19,8 @@ import {
   Bookmark,
   Play,
   Bell,
-  BellOff
+  BellOff,
+  ListVideo
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
@@ -184,6 +185,14 @@ export default function MediaInfoModal({
   const score = details?.vote_average ?? item.vote_average
   const showScore = score !== undefined && score !== null && score > 0
 
+  // Read statically so Next can inline it at build time. Unset (the default for
+  // anyone who isn't running the IPTV server locally) hides the button entirely.
+  const iptvBase = process.env.NEXT_PUBLIC_IPTV_URL?.replace(/\/+$/, '')
+  const iptvUrl =
+    iptvBase && item.type === 'movie'
+      ? `${iptvBase}/?q=${encodeURIComponent(item.title)}#movies`
+      : null
+
   if (!mounted) return null
 
   return createPortal(
@@ -290,7 +299,7 @@ export default function MediaInfoModal({
               )}
               
               {/* Watch Trailer Button */}
-              {(details?.trailer_url || item.type === 'movie') && (
+              {(details?.trailer_url || iptvUrl) && (
                 <div className="pt-3 flex flex-wrap gap-2">
                   {details?.trailer_url && (
                     <a
@@ -303,9 +312,9 @@ export default function MediaInfoModal({
                       Watch Trailer
                     </a>
                   )}
-                  {item.type === 'movie' && (
+                  {iptvUrl && (
                     <a
-                      href={`http://localhost:3003/?q=${encodeURIComponent(item.title)}#movies`}
+                      href={iptvUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs transition-colors border border-[var(--accent)]/20"
@@ -544,6 +553,19 @@ export default function MediaInfoModal({
               )}
               <span>{details?.isFollowed ? 'Unfollow Show' : 'Follow Show'}</span>
             </Button>
+          )}
+
+          {/* Only reachable once the show is cached locally — upsertMedia writes
+              the seasons rows the tracker renders, so media_id implies they exist. */}
+          {item.type === 'show' && details?.media_id && (
+            <Link
+              href={`/show/${details.media_id}`}
+              {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm text-[var(--violet-300)] bg-[var(--violet-tint-bg)] border border-[var(--violet-tint-border)] hover:bg-violet-600 hover:border-violet-500 hover:text-white transition-colors"
+            >
+              <ListVideo className="w-4 h-4" />
+              <span>Track Episodes</span>
+            </Link>
           )}
 
           <Button
