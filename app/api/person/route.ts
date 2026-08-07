@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TMDB_GENRES } from '@/lib/tmdb'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const name = searchParams.get('name')
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })

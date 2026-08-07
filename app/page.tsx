@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Calendar, Flame, ArrowRight, Sparkles, MonitorPlay } from 'lucide-react'
 import DashboardRecentCards from '@/components/DashboardRecentCards'
 import { BentoGrid, BentoGridItem } from '@/components/ui/BentoGrid'
@@ -49,6 +50,8 @@ function findNextUp(seasons: ContinueWatchingShow['seasons'], watchedKeys: Set<s
 
 export default async function DashboardPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const [
     { data: recent },
@@ -56,15 +59,16 @@ export default async function DashboardPage() {
     { data: thisYearEntries },
     upcomingReleases,
   ] = await Promise.all([
-    supabase.from('watch_entries').select('*, media(*)').order('created_at', { ascending: false }).limit(5),
-    supabase.from('watchlist_items').select('priority'),
-    supabase.from('watch_entries').select('id').gte('watched_at', `${new Date().getFullYear()}-01-01`),
+    supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+    supabase.from('watchlist_items').select('priority').eq('user_id', user.id),
+    supabase.from('watch_entries').select('id').eq('user_id', user.id).gte('watched_at', `${new Date().getFullYear()}-01-01`),
     fetchUpcomingReleases(),
   ])
 
   const { data: episodeProgressData } = await supabase
     .from('episode_progress')
     .select('season_id, episode_number, seasons!inner(media_id)')
+    .eq('user_id', user.id)
     .order('watched_at', { ascending: false })
 
   const episodeProgress = (episodeProgressData ?? []) as ProgressWithSeason[]

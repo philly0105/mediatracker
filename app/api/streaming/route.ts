@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { discoverStreaming } from '@/lib/tmdb'
 import type { StreamingSort } from '@/lib/tmdb'
 import type { MediaType } from '@/types'
+import { createClient } from '@/lib/supabase/server'
 
 const STREAMING_SORTS = new Set<StreamingSort>(['popular', 'rating', 'latest'])
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const provider = searchParams.get('provider') ?? '8'
   const type = (searchParams.get('type') === 'show' ? 'show' : 'movie') as MediaType

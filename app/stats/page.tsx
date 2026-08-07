@@ -2,11 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import StatsCharts from '@/components/StatsCharts'
 import { computeGenreBreakdown, computeRatingDistribution, computeMonthlyActivity, computeTopDirectors, computeTopActors } from '@/lib/stats'
 import { StatTile } from '@/components/ui/StatTile'
+import { redirect } from 'next/navigation'
 
 export default async function StatsPage() {
   const supabase = await createClient()
-  const { data: entries } = await supabase.from('watch_entries').select('*, media(*)').order('watched_at')
-  const { data: epProgress } = await supabase.from('episode_progress').select('id')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: entries } = await supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('watched_at')
+  const { data: epProgress } = await supabase.from('episode_progress').select('id').eq('user_id', user.id)
 
   const all = (entries ?? []) as any[]
   const movies = all.filter(e => e.media?.type === 'movie')

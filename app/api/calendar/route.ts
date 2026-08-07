@@ -10,6 +10,10 @@ function tmdbFetch(path: string, params: Record<string, string>, key: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const tmdbKey = process.env.TMDB_API_KEY
   if (!tmdbKey) return NextResponse.json({ error: 'Missing API Key' }, { status: 500 })
 
@@ -82,48 +86,44 @@ export async function GET(request: NextRequest) {
     // Followed shows next episodes (auth users only)
     const followedReleases: any[] = []
     try {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: followedRows } = await supabase
-          .from('followed_shows')
-          .select('media(tmdb_id, title, poster_url, release_year, genres, overview)')
-          .eq('user_id', user.id)
+      const { data: followedRows } = await supabase
+        .from('followed_shows')
+        .select('media(tmdb_id, title, poster_url, release_year, genres, overview)')
+        .eq('user_id', user.id)
 
-        if (followedRows && followedRows.length > 0) {
-          const nextEps = await Promise.all(
-            followedRows.slice(0, 25).map(async (row: any) => {
-              const m = row.media
-              if (!m) return null
-              try {
-                const d = await tmdbFetch(`/tv/${m.tmdb_id}`, {}, tmdbKey)
-                const next = d.next_episode_to_air
-                if (!next?.air_date) return null
-                const key = `show-${m.tmdb_id}`
-                // Don't duplicate if it's already in the new-shows list
-                seen.add(key)
-                return {
-                  tmdb_id: m.tmdb_id, type: 'show' as const,
-                  title: m.title, overview: m.overview || '',
-                  poster_url: m.poster_url,
-                  full_release_date: next.air_date,
-                  release_year: m.release_year,
-                  genres: m.genres ?? [],
-                  vote_average: d.vote_average,
-                  priority: 'upcoming',
-                  followed: true,
-                  episode_label: `S${next.season_number} · E${next.episode_number}`,
-                }
-              } catch {
-                return null
+      if (followedRows && followedRows.length > 0) {
+        const nextEps = await Promise.all(
+          followedRows.slice(0, 25).map(async (row: any) => {
+            const m = row.media
+            if (!m) return null
+            try {
+              const d = await tmdbFetch(`/tv/${m.tmdb_id}`, {}, tmdbKey)
+              const next = d.next_episode_to_air
+              if (!next?.air_date) return null
+              const key = `show-${m.tmdb_id}`
+              // Don't duplicate if it's already in the new-shows list
+              seen.add(key)
+              return {
+                tmdb_id: m.tmdb_id, type: 'show' as const,
+                title: m.title, overview: m.overview || '',
+                poster_url: m.poster_url,
+                full_release_date: next.air_date,
+                release_year: m.release_year,
+                genres: m.genres ?? [],
+                vote_average: d.vote_average,
+                priority: 'upcoming',
+                followed: true,
+                episode_label: `S${next.season_number} · E${next.episode_number}`,
               }
-            })
-          )
-          followedReleases.push(...nextEps.filter(Boolean))
-        }
+            } catch {
+              return null
+            }
+          })
+        )
+        followedReleases.push(...nextEps.filter(Boolean))
       }
     } catch {
-      // Not logged in or follow fetch failed — skip silently
+      // Follow fetch failed — skip silently
     }
 
     const releases = [...movies, ...shows, ...followedReleases]
