@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import MediaInfoModal from './MediaInfoModal'
+import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbCollectionPart } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
@@ -18,6 +19,14 @@ interface Props {
 export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: Props) {
   const [showInfo, setShowInfo] = useState(false)
   const router = useRouter()
+
+  const { addToWatchlist, markWatched } = useMediaActions({
+    priority: 'want_to_watch',
+    onDone: () => {
+      setShowInfo(false)
+      router.refresh()
+    },
+  })
 
   const item = mediaToResult(part, { type: 'movie' })
 
@@ -46,28 +55,8 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
         <MediaInfoModal
           item={item}
           onClose={() => setShowInfo(false)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: part.tmdb_id, type: 'movie', priority: 'want_to_watch' }),
-            })
-            setShowInfo(false)
-            router.refresh()
-          }}
-          onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                tmdb_id: part.tmdb_id,
-                type: 'movie',
-                watched_at: new Date().toISOString().split('T')[0],
-              }),
-            })
-            setShowInfo(false)
-            router.refresh()
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(part.tmdb_id, 'movie') }}
+          onMarkAsWatched={async () => { await markWatched(part.tmdb_id, 'movie') }}
         />,
         document.body
       )}

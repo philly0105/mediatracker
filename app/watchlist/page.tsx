@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2 } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
+import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
@@ -120,6 +121,10 @@ function WatchlistSection({
   const config = PRIORITY_CONFIG[priority]
   const Icon = config.icon
 
+  // Only markWatched is shared. Removal here deletes by watchlist row id, not by
+  // tmdb_id/type like the hook's removeFromWatchlist, so it stays inline.
+  const { markWatched } = useMediaActions()
+
   useEffect(() => {
     setItems([])
     setPage(1)
@@ -223,15 +228,7 @@ function WatchlistSection({
     if (!item.media) return
     try {
       setActioningId(item.id)
-      await fetch('/api/watch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tmdb_id: item.media.tmdb_id,
-          type: item.media.type,
-          watched_at: new Date().toISOString().split('T')[0],
-        }),
-      })
+      await markWatched(item.media.tmdb_id, item.media.type)
       await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },

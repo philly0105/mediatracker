@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { CheckCircle2, Bookmark, Search } from 'lucide-react'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -16,6 +17,8 @@ export default function SearchPage() {
   const [searchLoading, setSearchLoading] = useState(false)
 
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   const search = useCallback(async (q: string) => {
     if (q.trim().length < 2) { setResults([]); return }
@@ -65,11 +68,11 @@ export default function SearchPage() {
           item={selected}
           onClose={() => setSelected(null)}
           onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }) })
+            await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }) })
+            await markWatched(selected.tmdb_id, selected.type)
             setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
         />

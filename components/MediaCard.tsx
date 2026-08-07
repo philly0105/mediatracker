@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import EditEntryModal from './EditEntryModal'
 import type { WatchEntry } from '@/types'
+import { useMediaActions } from '@/lib/useMediaActions'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
@@ -23,6 +24,8 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
   const [showInfo, setShowInfo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [tmdbRating, setTmdbRating] = useState<number | null>(media.vote_average ?? null)
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   useEffect(() => {
     if (tmdbRating === null) {
@@ -107,19 +110,9 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
         <MediaInfoModal
           item={mediaAsResult}
           onClose={() => setShowInfo(false)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, priority: 'want_to_watch' }),
-            })
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(media.tmdb_id, media.type) }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
+            await markWatched(media.tmdb_id, media.type)
             router.refresh()
           }}
         />,

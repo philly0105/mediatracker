@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult } from '@/types'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
@@ -40,6 +41,8 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<TmdbSearchResult | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'must_watch' })
 
   useEffect(() => {
     async function fetchCalendar() {
@@ -221,20 +224,8 @@ export default function CalendarPage() {
         <MediaInfoModal
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selectedItem.tmdb_id, type: selectedItem.type, priority: 'must_watch' })
-            })
-          }}
-          onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selectedItem.tmdb_id, type: selectedItem.type, watched_at: new Date().toISOString().split('T')[0] })
-            })
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(selectedItem.tmdb_id, selectedItem.type) }}
+          onMarkAsWatched={async () => { await markWatched(selectedItem.tmdb_id, selectedItem.type) }}
         />
       )}
     </div>

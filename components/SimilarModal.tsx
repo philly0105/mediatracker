@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
@@ -28,6 +29,8 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
 
   const { isSelectMode } = useMultiSelect()
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
@@ -185,19 +188,11 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           item={selected}
           onClose={() => setSelected(null)}
           onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
-            })
+            await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
+            await markWatched(selected.tmdb_id, selected.type)
             setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
         />

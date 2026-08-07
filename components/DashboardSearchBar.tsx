@@ -6,6 +6,7 @@ import { Search, Loader2, Film, Tv } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import type { TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import { useMediaActions } from '@/lib/useMediaActions'
 import { createPortal } from 'react-dom'
 
 export default function DashboardSearchBar() {
@@ -19,6 +20,14 @@ export default function DashboardSearchBar() {
   const router = useRouter()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  const { addToWatchlist, markWatched } = useMediaActions({
+    priority: 'want_to_watch',
+    onDone: () => {
+      setSelected(null)
+      router.refresh()
+    },
+  })
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -163,24 +172,8 @@ export default function DashboardSearchBar() {
         <MediaInfoModal
           item={selected}
           onClose={() => setSelected(null)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
-            })
-            setSelected(null)
-            router.refresh()
-          }}
-          onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
-            setSelected(null)
-            router.refresh()
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(selected.tmdb_id, selected.type) }}
+          onMarkAsWatched={async () => { await markWatched(selected.tmdb_id, selected.type) }}
         />,
         document.body
       )}

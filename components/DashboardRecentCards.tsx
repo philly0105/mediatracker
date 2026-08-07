@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import MediaInfoModal from './MediaInfoModal'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
+import { useMediaActions } from '@/lib/useMediaActions'
 import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
 import { PosterCard } from '@/components/ui/PosterCard'
@@ -14,6 +15,8 @@ interface Props {
 export default function DashboardRecentCards({ entries }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   function toResult(entry: WatchEntry): TmdbSearchResult {
     const media = entry.media!
@@ -42,19 +45,11 @@ export default function DashboardRecentCards({ entries }: Props) {
           item={selected}
           onClose={() => setSelected(null)}
           onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
-            })
+            await addToWatchlist(selected.tmdb_id, selected.type)
             setSelected(null)
           }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
+            await markWatched(selected.tmdb_id, selected.type)
             router.refresh()
             setSelected(null)
           }}
