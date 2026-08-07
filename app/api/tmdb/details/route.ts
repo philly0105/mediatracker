@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .select('id')
       .eq('tmdb_id', Number(id))
       .eq('type', type)
-      .single()
+      .maybeSingle()
 
     if (media) {
       const [watchRes, watchlistRes] = await Promise.all([
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       isWatched = !!(watchRes.data && watchRes.data.length > 0)
       isWatchlisted = !!(watchlistRes.data && watchlistRes.data.length > 0)
       if (type === 'show') {
-        const { data: followData } = await supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).single()
+        const { data: followData } = await supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).maybeSingle()
         isFollowed = !!followData
       }
     }

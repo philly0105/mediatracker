@@ -18,7 +18,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     async function load() {
-      const { data: m } = await supabase.from('media').select('*').eq('id', id).single()
+      const { data: m } = await supabase.from('media').select('*').eq('id', id).maybeSingle()
       setMedia(m)
 
       const { data: s } = await supabase.from('seasons').select('*').eq('media_id', id).order('season_number')
@@ -36,7 +36,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
         .eq('media_id', id)
         .order('watched_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
       setEntry(e)
       setRating(e?.rating ?? null)
     }

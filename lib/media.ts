@@ -7,9 +7,38 @@ export async function upsertMedia(
   tmdbId: number,
   type: MediaType
 ): Promise<{ media: Media; seasons: Season[] }> {
+  // A title that's already cached can skip the TMDB round-trip. Movies have no
+  // rows derived from the detail response; a show's seasons rows are, so we only
+  // take the cached path once they already exist (otherwise the episode tracker
+  // would have nothing to render). Residual staleness — a show that gained a
+  // season since its last write — is bounded by the 7-day TMDB detail cache.
+  //
+  // Rows predating migration 004 have a null vote_average. Those must NOT take
+  // the cached path: re-fetching is the only thing that backfills them, and
+  // MediaCard still falls back to a per-card rating fetch while they're null.
+  const { data: existing } = await supabase
+    .from('media')
+    .select('*')
+    .eq('tmdb_id', tmdbId)
+    .eq('type', type)
+    .maybeSingle()
+
+  if (existing && existing.vote_average !== null && existing.vote_average !== undefined) {
+    if (type === 'movie') return { media: existing, seasons: [] }
+    const { data: cachedSeasons } = await supabase
+      .from('seasons')
+      .select('*')
+      .eq('media_id', existing.id)
+      .order('season_number', { ascending: true })
+    if (cachedSeasons && cachedSeasons.length > 0) {
+      return { media: existing, seasons: cachedSeasons }
+    }
+    // A cached show with no seasons yet still needs the detail response.
+  }
+
   const details = await fetchTmdbDetails(tmdbId, type)
 
-  const mediaRow = {
+  const mediaRow: Record<string, unknown> = {
     tmdb_id: details.tmdb_id,
     type: details.type,
     title: details.title,
@@ -22,6 +51,16 @@ export async function upsertMedia(
     cast_members: details.cast_members,
   }
 
+  // Collection + rating fields were previously written in a second UPDATE; carry
+  // them in the one upsert (migrations 003/004 add the columns).
+  if (details.type === 'movie') {
+    mediaRow.collection_id = details.belongs_to_collection?.id ?? null
+    mediaRow.collection_name = details.belongs_to_collection?.name ?? null
+  }
+  if (details.vote_average !== undefined) {
+    mediaRow.vote_average = details.vote_average
+  }
+
   const { data: media, error } = await supabase
     .from('media')
     .upsert(mediaRow, { onConflict: 'tmdb_id' })
@@ -29,24 +68,6 @@ export async function upsertMedia(
     .single()
 
   if (error) throw new Error(`Failed to upsert media: ${error.message}`)
-
-  // Best-effort: update collection fields and vote_average (requires migrations)
-  const updates: any = {}
-  if (details.type === 'movie') {
-    updates.collection_id = details.belongs_to_collection?.id ?? null
-    updates.collection_name = details.belongs_to_collection?.name ?? null
-  }
-  if (details.vote_average !== undefined) {
-    updates.vote_average = details.vote_average
-  }
-
-  if (Object.keys(updates).length > 0) {
-    await supabase
-      .from('media')
-      .update(updates)
-      .eq('id', media.id)
-    // ignore error — columns may not exist until migration is applied
-  }
 
   let seasons: Season[] = []
 

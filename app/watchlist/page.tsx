@@ -246,9 +246,10 @@ function WatchlistSection({
 
   const modalItem = selectedItem?.media ? mediaToResult(selectedItem.media) : null
 
-  // Don't render anything if not loading and 0 items (unless it's Must Watch and no filters to avoid totally empty page look)
-  if (!loading && items.length === 0 && (typeFilter !== 'all' || genreFilter !== 'All' || priority !== 'must_watch')) {
-    if (typeFilter === 'all' && genreFilter === 'All') return null; // Fully empty queue naturally -> hide it
+  // Hide an empty section only when it's unfiltered and not the Must Watch bucket
+  // (which is always kept visible so the "No matching items." empty state can show).
+  if (!loading && items.length === 0 && priority !== 'must_watch' && typeFilter === 'all' && genreFilter === 'All') {
+    return null
   }
 
   return (
