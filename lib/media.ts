@@ -51,21 +51,35 @@ export async function upsertMedia(
     cast_members: details.cast_members,
   }
 
-  // Collection + rating fields were previously written in a second UPDATE; carry
-  // them in the one upsert (migrations 003/004 add the columns).
+  // Collection + rating live in migrations 003/004. Carry them in the one upsert
+  // when those columns exist — but they are NOT guaranteed to: the original code
+  // wrote them in a separate best-effort UPDATE precisely because a database can
+  // be on 001/002 only. Putting them in the main upsert unconditionally makes the
+  // whole write fail with "column does not exist", which would break marking
+  // anything watched. So: try the full row, and fall back to the base columns.
+  const optionalFields: Record<string, unknown> = {}
   if (details.type === 'movie') {
-    mediaRow.collection_id = details.belongs_to_collection?.id ?? null
-    mediaRow.collection_name = details.belongs_to_collection?.name ?? null
+    optionalFields.collection_id = details.belongs_to_collection?.id ?? null
+    optionalFields.collection_name = details.belongs_to_collection?.name ?? null
   }
   if (details.vote_average !== undefined) {
-    mediaRow.vote_average = details.vote_average
+    optionalFields.vote_average = details.vote_average
   }
 
-  const { data: media, error } = await supabase
+  let { data: media, error } = await supabase
     .from('media')
-    .upsert(mediaRow, { onConflict: 'tmdb_id' })
+    .upsert({ ...mediaRow, ...optionalFields }, { onConflict: 'tmdb_id' })
     .select()
     .single()
+
+  // PGRST204 = column not found in schema cache; 42703 = undefined_column.
+  if (error && (error.code === 'PGRST204' || error.code === '42703')) {
+    ;({ data: media, error } = await supabase
+      .from('media')
+      .upsert(mediaRow, { onConflict: 'tmdb_id' })
+      .select()
+      .single())
+  }
 
   if (error) throw new Error(`Failed to upsert media: ${error.message}`)
 
