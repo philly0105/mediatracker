@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { FilterPills } from '@/components/FilterPills'
 import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -199,23 +200,7 @@ export default function StreamingPage() {
 
       {/* Sort and filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {SORT_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => changeSort(option.id)}
-              aria-pressed={sortBy === option.id}
-              className={`relative px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
-                sortBy === option.id
-                  ? 'text-white bg-[var(--accent)] border border-transparent shadow-lg shadow-green-600/20'
-                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <FilterPills options={SORT_OPTIONS} active={sortBy} onSelect={changeSort} />
         <button
           type="button"
           onClick={toggleHideWatched}

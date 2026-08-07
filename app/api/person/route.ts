@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { TMDB_GENRES } from '@/lib/tmdb'
 import { createClient } from '@/lib/supabase/server'
 
+// A raw row from /person/:id/combined_credits. Only the fields we read are typed.
+type PersonCredit = {
+  id: number
+  media_type?: string
+  title?: string
+  name?: string
+  overview?: string | null
+  poster_path?: string | null
+  release_date?: string | null
+  first_air_date?: string | null
+  genre_ids?: number[]
+  vote_average?: number
+  vote_count?: number
+  job?: string
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,12 +52,12 @@ export async function GET(request: NextRequest) {
 
     // 3. Process credits
     // Combine cast and crew (director)
-    const directorCredits = (creditsData.crew || []).filter((c: any) => c.job === 'Director')
+    const directorCredits = (creditsData.crew || []).filter((c: PersonCredit) => c.job === 'Director')
     const castCredits = creditsData.cast || []
     
     // Deduplicate by tmdb_id
     const seen = new Set<number>()
-    const allCredits: any[] = []
+    const allCredits: PersonCredit[] = []
 
     for (const item of [...castCredits, ...directorCredits]) {
       if (item.media_type !== 'movie' && item.media_type !== 'tv') continue
@@ -51,7 +67,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const mapItem = (r: any) => ({
+    const mapItem = (r: PersonCredit) => ({
       tmdb_id: r.id,
       type: r.media_type === 'tv' ? 'show' : 'movie',
       title: r.title ?? r.name,
@@ -78,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     // Most Recent: Sort by release date descending
     const recentMovies = [...mapped]
-      .filter((m) => m.full_release_date)
+      .filter((m): m is (typeof mapped)[number] & { full_release_date: string } => Boolean(m.full_release_date))
       .sort((a, b) => {
         if (a.full_release_date < b.full_release_date) return 1
         if (a.full_release_date > b.full_release_date) return -1
@@ -108,8 +124,8 @@ export async function GET(request: NextRequest) {
       allMovies
     })
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 })
   }
 }
 

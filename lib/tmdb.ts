@@ -14,16 +14,58 @@ const CACHE_12H = 12 * 60 * 60 // upcoming-release schedules (added & adjusted d
 const CACHE_1D = 24 * 60 * 60 // per-title recommendation lists
 const CACHE_7D = 7 * 24 * 60 * 60 // detail / credits / collection metadata (near-static)
 
-type TmdbListItem = {
+// A raw TMDB list / multi / trending / discover item. Movies carry `title`,
+// shows carry `name`; we only read the fields we actually surface, and fields
+// that are genuinely optional in the API (e.g. vote_average on light fixtures)
+// stay optional here rather than being pretended into existence.
+type TmdbMovieListItem = {
   id: number
-  title?: string
-  name?: string
-  overview?: string
+  media_type?: string
+  title: string
+  name?: undefined
+  overview?: string | null
   poster_path?: string | null
-  release_date?: string
-  first_air_date?: string
+  backdrop_path?: string | null
+  release_date?: string | null
+  first_air_date?: undefined
   genre_ids?: number[]
   vote_average?: number
+  vote_count?: number
+  runtime?: number | null
+}
+
+type TmdbShowListItem = {
+  id: number
+  media_type?: string
+  name: string
+  title?: undefined
+  overview?: string | null
+  poster_path?: string | null
+  backdrop_path?: string | null
+  first_air_date?: string | null
+  release_date?: undefined
+  genre_ids?: number[]
+  vote_average?: number
+  vote_count?: number
+  runtime?: number | null
+}
+
+type TmdbListItem = TmdbMovieListItem | TmdbShowListItem
+
+// Detail-payload building blocks (from /movie/:id, /tv/:id and friends).
+type TmdbGenre = { id?: number; name: string }
+type TmdbCastMember = { id?: number; name: string; character?: string }
+type TmdbCrewMember = { id?: number; name: string; job?: string }
+type TmdbVideo = { key?: string; type?: string; site?: string }
+type TmdbSeason = { id?: number; season_number: number; episode_count: number; name?: string }
+
+// A raw part row from /collection/:id. Only used to read the fields we map out.
+type TmdbCollectionPartResponse = {
+  id: number
+  title: string
+  release_date?: string | null
+  overview?: string | null
+  poster_path?: string | null
 }
 
 export const TMDB_GENRES: Record<number, string> = {
@@ -90,8 +132,8 @@ export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
   const data = await res.json()
 
   return data.results
-    .filter((r: any) => r.media_type === 'movie' || r.media_type === 'tv')
-    .map((r: any): TmdbSearchResult => ({
+    .filter((r: TmdbListItem) => r.media_type === 'movie' || r.media_type === 'tv')
+    .map((r: TmdbListItem): TmdbSearchResult => ({
       tmdb_id: r.id,
       type: r.media_type === 'tv' ? 'show' : 'movie',
       title: r.title ?? r.name,
@@ -157,29 +199,29 @@ export async function fetchTmdbDetails(
   const d = await res.json()
 
   // These fields only exist in the append_to_response payload; stay safe when append=false
-  const trailerKey = append ? d.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key : undefined
+  const trailerKey = append ? d.videos?.results?.find((v: TmdbVideo) => v.type === 'Trailer' && v.site === 'YouTube')?.key : undefined
   const trailer_url = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null
 
   const providersData = append ? d['watch/providers']?.results?.US : undefined
   const watch_providers: TmdbWatchProviders | null = providersData ? {
     link: providersData.link,
-    flatrate: providersData.flatrate?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
-    rent: providersData.rent?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
-    buy: providersData.buy?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
+    flatrate: providersData.flatrate?.map((p: TmdbWatchProvider) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
+    rent: providersData.rent?.map((p: TmdbWatchProvider) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
+    buy: providersData.buy?.map((p: TmdbWatchProvider) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
   } : null
 
   if (type === 'movie') {
-    const director = d.credits?.crew?.find((c: any) => c.job === 'Director')?.name ?? null
+    const director = d.credits?.crew?.find((c: TmdbCrewMember) => c.job === 'Director')?.name ?? null
     return {
       tmdb_id: d.id, type: 'movie',
       imdb_id: d.imdb_id ?? null,
       title: d.title, overview: d.overview ?? '',
       poster_url: d.poster_path ? `${IMG}${d.poster_path}` : null,
-      genres: (d.genres ?? []).map((g: any) => g.name),
+      genres: (d.genres ?? []).map((g: TmdbGenre) => g.name),
       release_year: d.release_date ? parseInt(d.release_date.split('-')[0]) : null,
       runtime_mins: d.runtime ?? null,
       director,
-      cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
+      cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: TmdbCastMember) => c.name),
       full_release_date: d.release_date || null,
       trailer_url,
       belongs_to_collection: d.belongs_to_collection
@@ -194,14 +236,14 @@ export async function fetchTmdbDetails(
       imdb_id: d.external_ids?.imdb_id ?? null,
       title: d.name, overview: d.overview ?? '',
       poster_url: d.poster_path ? `${IMG}${d.poster_path}` : null,
-      genres: (d.genres ?? []).map((g: any) => g.name),
+      genres: (d.genres ?? []).map((g: TmdbGenre) => g.name),
       release_year: d.first_air_date ? parseInt(d.first_air_date.split('-')[0]) : null,
       runtime_mins: d.episode_run_time?.[0] ?? null,
       director: null,
-      cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: any) => c.name),
+      cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: TmdbCastMember) => c.name),
       seasons: (d.seasons ?? [])
-        .filter((s: any) => s.season_number > 0)
-        .map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count })),
+        .filter((s: TmdbSeason) => s.season_number > 0)
+        .map((s: TmdbSeason) => ({ season_number: s.season_number, episode_count: s.episode_count })),
       full_release_date: d.next_episode_to_air?.air_date || null,
       trailer_url,
       watch_providers,
@@ -216,7 +258,7 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, 
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
-    .map((r: any): TmdbSearchResult => ({
+    .map((r: TmdbListItem): TmdbSearchResult => ({
       tmdb_id: r.id,
       type: type,
       title: r.title ?? r.name,
@@ -237,8 +279,8 @@ export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
-    .filter((r: any) => r.media_type === 'movie' || r.media_type === 'tv')
-    .map((r: any): TmdbSearchResult => ({
+    .filter((r: TmdbListItem) => r.media_type === 'movie' || r.media_type === 'tv')
+    .map((r: TmdbListItem): TmdbSearchResult => ({
       tmdb_id: r.id,
       type: r.media_type === 'tv' ? 'show' : 'movie',
       title: r.title ?? r.name,
@@ -282,7 +324,7 @@ export async function discoverStreaming(
   const res = await fetch(apiUrl(endpoint, params), { next: { revalidate: CACHE_6H } })
   if (!res.ok) return { results: [], total_pages: 0 }
   const data = await res.json()
-  const results = (data.results ?? []).map((r: any): TmdbSearchResult => ({
+  const results = (data.results ?? []).map((r: TmdbListItem): TmdbSearchResult => ({
     tmdb_id: r.id,
     type,
     title: r.title ?? r.name,
@@ -340,8 +382,8 @@ export async function getCollectionDetails(id: number): Promise<TmdbCollectionDe
   const d = await res.json()
 
   const parts: TmdbCollectionPart[] = (d.parts ?? [])
-    .sort((a: any, b: any) => (a.release_date ?? '').localeCompare(b.release_date ?? ''))
-    .map((p: any): TmdbCollectionPart => ({
+    .sort((a: TmdbCollectionPartResponse, b: TmdbCollectionPartResponse) => (a.release_date ?? '').localeCompare(b.release_date ?? ''))
+    .map((p: TmdbCollectionPartResponse): TmdbCollectionPart => ({
       tmdb_id: p.id,
       title: p.title,
       poster_url: p.poster_path ? `${IMG}${p.poster_path}` : null,
@@ -364,7 +406,7 @@ export async function getPopularCollections(page: number): Promise<TmdbCollectio
   const res = await fetch(apiUrl('/movie/popular', { page: String(page) }), { next: { revalidate: CACHE_6H } })
   if (!res.ok) return []
   const data = await res.json()
-  const movieIds: number[] = (data.results ?? []).map((m: any) => m.id)
+  const movieIds: number[] = (data.results ?? []).map((m: TmdbListItem) => m.id)
 
   // belongs_to_collection is not in list responses — fetch details in parallel
   const details = await Promise.all(
@@ -491,13 +533,13 @@ export async function fetchUpcomingReleases(options?: UpcomingOptions): Promise<
 
     const movies = movieResults
       .flatMap(d => d.results ?? [])
-      .filter((r: any) => {
+      .filter((r: TmdbListItem) => {
         const key = `movie-${r.id}`
         if (!r.release_date || r.release_date < todayStr || seen.has(key)) return false
         seen.add(key)
         return true
       })
-      .map((r: any) => ({
+      .map((r: TmdbMovieListItem & { release_date: string }) => ({
         tmdb_id: r.id, type: 'movie' as const,
         title: r.title, overview: r.overview || '',
         poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,
@@ -509,13 +551,13 @@ export async function fetchUpcomingReleases(options?: UpcomingOptions): Promise<
 
     const shows = showResults
       .flatMap(d => d.results ?? [])
-      .filter((r: any) => {
+      .filter((r: TmdbListItem) => {
         const key = `show-${r.id}`
         if (!r.first_air_date || r.first_air_date < todayStr || seen.has(key)) return false
         seen.add(key)
         return true
       })
-      .map((r: any) => ({
+      .map((r: TmdbShowListItem & { first_air_date: string }) => ({
         tmdb_id: r.id, type: 'show' as const,
         title: r.name, overview: r.overview || '',
         poster_url: r.poster_path ? `${IMG}${r.poster_path}` : null,

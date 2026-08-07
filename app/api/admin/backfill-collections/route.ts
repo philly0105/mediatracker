@@ -57,8 +57,8 @@ export async function POST(req: Request) {
       } else {
         updated += updatedRows?.length ?? 0
       }
-    } catch (err: any) {
-      errors.push(`tmdb_id=${movie.tmdb_id}: ${err.message}`)
+    } catch (err) {
+      errors.push(`tmdb_id=${movie.tmdb_id}: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
