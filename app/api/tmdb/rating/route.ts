@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
   
   try {
-    const details = await fetchTmdbDetails(Number(tmdb_id), type)
+    const details = await fetchTmdbDetails(Number(tmdb_id), type, false)
     return NextResponse.json({ vote_average: details.vote_average })
   } catch (e) {
     return NextResponse.json({ error: 'Failed to fetch TMDB details' }, { status: 500 })

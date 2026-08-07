@@ -4,9 +4,13 @@ import { TMDB_GENRES } from '@/lib/tmdb'
 
 const TMDB_IMG = 'https://image.tmdb.org/t/p/w500'
 
+// Calendar data is time-sensitive (upcoming releases + next-episode-to-air), so keep the
+// window short but long enough to stop hammering TMDB on every load.
+const REVALIDATE = 6 * 60 * 60
+
 function tmdbFetch(path: string, params: Record<string, string>, key: string) {
   const qs = new URLSearchParams({ api_key: key, language: 'en-US', ...params })
-  return fetch(`https://api.themoviedb.org/3${path}?${qs}`).then(r => r.json())
+  return fetch(`https://api.themoviedb.org/3${path}?${qs}`, { next: { revalidate: REVALIDATE } }).then(r => r.json())
 }
 
 export async function GET(request: NextRequest) {

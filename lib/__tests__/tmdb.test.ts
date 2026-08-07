@@ -108,6 +108,40 @@ describe('fetchTmdbDetails', () => {
     const details = await fetchTmdbDetails(550, 'movie')
     expect(details.belongs_to_collection).toBeNull()
   })
+
+  it('requests append_to_response by default', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 550, title: 'Fight Club', genres: [], credits: { crew: [], cast: [] } }),
+    })
+    await fetchTmdbDetails(550, 'movie')
+    expect(mockFetch.mock.calls[0][0]).toContain('append_to_response=')
+  })
+
+  it('omits append_to_response when append is false, and still returns the full shape', async () => {
+    // The cheap path /api/tmdb/rating uses: no credits, videos or watch/providers
+    // come back, so the mapping must fall back rather than throw.
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', runtime: 139,
+        overview: 'A movie', poster_path: '/path.jpg',
+        genres: [{ name: 'Drama' }], release_date: '1999-10-15',
+        vote_average: 8.4,
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie', false)
+    expect(mockFetch.mock.calls[0][0]).not.toContain('append_to_response=')
+    expect(details).toMatchObject({
+      tmdb_id: 550,
+      title: 'Fight Club',
+      vote_average: 8.4,
+      cast_members: [],
+      director: null,
+      trailer_url: null,
+      watch_providers: null,
+    })
+  })
 })
 
 describe('getCollectionDetails', () => {

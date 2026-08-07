@@ -4,6 +4,16 @@ const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
 const BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 
+// TMDB responses are public, never user-specific. Windows are chosen by how volatile
+// the underlying data actually is: near-static detail/credits metadata gets a long
+// window, popularity/trending/discover listings a short one (Next 16 fetch defaults to
+// no-store, so without these every call is a live round-trip to TMDB).
+const CACHE_1H = 60 * 60 // search — fresh content matters when results are re-queried
+const CACHE_6H = 6 * 60 * 60 // trending / discover / popular listings
+const CACHE_12H = 12 * 60 * 60 // upcoming-release schedules (added & adjusted daily)
+const CACHE_1D = 24 * 60 * 60 // per-title recommendation lists
+const CACHE_7D = 7 * 24 * 60 * 60 // detail / credits / collection metadata (near-static)
+
 type TmdbListItem = {
   id: number
   title?: string
@@ -75,7 +85,7 @@ function apiUrl(path: string, params: Record<string, string> = {}) {
 }
 
 export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
-  const res = await fetch(apiUrl('/search/multi', { query, include_adult: 'false' }))
+  const res = await fetch(apiUrl('/search/multi', { query, include_adult: 'false' }), { next: { revalidate: CACHE_1H } })
   if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`)
   const data = await res.json()
 
@@ -132,16 +142,25 @@ export interface TmdbFullDetails {
 
 export type StreamingSort = 'popular' | 'rating' | 'latest'
 
-export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise<TmdbFullDetails> {
+export async function fetchTmdbDetails(
+  tmdbId: number,
+  type: MediaType,
+  append = true
+): Promise<TmdbFullDetails> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}` : `/tv/${tmdbId}`
-  const res = await fetch(apiUrl(endpoint, { append_to_response: 'credits,videos,watch/providers,external_ids' }))
+  // Cheap callers (e.g. /api/tmdb/rating, which only needs vote_average) can opt out of
+  // the heavy append_to_response payload (full credits, trailers, providers, external_ids).
+  const params: Record<string, string> = {}
+  if (append) params.append_to_response = 'credits,videos,watch/providers,external_ids'
+  const res = await fetch(apiUrl(endpoint, params), { next: { revalidate: CACHE_7D } })
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
-  
-  const trailerKey = d.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key
+
+  // These fields only exist in the append_to_response payload; stay safe when append=false
+  const trailerKey = append ? d.videos?.results?.find((v: any) => v.type === 'Trailer' && v.site === 'YouTube')?.key : undefined
   const trailer_url = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null
 
-  const providersData = d['watch/providers']?.results?.US
+  const providersData = append ? d['watch/providers']?.results?.US : undefined
   const watch_providers: TmdbWatchProviders | null = providersData ? {
     link: providersData.link,
     flatrate: providersData.flatrate?.map((p: any) => ({ provider_id: p.provider_id, provider_name: p.provider_name, logo_path: p.logo_path ? `${IMG}${p.logo_path}` : null })),
@@ -193,7 +212,7 @@ export async function fetchTmdbDetails(tmdbId: number, type: MediaType): Promise
 
 export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, page = 1): Promise<TmdbSearchResult[]> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}/recommendations` : `/tv/${tmdbId}/recommendations`
-  const res = await fetch(apiUrl(endpoint, { page: String(page) }))
+  const res = await fetch(apiUrl(endpoint, { page: String(page) }), { next: { revalidate: CACHE_1D } })
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
@@ -214,7 +233,7 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, 
 }
 
 export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
-  const res = await fetch(apiUrl('/trending/all/week', { page: String(page) }))
+  const res = await fetch(apiUrl('/trending/all/week', { page: String(page) }), { next: { revalidate: CACHE_6H } })
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
@@ -260,7 +279,7 @@ export async function discoverStreaming(
   if (sort === 'rating') {
     params['vote_count.gte'] = '100'
   }
-  const res = await fetch(apiUrl(endpoint, params))
+  const res = await fetch(apiUrl(endpoint, params), { next: { revalidate: CACHE_6H } })
   if (!res.ok) return { results: [], total_pages: 0 }
   const data = await res.json()
   const results = (data.results ?? []).map((r: any): TmdbSearchResult => ({
@@ -294,7 +313,7 @@ export async function discoverByGenre(
     with_genres: String(genreId),
     sort_by: 'popularity.desc',
     page: String(page),
-  }))
+  }), { next: { revalidate: CACHE_6H } })
   if (!res.ok) return { results: [], total_pages: 0 }
   const data = await res.json()
   const results = (data.results ?? []).map((r: TmdbListItem): TmdbSearchResult => ({
@@ -316,7 +335,7 @@ export async function discoverByGenre(
 }
 
 export async function getCollectionDetails(id: number): Promise<TmdbCollectionDetails> {
-  const res = await fetch(apiUrl(`/collection/${id}`))
+  const res = await fetch(apiUrl(`/collection/${id}`), { next: { revalidate: CACHE_7D } })
   if (!res.ok) throw new Error(`TMDB collection failed: ${res.status}`)
   const d = await res.json()
 
@@ -342,7 +361,7 @@ export async function getCollectionDetails(id: number): Promise<TmdbCollectionDe
 }
 
 export async function getPopularCollections(page: number): Promise<TmdbCollectionSummary[]> {
-  const res = await fetch(apiUrl('/movie/popular', { page: String(page) }))
+  const res = await fetch(apiUrl('/movie/popular', { page: String(page) }), { next: { revalidate: CACHE_6H } })
   if (!res.ok) return []
   const data = await res.json()
   const movieIds: number[] = (data.results ?? []).map((m: any) => m.id)
@@ -350,7 +369,7 @@ export async function getPopularCollections(page: number): Promise<TmdbCollectio
   // belongs_to_collection is not in list responses — fetch details in parallel
   const details = await Promise.all(
     movieIds.map(id =>
-      fetch(apiUrl(`/movie/${id}`))
+      fetch(apiUrl(`/movie/${id}`), { next: { revalidate: CACHE_7D } })
         .then(r => r.ok ? r.json() : null)
         .catch(() => null)
     )
@@ -394,7 +413,7 @@ export async function fetchUpcomingReleases(): Promise<any[]> {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
     try {
-      const res = await fetch(url, { signal: controller.signal })
+      const res = await fetch(url, { signal: controller.signal, next: { revalidate: CACHE_12H } })
       if (!res.ok) {
         console.error(`Error fetching upcoming releases: TMDB responded ${res.status} for ${url}`)
         return { results: [] }

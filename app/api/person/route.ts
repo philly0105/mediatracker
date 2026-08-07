@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     // 1. Search for person to get ID and Profile
     const qs1 = new URLSearchParams({ api_key: tmdbKey, query: name })
-    const searchRes = await fetch(`https://api.themoviedb.org/3/search/person?${qs1}`)
+    const searchRes = await fetch(`https://api.themoviedb.org/3/search/person?${qs1}`, { next: { revalidate: 7 * 24 * 60 * 60 } })
     if (!searchRes.ok) throw new Error('Failed to search person')
     const searchData = await searchRes.json()
     
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Fetch combined credits
     const qs2 = new URLSearchParams({ api_key: tmdbKey })
-    const creditsRes = await fetch(`https://api.themoviedb.org/3/person/${person.id}/combined_credits?${qs2}`)
+    const creditsRes = await fetch(`https://api.themoviedb.org/3/person/${person.id}/combined_credits?${qs2}`, { next: { revalidate: 7 * 24 * 60 * 60 } })
     if (!creditsRes.ok) throw new Error('Failed to fetch person credits')
     const creditsData = await creditsRes.json()
 
