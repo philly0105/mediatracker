@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming } from '@/lib/tmdb'
+import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -141,6 +141,51 @@ describe('fetchTmdbDetails', () => {
       trailer_url: null,
       watch_providers: null,
     })
+  })
+})
+
+describe('showRuntimeMins', () => {
+  it('prefers episode_run_time when TMDB still populates it', () => {
+    expect(showRuntimeMins({ episode_run_time: [42], last_episode_to_air: { runtime: 60 } })).toBe(42)
+  })
+
+  it('falls back to the last aired episode when episode_run_time is empty', () => {
+    // TMDB is deprecating episode_run_time and returns [] for most shows now,
+    // which is why 24 of 26 shows in this database had a null runtime.
+    expect(showRuntimeMins({ episode_run_time: [], last_episode_to_air: { runtime: 47 } })).toBe(47)
+  })
+
+  it('falls back to the next episode when there is no last one', () => {
+    expect(showRuntimeMins({ next_episode_to_air: { runtime: 30 } })).toBe(30)
+  })
+
+  it('treats zero, negative and null runtimes as missing', () => {
+    expect(showRuntimeMins({ episode_run_time: [0], last_episode_to_air: { runtime: 50 } })).toBe(50)
+    expect(showRuntimeMins({ episode_run_time: [-5], next_episode_to_air: { runtime: 25 } })).toBe(25)
+    expect(showRuntimeMins({ episode_run_time: [], last_episode_to_air: { runtime: null } })).toBeNull()
+  })
+
+  it('returns null when TMDB offers nothing at all', () => {
+    expect(showRuntimeMins({})).toBeNull()
+    expect(showRuntimeMins({ episode_run_time: null, last_episode_to_air: null })).toBeNull()
+  })
+})
+
+describe('fetchTmdbDetails for shows', () => {
+  it('maps a runtime from last_episode_to_air when episode_run_time is empty', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 1396, name: 'Breaking Bad', overview: 'A show',
+        poster_path: '/p.jpg', first_air_date: '2008-01-20',
+        genres: [], episode_run_time: [],
+        last_episode_to_air: { runtime: 47 },
+        seasons: [{ season_number: 1, episode_count: 7 }],
+        credits: { cast: [] },
+      }),
+    })
+    const details = await fetchTmdbDetails(1396, 'show')
+    expect(details.runtime_mins).toBe(47)
   })
 })
 

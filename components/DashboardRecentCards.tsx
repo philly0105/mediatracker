@@ -48,8 +48,8 @@ export default function DashboardRecentCards({ entries }: Props) {
             await addToWatchlist(selected.tmdb_id, selected.type)
             setSelected(null)
           }}
-          onMarkAsWatched={async () => {
-            await markWatched(selected.tmdb_id, selected.type)
+          onMarkAsWatched={async (opts) => {
+            await markWatched(selected.tmdb_id, selected.type, opts)
             router.refresh()
             setSelected(null)
           }}

@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/Button'
 import { FilterPills } from '@/components/FilterPills'
 import { Search, RefreshCw, Loader2 } from 'lucide-react'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
+import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
+import { useDeferredAction } from '@/lib/useDeferredAction'
+import { useToast } from '@/components/ToastProvider'
 
 interface LibraryViewProps {
   type: 'movie' | 'show'
@@ -27,6 +30,8 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
   const [sortBy, setSortBy] = useState<WatchEntrySort>('recent')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const { schedule, cancel } = useDeferredAction()
+  const { toast } = useToast()
 
   const fetchEntries = useCallback(
     () =>
@@ -49,10 +54,53 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
       .finally(() => setRefreshing(false))
   }, [fetchEntries])
 
+  // Deleting drops the row immediately and defers the write, so Undo just
+  // cancels the pending request rather than trying to reconstruct the entry.
+  const handleEntryDeleted = useCallback((entryId: string) => {
+    const removed = entries.find((entry) => entry.id === entryId)
+    if (!removed) return
+    setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+
+    schedule(entryId, async () => {
+      try {
+        const res = await fetch('/api/watch', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: entryId }),
+        })
+        if (!res.ok) throw new Error('Failed to delete entry')
+      } catch (err) {
+        // Put it back — the row is gone from the UI but the server still has it.
+        console.error(err)
+        setEntries((prev) =>
+          prev.some((entry) => entry.id === entryId) ? prev : [...prev, removed]
+        )
+        toast(`Could not remove ${removed.media?.title ?? 'that entry'}.`, { tone: 'error' })
+      }
+    })
+
+    toast(`Removed ${removed.media?.title ?? 'entry'}.`, {
+      tone: 'success',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!cancel(entryId)) return
+          setEntries((prev) =>
+            prev.some((entry) => entry.id === entryId) ? prev : [...prev, removed]
+          )
+        },
+      },
+    })
+  }, [entries, schedule, cancel, toast])
+
+  // An edit can change rating, review or watched_at — any of which feeds the
+  // active sort — so re-pull rather than trying to patch the row in place.
+  const handleEntryUpdated = useCallback(() => {
+    fetchEntries().then(setEntries)
+  }, [fetchEntries])
+
   const filteredEntries = useMemo(() => {
-    const filtered = entries.filter((entry) =>
-      entry.media?.title.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filtered = entries.filter((entry) => matchesLibraryQuery(entry, searchQuery))
     return sortWatchEntries(filtered, sortBy)
   }, [entries, searchQuery, sortBy])
 
@@ -71,7 +119,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
             <div className="w-full sm:w-64">
               <Input
                 icon={<Search className="w-4 h-4 text-zinc-500" />}
-                placeholder={`Search logged ${noun}...`}
+                placeholder={`Search ${noun}, director, cast...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
@@ -107,7 +155,13 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
             {filteredEntries.map((entry) => (
-              <MediaCard key={entry.id} entry={entry} hideWatchedDate={true} />
+              <MediaCard
+                key={entry.id}
+                entry={entry}
+                hideWatchedDate={true}
+                onDeleted={handleEntryDeleted}
+                onUpdated={handleEntryUpdated}
+              />
             ))}
           </div>
           {entries.length === 0 && (

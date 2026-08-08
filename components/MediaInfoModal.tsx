@@ -26,12 +26,20 @@ import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 import SimilarModal from './SimilarModal'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ToastProvider'
+import { isAlreadyWatchedError } from '@/lib/useMediaActions'
+
+const PRIORITY_LABELS: Record<WatchlistPriority, string> = {
+  must_watch: 'Must Watch',
+  want_to_watch: 'Want to Watch',
+  someday: 'Someday',
+}
 
 interface Props {
   item: TmdbSearchResult
   onClose: () => void
   onAddToWatchlist: () => Promise<void>
-  onMarkAsWatched: () => Promise<void>
+  onMarkAsWatched: (opts?: { rewatch?: boolean }) => Promise<void>
   currentPriority?: WatchlistPriority
   onUpdatePriority?: (priority: WatchlistPriority) => Promise<void>
   onRemoveFromWatchlist?: () => Promise<void>
@@ -69,6 +77,7 @@ export default function MediaInfoModal({
   const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showSimilar, setShowSimilar] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     setMounted(true)
@@ -109,22 +118,41 @@ export default function MediaInfoModal({
       setActioning('watchlist')
       await onAddToWatchlist()
       if (details) setDetails({ ...details, isWatchlisted: true })
+      toast(`Added ${item.title} to your watchlist.`, { tone: 'success' })
       // Modal stays open after action
     } catch (err) {
       console.error(err)
+      toast(err instanceof Error ? err.message : 'Could not add to your watchlist.', { tone: 'error' })
     } finally {
       setActioning(null)
     }
   }
 
-  async function handleWatchedClick() {
+  async function handleWatchedClick(opts?: { rewatch?: boolean }) {
     try {
       setActioning('watched')
-      await onMarkAsWatched()
+      await onMarkAsWatched(opts)
       if (details) setDetails({ ...details, isWatched: true })
+      toast(
+        opts?.rewatch
+          ? `Logged a rewatch of ${item.title}.`
+          : `Logged ${item.title} as watched.`,
+        { tone: 'success' }
+      )
       // Modal stays open after action
     } catch (err) {
       console.error(err)
+      if (isAlreadyWatchedError(err)) {
+        toast(`${item.title} is already in your history.`, {
+          tone: 'info',
+          action: {
+            label: 'Log rewatch',
+            onClick: () => handleWatchedClick({ rewatch: true }),
+          },
+        })
+      } else {
+        toast(err instanceof Error ? err.message : 'Could not mark as watched.', { tone: 'error' })
+      }
     } finally {
       setActioning(null)
     }
@@ -135,8 +163,10 @@ export default function MediaInfoModal({
     try {
       setActioning(`priority-${p}`)
       await onUpdatePriority(p)
+      toast(`Moved ${item.title} to ${PRIORITY_LABELS[p]}.`, { tone: 'success' })
     } catch (err) {
       console.error(err)
+      toast(err instanceof Error ? err.message : 'Could not change the priority.', { tone: 'error' })
     } finally {
       setActioning(null)
     }
@@ -148,9 +178,11 @@ export default function MediaInfoModal({
       setActioning('remove')
       await onRemoveFromWatchlist()
       if (details) setDetails({ ...details, isWatchlisted: false })
+      toast(`Removed ${item.title} from your watchlist.`, { tone: 'success' })
       // Modal stays open after action
     } catch (err) {
       console.error(err)
+      toast(err instanceof Error ? err.message : 'Could not remove from your watchlist.', { tone: 'error' })
     } finally {
       setActioning(null)
     }
@@ -160,15 +192,23 @@ export default function MediaInfoModal({
     if (!details) return
     try {
       setActioning('follow')
-      if (details.isFollowed) {
-        await fetch('/api/follow', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tmdb_id: item.tmdb_id }) })
-        setDetails({ ...details, isFollowed: false })
-      } else {
-        await fetch('/api/follow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tmdb_id: item.tmdb_id }) })
-        setDetails({ ...details, isFollowed: true })
-      }
+      const following = details.isFollowed
+      // These responses were never checked, so a failed follow still flipped the
+      // icon and looked like it had worked.
+      const res = await fetch('/api/follow', {
+        method: following ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tmdb_id: item.tmdb_id }),
+      })
+      if (!res.ok) throw new Error(following ? 'Failed to unfollow' : 'Failed to follow')
+      setDetails({ ...details, isFollowed: !following })
+      toast(
+        following ? `Unfollowed ${item.title}.` : `Following ${item.title}.`,
+        { tone: 'success' }
+      )
     } catch (err) {
       console.error(err)
+      toast(err instanceof Error ? err.message : 'Could not update follow state.', { tone: 'error' })
     } finally {
       setActioning(null)
     }
@@ -502,22 +542,30 @@ export default function MediaInfoModal({
 
           {details?.isWatched ? (
             <Button
-              disabled
+              disabled={loading || actioning !== null}
+              onClick={() => handleWatchedClick({ rewatch: true })}
+              // This used to be a permanently disabled "Already Watched" chip, so
+              // it carried a dimmed opacity. It is a real action now — leave the
+              // teal "you have seen this" tint but let Button own the opacity, or
+              // an enabled control keeps reading as greyed out.
               style={{
                 flex: 1,
                 background: 'var(--teal-tint-bg)',
                 border: '1px solid var(--teal-tint-border)',
                 color: 'var(--teal-300)',
-                opacity: 0.7
               }}
             >
-              <Check className="w-4 h-4" />
-              <span>Already Watched</span>
+              {actioning === 'watched' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              <span>Log rewatch</span>
             </Button>
           ) : (
             <Button
               disabled={loading || actioning !== null}
-              onClick={handleWatchedClick}
+              onClick={() => handleWatchedClick()}
               style={{ flex: 1 }}
               className="hover:!bg-emerald-600 hover:!border-emerald-500 hover:!text-white"
             >

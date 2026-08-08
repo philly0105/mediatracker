@@ -1,6 +1,7 @@
 import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MultiSelectProvider, useMultiSelect } from '../MultiSelectProvider'
+import { ToastProvider } from '../ToastProvider'
 import SelectableOverlay from '../SelectableOverlay'
 import type { TmdbSearchResult } from '@/types'
 
@@ -56,10 +57,14 @@ function TestComponent() {
 
 describe('SelectableOverlay multiselect behavior', () => {
   it('selects multiple items in sequence and supports clicking overlay', () => {
+    // MultiSelectProvider calls useToast to report batch-action outcomes, so it
+    // now requires a ToastProvider above it — the same nesting app/layout.tsx has.
     const { getByTestId } = render(
-      <MultiSelectProvider>
-        <TestComponent />
-      </MultiSelectProvider>
+      <ToastProvider>
+        <MultiSelectProvider>
+          <TestComponent />
+        </MultiSelectProvider>
+      </ToastProvider>
     )
 
     const count = getByTestId('selected-count')

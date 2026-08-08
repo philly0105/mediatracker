@@ -119,7 +119,7 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
           item={selected}
           onClose={() => setSelected(null)}
           onAddToWatchlist={async () => { await addToWatchlist(selected.tmdb_id, selected.type) }}
-          onMarkAsWatched={async () => { await markWatched(selected.tmdb_id, selected.type) }}
+          onMarkAsWatched={async (opts) => { await markWatched(selected.tmdb_id, selected.type, opts) }}
         />,
         document.body
       )}

@@ -1,0 +1,179 @@
+import type { HTMLAttributes, ReactNode } from 'react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import LibraryView from '../LibraryView'
+import { ToastProvider } from '../ToastProvider'
+import { MultiSelectProvider } from '../MultiSelectProvider'
+import type { WatchEntry } from '@/types'
+
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
+  initial?: unknown
+  animate?: unknown
+  exit?: unknown
+  transition?: unknown
+  layout?: unknown
+}
+
+function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
+  delete props.initial
+  delete props.animate
+  delete props.exit
+  delete props.transition
+  delete props.layout
+  return props
+}
+
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  motion: {
+    div: (props: MotionDivProps) => <div {...stripMotionProps(props)} />,
+  },
+}))
+
+const refresh = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh, push: vi.fn(), back: vi.fn() }),
+}))
+
+function entry(id: string, title: string): WatchEntry {
+  return {
+    id,
+    user_id: 'u1',
+    media_id: `m-${id}`,
+    rating: 4,
+    review: null,
+    watched_at: '2026-01-01',
+    rewatch: false,
+    created_at: '2026-01-01T00:00:00Z',
+    media: {
+      id: `m-${id}`,
+      tmdb_id: Number(id),
+      type: 'movie',
+      title,
+      overview: null,
+      poster_url: null,
+      genres: [],
+      release_year: 2020,
+      runtime_mins: 100,
+      director: null,
+      vote_average: 7.5,
+      cast_members: [],
+      collection_id: null,
+      collection_name: null,
+    },
+  }
+}
+
+const mockFetch = vi.fn()
+
+function renderLibrary() {
+  return render(
+    <ToastProvider>
+      <MultiSelectProvider>
+        <LibraryView type="movie" title="Movies" noun="movies" />
+      </MultiSelectProvider>
+    </ToastProvider>
+  )
+}
+
+describe('LibraryView', () => {
+  beforeEach(() => {
+    refresh.mockClear()
+    mockFetch.mockReset()
+    global.fetch = mockFetch
+    // No confirm() spy: deleting no longer prompts, it offers an Undo instead.
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function deleteCalls() {
+    return mockFetch.mock.calls.filter(([, init]) => init?.method === 'DELETE')
+  }
+
+  it('removes a deleted row immediately and commits the delete after the undo window', async () => {
+    vi.useFakeTimers()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat'), entry('2', 'Sicario')] }),
+    })
+
+    renderLibrary()
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(screen.getByText('2 watched')).toBeInTheDocument()
+
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle('Delete entry')[0])
+    })
+
+    // Gone from the UI at once, but nothing has been sent yet — that is what
+    // makes Undo a cancellation rather than a reconstruction.
+    expect(screen.queryByText('Heat')).not.toBeInTheDocument()
+    expect(screen.getByText('Sicario')).toBeInTheDocument()
+    expect(screen.getByText('1 watched')).toBeInTheDocument()
+    expect(deleteCalls()).toHaveLength(0)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+    expect(deleteCalls()).toHaveLength(1)
+    expect(JSON.parse(String(deleteCalls()[0][1]?.body))).toEqual({ id: '1' })
+
+    vi.useRealTimers()
+  })
+
+  it('undo restores the row and never sends the delete', async () => {
+    vi.useFakeTimers()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle('Delete entry')[0])
+    })
+    expect(screen.queryByText('Heat')).not.toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Undo'))
+    })
+
+    expect(screen.getByText('Heat')).toBeInTheDocument()
+    expect(screen.getByText('1 watched')).toBeInTheDocument()
+
+    // Well past the window: the cancelled request must never fire.
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
+    expect(deleteCalls()).toHaveLength(0)
+
+    vi.useRealTimers()
+  })
+
+  it('puts the row back when the deferred delete fails', async () => {
+    vi.useFakeTimers()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    mockFetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle('Delete entry')[0])
+    })
+    expect(screen.queryByText('Heat')).not.toBeInTheDocument()
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+
+    // The server still has it, so the UI must not keep pretending otherwise.
+    expect(screen.getByText('Heat')).toBeInTheDocument()
+    expect(screen.getByText('Could not remove Heat.')).toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+})

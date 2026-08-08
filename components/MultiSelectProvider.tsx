@@ -7,6 +7,7 @@ import { Check, Plus, X, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ToastProvider'
 
 interface MultiSelectContextType {
   selectedItems: Map<string, TmdbSearchResult>
@@ -22,6 +23,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     setMounted(true)
@@ -50,7 +52,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       const items = Array.from(selectedItems.values())
       const today = new Date().toISOString().split('T')[0]
 
-      await Promise.all(
+      const results = await Promise.allSettled(
         items.map(async (item) => {
           if (action === 'watched') {
             const resWatch = await fetch('/api/watch', {
@@ -75,10 +77,26 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
           }
         })
       )
-      
-      // Clear after success and refresh router to update any server components
-      clearSelection()
-      router.refresh()
+
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.length - succeeded
+      const verb = action === 'watched' ? 'Marked' : 'Added'
+      const countLabel = `${succeeded} ${succeeded === 1 ? 'item' : 'items'}`
+      const suffix = action === 'watched' ? ' as watched.' : ' to your watchlist.'
+
+      if (failed === 0) {
+        toast(`${verb} ${countLabel}${suffix}`, { tone: 'success' })
+      } else if (succeeded === 0) {
+        toast(`Could not ${action === 'watched' ? 'mark' : 'add'} those items.`, { tone: 'error' })
+      } else {
+        toast(`${verb} ${countLabel} — ${failed} failed.`, { tone: 'error' })
+      }
+
+      // Clear selection and refresh the router only when at least one item succeeded.
+      if (succeeded > 0) {
+        clearSelection()
+        router.refresh()
+      }
     } catch (err) {
       console.error(err)
     } finally {

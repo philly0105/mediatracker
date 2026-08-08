@@ -14,9 +14,15 @@ import { MediaRow } from './ui/MediaRow'
 interface Props {
   entry: WatchEntry
   hideWatchedDate?: boolean
+  // Called after this entry is removed or edited. MediaCard is rendered by
+  // LibraryView, which holds its rows in client state fetched from /api/watch —
+  // router.refresh() re-renders the server tree and does not re-run that fetch,
+  // so without these the card stays on screen after it has been deleted.
+  onDeleted?: (entryId: string) => void
+  onUpdated?: () => void
 }
 
-export default function MediaCard({ entry, hideWatchedDate }: Props) {
+export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated }: Props) {
   const media = entry.media!
   const router = useRouter()
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
@@ -49,23 +55,13 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
     })
   }
 
-  async function handleDelete(e: React.MouseEvent) {
+  // The owner performs the delete so it can defer it behind an Undo. There is
+  // no confirm() any more — an undo you can ignore beats a dialog you have to
+  // dismiss every time.
+  function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm('Are you sure you want to delete this entry?')) return
     setIsDeleting(true)
-    try {
-      const res = await fetch('/api/watch', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: entry.id }),
-      })
-      if (res.ok) {
-        router.refresh()
-      }
-    } catch (err) {
-      console.error(err)
-      setIsDeleting(false)
-    }
+    onDeleted?.(entry.id)
   }
 
   return (
@@ -103,7 +99,11 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
       />
 
       {showEditModal && createPortal(
-        <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />,
+        <EditEntryModal
+          entry={entry}
+          onClose={() => setShowEditModal(false)}
+          onSaved={onUpdated}
+        />,
         document.body
       )}
       {showInfo && createPortal(
@@ -111,8 +111,8 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
           item={mediaAsResult}
           onClose={() => setShowInfo(false)}
           onAddToWatchlist={async () => { await addToWatchlist(media.tmdb_id, media.type) }}
-          onMarkAsWatched={async () => {
-            await markWatched(media.tmdb_id, media.type)
+          onMarkAsWatched={async (opts) => {
+            await markWatched(media.tmdb_id, media.type, opts)
             router.refresh()
           }}
         />,

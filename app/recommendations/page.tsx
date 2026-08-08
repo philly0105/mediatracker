@@ -15,10 +15,11 @@ import {
   RefreshCw
 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaActions, isAlreadyWatchedError } from '@/lib/useMediaActions'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ToastProvider'
 
 interface Recommendation {
   tmdb_id: number
@@ -33,6 +34,7 @@ interface Recommendation {
 }
 
 export default function RecommendationsPage() {
+  const { toast } = useToast()
   const [items, setItems] = useState<Recommendation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -90,31 +92,44 @@ export default function RecommendationsPage() {
   async function handleAddToWatchlist(tmdbId: number, type: 'movie' | 'show') {
     try {
       setActioningId(tmdbId)
-      const res = await addToWatchlist(tmdbId, type)
-      if (!res.ok) throw new Error('Failed to add to watchlist')
-      
+      await addToWatchlist(tmdbId, type)
+
       // Animate card removal
       setItems((prev) => prev.filter((item) => item.tmdb_id !== tmdbId))
     } catch (err) {
       console.error(err)
+      toast(err instanceof Error ? err.message : 'Could not add to watchlist.', { tone: 'error' })
     } finally {
       setActioningId(null)
     }
   }
 
-  async function handleMarkAsWatched(tmdbId: number, type: 'movie' | 'show') {
+  // Throws on failure. Reached two ways: straight from a card button, and from
+  // MediaInfoModal. The modal owns its own messaging (a 409 becomes a "log a
+  // rewatch" offer there), so reporting here would double up and suppress that
+  // — the card path below catches and reports for itself instead.
+  async function handleMarkAsWatched(tmdbId: number, type: 'movie' | 'show', opts?: { rewatch?: boolean }) {
     try {
       setActioningId(tmdbId)
-      const res = await markWatched(tmdbId, type)
-      if (!res.ok) throw new Error('Failed to mark as watched')
+      await markWatched(tmdbId, type, opts)
 
       // Animate card removal
       setItems((prev) => prev.filter((item) => item.tmdb_id !== tmdbId))
-    } catch (err) {
-      console.error(err)
     } finally {
       setActioningId(null)
     }
+  }
+
+  function handleMarkAsWatchedFromCard(tmdbId: number, type: 'movie' | 'show') {
+    handleMarkAsWatched(tmdbId, type).catch((err) => {
+      console.error(err)
+      toast(
+        isAlreadyWatchedError(err) ? 'That is already in your watch history.'
+          : err instanceof Error ? err.message
+          : 'Could not mark as watched.',
+        { tone: 'error' }
+      )
+    })
   }
 
   // 1. Filter by Media Type (Movie / Show)
@@ -484,7 +499,7 @@ export default function RecommendationsPage() {
                           disabled={actioningId !== null}
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleMarkAsWatched(item.tmdb_id, item.type)
+                            handleMarkAsWatchedFromCard(item.tmdb_id, item.type)
                           }}
                           variant="ghost"
                           size="sm"
@@ -520,7 +535,7 @@ export default function RecommendationsPage() {
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
           onAddToWatchlist={() => handleAddToWatchlist(selectedItem.tmdb_id, selectedItem.type)}
-          onMarkAsWatched={() => handleMarkAsWatched(selectedItem.tmdb_id, selectedItem.type)}
+          onMarkAsWatched={(opts) => handleMarkAsWatched(selectedItem.tmdb_id, selectedItem.type, opts)}
         />
       )}
     </div>

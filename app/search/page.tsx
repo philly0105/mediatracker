@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { useMediaActions } from '@/lib/useMediaActions'
@@ -20,19 +20,55 @@ export default function SearchPage() {
 
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
-  const search = useCallback(async (q: string) => {
-    if (q.trim().length < 2) { setResults([]); return }
-    setSearchLoading(true)
-    try {
-      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`)
-      const data = await res.json()
-      setResults(data.results ?? [])
-    } catch {
-      setResults([])
-    } finally {
-      setSearchLoading(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  // Cancel any pending debounce/request on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      abortRef.current?.abort()
     }
   }, [])
+
+  const search = useCallback(async (q: string) => {
+    if (q.trim().length < 2) { setResults([]); return }
+
+    // Cancel any in-flight request before starting a new one. Without this a
+    // slow early response could land after a fast later one and leave the list
+    // showing results for a prefix of what was typed.
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setSearchLoading(true)
+    try {
+      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`, {
+        signal: controller.signal,
+      })
+      const data = await res.json()
+      setResults(data.results ?? [])
+    } catch (err) {
+      // A superseded request is not a failure — leave the results alone so the
+      // newer one can fill them in.
+      if ((err as Error)?.name === 'AbortError') return
+      setResults([])
+    } finally {
+      if (abortRef.current === controller) setSearchLoading(false)
+    }
+  }, [])
+
+  // Every keystroke used to fire its own TMDB request; "breaking bad" was 12.
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (value.trim().length < 2) {
+      setResults([])
+      setSearchLoading(false)
+      return
+    }
+    debounceRef.current = setTimeout(() => search(value), 350)
+  }, [search])
 
   return (
     <div style={{ maxWidth: 672, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -42,7 +78,7 @@ export default function SearchPage() {
         icon={<Search className="w-5 h-5" />}
         placeholder="Search movies and TV shows..."
         value={query}
-        onChange={e => { setQuery(e.target.value); search(e.target.value) }}
+        onChange={e => handleQueryChange(e.target.value)}
         autoFocus
       />
 
@@ -71,8 +107,8 @@ export default function SearchPage() {
             await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
-          onMarkAsWatched={async () => {
-            await markWatched(selected.tmdb_id, selected.type)
+          onMarkAsWatched={async (opts) => {
+            await markWatched(selected.tmdb_id, selected.type, opts)
             setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
         />

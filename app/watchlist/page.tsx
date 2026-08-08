@@ -9,6 +9,7 @@ import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
+import { useToast } from '@/components/ToastProvider'
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -124,6 +125,7 @@ function WatchlistSection({
   // Only markWatched is shared. Removal here deletes by watchlist row id, not by
   // tmdb_id/type like the hook's removeFromWatchlist, so it stays inline.
   const { markWatched } = useMediaActions()
+  const { toast } = useToast()
 
   useEffect(() => {
     setItems([])
@@ -201,6 +203,7 @@ function WatchlistSection({
       onPriorityChanged(newPriority)
     } catch (err) {
       console.error(err)
+      toast('Could not move that item.', { tone: 'error' })
     } finally {
       setActioningId(null)
     }
@@ -219,16 +222,17 @@ function WatchlistSection({
       if (selectedItem?.id === itemId) setSelectedItem(null)
     } catch (err) {
       console.error(err)
+      toast('Could not remove that item.', { tone: 'error' })
     } finally {
       setActioningId(null)
     }
   }
 
-  const handleMarkAsWatched = async (item: WatchlistItem) => {
+  const handleMarkAsWatched = async (item: WatchlistItem, opts?: { rewatch?: boolean }) => {
     if (!item.media) return
     try {
       setActioningId(item.id)
-      await markWatched(item.media.tmdb_id, item.media.type)
+      await markWatched(item.media.tmdb_id, item.media.type, opts)
       await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -238,7 +242,13 @@ function WatchlistSection({
       setTotal(prev => prev - 1)
       if (selectedItem?.id === item.id) setSelectedItem(null)
     } catch (err) {
+      // Rethrow rather than reporting here. This is only ever reached through
+      // MediaInfoModal, which owns the messaging — including turning a 409 into
+      // a "log a rewatch" offer. Swallowing here would make the modal believe
+      // the write succeeded, so it would show a success toast on top of an
+      // error one and never offer the rewatch.
       console.error(err)
+      throw err
     } finally {
       setActioningId(null)
     }
@@ -395,7 +405,7 @@ function WatchlistSection({
             item={modalItem}
             onClose={() => setSelectedItem(null)}
             onAddToWatchlist={async () => {}}
-            onMarkAsWatched={async () => handleMarkAsWatched(selectedItem)}
+            onMarkAsWatched={async (opts) => handleMarkAsWatched(selectedItem, opts)}
             currentPriority={selectedItem.priority}
             onUpdatePriority={async (newPriority) => handleUpdatePriority(selectedItem.id, newPriority)}
             onRemoveFromWatchlist={async () => handleRemove(selectedItem.id)}

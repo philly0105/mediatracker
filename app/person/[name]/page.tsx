@@ -183,7 +183,7 @@ export default function PersonPage() {
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
           onAddToWatchlist={async () => { await addToWatchlist(selectedItem.tmdb_id, selectedItem.type) }}
-          onMarkAsWatched={async () => { await markWatched(selectedItem.tmdb_id, selectedItem.type) }}
+          onMarkAsWatched={async (opts) => { await markWatched(selectedItem.tmdb_id, selectedItem.type, opts) }}
         />
       )}
     </div>

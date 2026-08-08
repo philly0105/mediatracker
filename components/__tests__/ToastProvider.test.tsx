@@ -1,0 +1,141 @@
+import type { HTMLAttributes, ReactNode } from 'react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { ToastProvider, useToast } from '../ToastProvider'
+import type { ToastOptions } from '../ToastProvider'
+
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
+  initial?: unknown
+  animate?: unknown
+  exit?: unknown
+  transition?: unknown
+}
+
+// Framer-motion's AnimatePresence keeps exiting elements mounted while the exit
+// animation runs, which never completes under fake timers in jsdom. Stub it out
+// so a dismissed toast is removed from the DOM synchronously.
+// Strip the animation-only props so React does not warn about unknown DOM
+// attributes, and pass everything else (role, aria-*, className) straight on.
+function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
+  delete props.initial
+  delete props.animate
+  delete props.exit
+  delete props.transition
+  return props
+}
+
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  motion: {
+    div: (props: MotionDivProps) => <div {...stripMotionProps(props)} />,
+  },
+}))
+
+type ToastFn = (message: string, options?: ToastOptions) => string
+
+function Harness({ onToast }: { onToast: (toast: ToastFn) => void }) {
+  const { toast } = useToast()
+  onToast(toast)
+  return <button onClick={() => toast('Hello there')}>trigger</button>
+}
+
+function renderHarness() {
+  let toastFn: ToastFn | null = null
+  render(
+    <ToastProvider>
+      <Harness onToast={(t) => { toastFn = t }} />
+    </ToastProvider>
+  )
+  return {
+    trigger: () => fireEvent.click(screen.getByText('trigger')),
+    toast: (message: string, options?: ToastOptions) => {
+      if (toastFn) toastFn(message, options)
+    },
+  }
+}
+
+describe('ToastProvider', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    // No manual `document.body.innerHTML = ''` here. Testing Library's automatic
+    // cleanup unmounts the tree itself, and wiping the body first detaches the
+    // portal container out from under React, which then throws NotFoundError.
+  })
+
+  it('renders a toast message with a polite live region', () => {
+    const { trigger } = renderHarness()
+    trigger()
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('auto-dismisses after durationMs', () => {
+    const { trigger } = renderHarness()
+    trigger()
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(screen.queryByText('Hello there')).not.toBeInTheDocument()
+  })
+
+  it('removes a toast on manual dismiss', () => {
+    const { trigger } = renderHarness()
+    trigger()
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Dismiss notification'))
+    expect(screen.queryByText('Hello there')).not.toBeInTheDocument()
+  })
+
+  it('fires the action onClick and then dismisses the toast', async () => {
+    const onClick = vi.fn()
+    const { toast } = renderHarness()
+
+    act(() => {
+      toast('Action toast', { action: { label: 'Undo', onClick } })
+    })
+
+    expect(screen.getByText('Action toast')).toBeInTheDocument()
+
+    // The handler awaits onClick before dismissing, so the dismiss lands a
+    // microtask later — the click has to be awaited inside act to see it.
+    await act(async () => {
+      fireEvent.click(screen.getByText('Undo'))
+    })
+
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Action toast')).not.toBeInTheDocument()
+  })
+
+  it('dismisses an action toast even when its onClick rejects', async () => {
+    const onClick = vi.fn().mockRejectedValue(new Error('nope'))
+    const { toast } = renderHarness()
+
+    act(() => {
+      toast('Action toast', { action: { label: 'Undo', onClick } })
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Undo'))
+    })
+
+    expect(screen.queryByText('Action toast')).not.toBeInTheDocument()
+  })
+
+  it('uses an assertive alert region for error toasts', () => {
+    const { toast } = renderHarness()
+
+    act(() => {
+      toast('Something failed', { tone: 'error' })
+    })
+
+    expect(screen.getByText('Something failed')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveAttribute('aria-live', 'assertive')
+  })
+})

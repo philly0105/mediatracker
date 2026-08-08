@@ -191,8 +191,8 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
             await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
-          onMarkAsWatched={async () => {
-            await markWatched(selected.tmdb_id, selected.type)
+          onMarkAsWatched={async (opts) => {
+            await markWatched(selected.tmdb_id, selected.type, opts)
             setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
         />
