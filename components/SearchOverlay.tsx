@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Search, CheckCircle2, Bookmark } from 'lucide-react'
+import { Search, CheckCircle2, Bookmark, Home, Library, ListTodo, Clapperboard, Sparkles, List, Layers, BarChart3, Calendar, Settings } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useModal } from '@/lib/useModal'
 import { useTmdbSearch } from '@/lib/useTmdbSearch'
@@ -15,6 +15,21 @@ import { Badge } from '@/components/ui/Badge'
 interface Props {
   onClose: () => void
 }
+
+// Everything routable from the keyboard, nav-bar order first, then the
+// destinations that live outside the sidebar's primary six.
+const QUICK_NAV = [
+  { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Library', href: '/library', icon: Library },
+  { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
+  { name: 'Streaming', href: '/streaming', icon: Clapperboard },
+  { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
+  { name: 'Lists', href: '/lists', icon: List },
+  { name: 'Franchises', href: '/collections', icon: Layers },
+  { name: 'Stats', href: '/stats', icon: BarChart3 },
+  { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Settings', href: '/settings', icon: Settings },
+]
 
 export default function SearchOverlay({ onClose }: Props) {
   const { query, setQuery, results, loading, clear } = useTmdbSearch()
@@ -40,6 +55,15 @@ export default function SearchOverlay({ onClose }: Props) {
   function handleClose() {
     clear()
     onClose()
+  }
+
+  // Under two characters there is nothing to search — the list slot shows
+  // destinations instead, so the palette doubles as quick navigation.
+  const showQuickNav = query.trim().length < 2
+
+  function navigateTo(href: string) {
+    router.push(href)
+    handleClose()
   }
 
   // useModal moves focus to the panel container, but the search input is the
@@ -72,19 +96,28 @@ export default function SearchOverlay({ onClose }: Props) {
   }
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    const itemCount = showQuickNav ? QUICK_NAV.length : results.length
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      if (results.length === 0) return
-      setActiveIndex((i) => Math.min(i + 1, results.length - 1))
+      if (itemCount === 0) return
+      setActiveIndex((i) => Math.min(i + 1, itemCount - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      if (results.length === 0) return
+      if (itemCount === 0) return
       setActiveIndex((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
-      const active = results[activeIndex]
-      if (active) {
-        e.preventDefault()
-        setSelected(active)
+      if (showQuickNav) {
+        const active = QUICK_NAV[activeIndex]
+        if (active) {
+          e.preventDefault()
+          navigateTo(active.href)
+        }
+      } else {
+        const active = results[activeIndex]
+        if (active) {
+          e.preventDefault()
+          setSelected(active)
+        }
       }
     }
   }
@@ -124,8 +157,26 @@ export default function SearchOverlay({ onClose }: Props) {
 
         {/* Results list */}
         <div ref={listRef} className="max-h-[min(420px,60vh)] overflow-y-auto p-2">
-          {query.trim().length < 2 && (
-            <div className="py-8 text-sm text-zinc-600 text-center">Type to search</div>
+          {showQuickNav && (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Go to</div>
+              {QUICK_NAV.map((item, i) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    data-index={i}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    onClick={() => navigateTo(item.href)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                  >
+                    <Icon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                    <span className="text-sm text-zinc-300">{item.name}</span>
+                  </button>
+                )
+              })}
+            </>
           )}
           {query.trim().length >= 2 && loading && (
             <div className="py-8 text-sm text-zinc-600 text-center">Searching…</div>

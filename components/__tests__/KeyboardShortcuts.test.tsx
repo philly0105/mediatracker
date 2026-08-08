@@ -10,8 +10,9 @@ import { useModal } from '@/lib/useModal'
 let mockSearch = ''
 const refresh = vi.fn()
 const replace = vi.fn()
+const push = vi.fn()
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh, replace }),
+  useRouter: () => ({ refresh, replace, push }),
   useSearchParams: () => new URLSearchParams(mockSearch),
   usePathname: () => '/',
 }))
@@ -45,6 +46,10 @@ describe('KeyboardShortcuts', () => {
     mockSearch = ''
     replace.mockReset()
     refresh.mockReset()
+    push.mockReset()
+    // The overlay's scroll-into-view effect now runs on mount because the quick-nav
+    // rows carry data-index; jsdom doesn't implement scrollIntoView, so stub it.
+    HTMLElement.prototype.scrollIntoView = vi.fn()
   })
 
   it('opens the search overlay on Cmd/Ctrl+K', () => {
@@ -125,5 +130,30 @@ describe('KeyboardShortcuts', () => {
     render(<KeyboardShortcuts />)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('shows the Go to quick-nav heading and a Dashboard row when opened', () => {
+    render(<KeyboardShortcuts />)
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    expect(screen.getByText('Go to')).toBeInTheDocument()
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+  })
+
+  it('navigates to /library on ArrowDown then Enter', () => {
+    render(<KeyboardShortcuts />)
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    const input = screen.getByPlaceholderText('Search movies and TV shows…')
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(push).toHaveBeenCalledWith('/library')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('navigates to /watchlist when the Watchlist row is clicked', () => {
+    render(<KeyboardShortcuts />)
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    fireEvent.click(screen.getByText('Watchlist'))
+    expect(push).toHaveBeenCalledWith('/watchlist')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
