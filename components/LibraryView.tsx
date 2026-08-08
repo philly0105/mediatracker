@@ -18,12 +18,6 @@ import { useDeferredAction } from '@/lib/useDeferredAction'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 import { useToast } from '@/components/ToastProvider'
 
-interface LibraryViewProps {
-  type: 'movie' | 'show'
-  title: string
-  noun: string
-}
-
 // Matches the watchlist's page size.
 const PAGE_SIZE = 24
 
@@ -47,9 +41,9 @@ const ratingOptions: { id: string; label: string }[] = [
 // Which filters live in the URL, and their fallback values. Params are omitted
 // from the URL while at their default so /movies stays /movies; `q` is the
 // free-text key (default '') and so gets its URL write debounced.
-const FILTER_DEFAULTS = { q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All' }
+const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All' }
 
-export default function LibraryView({ type, title, noun }: LibraryViewProps) {
+export default function LibraryView() {
   const [entries, setEntries] = useState<WatchEntry[]>([])
   // Filter state now lives in the URL (via useUrlFilters) so a view is
   // bookmarkable and survives reloads; state stays the source of truth and the
@@ -63,6 +57,9 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
   const genreFilter = filters.genre
   const ratingFilter = ratingOptions.some((o) => o.id === filters.rating) ? filters.rating : 'All'
   const decadeFilter = filters.decade
+  // The type filter splits the combined library into movies, shows, or the
+  // whole set; a malformed param in a shared link falls back to 'all'.
+  const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -72,10 +69,12 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
 
   const fetchEntries = useCallback(
     () =>
-      fetch(`/api/watch?type=${type}`)
+      // A bare /api/watch returns both types, so the type param is only added
+      // when a specific filter is active.
+      fetch(`/api/watch${typeFilter !== 'all' ? `?type=${typeFilter}` : ''}`)
         .then((r) => r.json())
         .then((data) => (data.entries ?? []) as WatchEntry[]),
-    [type]
+    [typeFilter]
   )
 
   useEffect(() => {
@@ -170,7 +169,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
   // never leaves you scrolled past the end of a shorter list. Adjusted during
   // render rather than in an effect: React re-runs this pass immediately with
   // the new value, where an effect would paint one frame with the stale window.
-  const filterKey = `${searchQuery}|${sortBy}|${genreFilter}|${ratingFilter}|${decadeFilter}`
+  const filterKey = `${typeFilter}|${searchQuery}|${sortBy}|${genreFilter}|${ratingFilter}|${decadeFilter}`
   const [lastFilterKey, setLastFilterKey] = useState(filterKey)
   if (filterKey !== lastFilterKey) {
     setLastFilterKey(filterKey)
@@ -194,7 +193,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Library</h1>
           {!loading && (
             <span className="text-zinc-500 text-sm mt-1">
               {hasActiveFilters
@@ -203,8 +202,15 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
             </span>
           )}
         </div>
-        {!loading && entries.length > 0 && (
+        {/* The type pills must survive an empty result set: filtering to a type
+            with nothing in it would otherwise remove the only way back. */}
+        {!loading && (entries.length > 0 || typeFilter !== 'all') && (
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <FilterPills
+              options={[{ id: 'all', label: 'All' }, { id: 'movie', label: 'Movies' }, { id: 'show', label: 'Shows' }]}
+              active={typeFilter}
+              onSelect={(id) => setFilter('type', id)}
+            />
             <FilterPills options={sortOptions} active={sortBy} onSelect={(id) => setFilter('sort', id)} />
             <FilterPills options={ratingOptions} active={ratingFilter} onSelect={(id) => setFilter('rating', id)} />
             <select
@@ -230,7 +236,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
             <div className="w-full sm:w-64">
               <Input
                 icon={<Search className="w-4 h-4 text-zinc-500" />}
-                placeholder={`Search ${noun}, director, cast...`}
+                placeholder="Search titles, director, cast..."
                 value={searchQuery}
                 onChange={(e) => setFilter('q', e.target.value)}
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
@@ -282,7 +288,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
           )}
           {entries.length === 0 && (
             <p className="text-zinc-400">
-              No {noun} logged yet.{' '}
+              No {typeFilter === 'movie' ? 'movies' : typeFilter === 'show' ? 'shows' : 'titles'} logged yet.{' '}
               <a href="/search" className="text-white underline underline-offset-2">
                 Search to add one.
               </a>
@@ -290,7 +296,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
           )}
           {entries.length > 0 && filteredEntries.length === 0 && (
             <p className="text-zinc-400">
-              No logged {noun} match
+              No logged titles match
               {searchQuery.trim()
                 ? ` "${searchQuery}".`
                 : ' the active filters.'}

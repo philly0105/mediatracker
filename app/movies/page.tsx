@@ -1,12 +1,12 @@
-import { Suspense } from 'react'
-import LibraryView from '@/components/LibraryView'
+import { redirect } from 'next/navigation'
 
-export default function MoviesPage() {
-  // LibraryView reads useSearchParams (via useUrlFilters), which needs a
-  // Suspense boundary or the whole route opts out of static rendering.
-  return (
-    <Suspense>
-      <LibraryView type="movie" title="Movies" noun="movies" />
-    </Suspense>
-  )
+// The old per-type library routes live on as redirects so bookmarks and
+// shared filter URLs keep working.
+export default async function MoviesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (typeof value === 'string') params.set(key, value)
+  }
+  params.set('type', 'movie')
+  redirect(`/library?${params.toString()}`)
 }

@@ -37,20 +37,20 @@ export default async function CollectionsPage() {
     <div className="space-y-12">
       <div className="flex flex-col gap-1.5">
         <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-          Collections
+          Franchises
         </h1>
         <p className="text-sm text-zinc-400">
           Explore movie franchises and series.
         </p>
       </div>
 
-      {/* Your Active Collections */}
+      {/* Your Franchises */}
       <section className="space-y-5">
         <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
           <div className="p-1.5 rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5">
             <Layers className="w-4 h-4 text-[var(--accent)]" />
           </div>
-          <h2 className="text-lg font-bold tracking-tight text-white">Your Active Collections</h2>
+          <h2 className="text-lg font-bold tracking-tight text-white">Your Franchises</h2>
           {activeCollections.length > 0 && (
             <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-[var(--border-subtle)] px-2 py-0.5 rounded-full">
               {activeCollections.length}

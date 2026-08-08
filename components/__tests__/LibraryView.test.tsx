@@ -35,7 +35,7 @@ const replace = vi.fn()
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh, push: vi.fn(), back: vi.fn(), replace }),
   useSearchParams: () => new URLSearchParams(''),
-  usePathname: () => '/movies',
+  usePathname: () => '/library',
 }))
 
 function entry(id: string, title: string): WatchEntry {
@@ -73,7 +73,7 @@ function renderLibrary() {
   return render(
     <ToastProvider>
       <MultiSelectProvider>
-        <LibraryView type="movie" title="Movies" noun="movies" />
+        <LibraryView />
       </MultiSelectProvider>
     </ToastProvider>
   )
@@ -136,7 +136,7 @@ describe('LibraryView', () => {
     await screen.findByText('Film 1')
 
     await act(async () => {
-      fireEvent.change(screen.getByPlaceholderText(/Search movies/), {
+      fireEvent.change(screen.getByPlaceholderText(/Search titles/), {
         target: { value: 'Film 3' },
       })
     })
@@ -230,5 +230,36 @@ describe('LibraryView', () => {
     expect(screen.getByText('Could not remove Heat.')).toBeInTheDocument()
 
     vi.useRealTimers()
+  })
+
+  it('issues a scoped fetch when a type pill is selected', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await screen.findByText('Heat')
+
+    // The first fetch is unscoped — a bare /api/watch returns both types.
+    expect(mockFetch).toHaveBeenCalledWith('/api/watch')
+
+    mockFetch.mockClear()
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    // Movies and All both appear as pills (rating also has an All), and the type
+    // row is rendered first, so the leading All is the type filter.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+    })
+    expect(mockFetch).toHaveBeenCalledWith('/api/watch?type=movie')
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0])
+    })
+    expect(mockFetch).toHaveBeenCalledWith('/api/watch')
   })
 })
