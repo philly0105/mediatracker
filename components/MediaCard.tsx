@@ -10,13 +10,20 @@ import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
 import { MediaRow } from './ui/MediaRow'
+import { useToast } from './ToastProvider'
 
 interface Props {
   entry: WatchEntry
   hideWatchedDate?: boolean
+  // Called after this entry is removed or edited. MediaCard is rendered by
+  // LibraryView, which holds its rows in client state fetched from /api/watch —
+  // router.refresh() re-renders the server tree and does not re-run that fetch,
+  // so without these the card stays on screen after it has been deleted.
+  onDeleted?: (entryId: string) => void
+  onUpdated?: () => void
 }
 
-export default function MediaCard({ entry, hideWatchedDate }: Props) {
+export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated }: Props) {
   const media = entry.media!
   const router = useRouter()
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
@@ -26,6 +33,7 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
   const [tmdbRating, setTmdbRating] = useState<number | null>(media.vote_average ?? null)
 
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
+  const { toast } = useToast()
 
   useEffect(() => {
     if (tmdbRating === null) {
@@ -59,11 +67,14 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: entry.id }),
       })
-      if (res.ok) {
-        router.refresh()
-      }
+      // A non-ok response used to fall through every branch: nothing cleared
+      // isDeleting, so the row kept spinning forever with no explanation.
+      if (!res.ok) throw new Error('Failed to delete entry')
+      toast(`Removed ${media.title}.`, { tone: 'success' })
+      onDeleted?.(entry.id)
     } catch (err) {
       console.error(err)
+      toast('Could not delete that entry.', { tone: 'error' })
       setIsDeleting(false)
     }
   }
@@ -103,7 +114,11 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
       />
 
       {showEditModal && createPortal(
-        <EditEntryModal entry={entry} onClose={() => setShowEditModal(false)} />,
+        <EditEntryModal
+          entry={entry}
+          onClose={() => setShowEditModal(false)}
+          onSaved={onUpdated}
+        />,
         document.body
       )}
       {showInfo && createPortal(

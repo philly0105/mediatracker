@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/Input'
 interface Props {
   entry: WatchEntry
   onClose: () => void
+  // Client-fetched lists (LibraryView) need an explicit signal — router.refresh()
+  // only re-renders server components and leaves their local state untouched.
+  onSaved?: () => void
 }
 
 const glassModal = {
@@ -17,7 +20,7 @@ const glassModal = {
   border: '1px solid rgba(255,255,255,0.1)',
 }
 
-export default function EditEntryModal({ entry, onClose }: Props) {
+export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
   const media = entry.media!
   const router = useRouter()
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
@@ -45,6 +48,7 @@ export default function EditEntryModal({ entry, onClose }: Props) {
         throw new Error(data.error || 'Failed to update entry')
       }
       router.refresh()
+      onSaved?.()
       onClose()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'An error occurred')

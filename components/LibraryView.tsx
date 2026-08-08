@@ -49,6 +49,18 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
       .finally(() => setRefreshing(false))
   }, [fetchEntries])
 
+  // Drop the row locally rather than refetching: the delete already succeeded,
+  // and a round-trip would leave the card on screen in the meantime.
+  const handleEntryDeleted = useCallback((entryId: string) => {
+    setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+  }, [])
+
+  // An edit can change rating, review or watched_at — any of which feeds the
+  // active sort — so re-pull rather than trying to patch the row in place.
+  const handleEntryUpdated = useCallback(() => {
+    fetchEntries().then(setEntries)
+  }, [fetchEntries])
+
   const filteredEntries = useMemo(() => {
     const filtered = entries.filter((entry) =>
       entry.media?.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -107,7 +119,13 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
             {filteredEntries.map((entry) => (
-              <MediaCard key={entry.id} entry={entry} hideWatchedDate={true} />
+              <MediaCard
+                key={entry.id}
+                entry={entry}
+                hideWatchedDate={true}
+                onDeleted={handleEntryDeleted}
+                onUpdated={handleEntryUpdated}
+              />
             ))}
           </div>
           {entries.length === 0 && (
