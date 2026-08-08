@@ -10,6 +10,7 @@ import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 import { useToast } from '@/components/ToastProvider'
+import { useDeferredAction } from '@/lib/useDeferredAction'
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -126,6 +127,7 @@ function WatchlistSection({
   // tmdb_id/type like the hook's removeFromWatchlist, so it stays inline.
   const { markWatched } = useMediaActions()
   const { toast } = useToast()
+  const { schedule, cancel } = useDeferredAction()
 
   useEffect(() => {
     setItems([])
@@ -209,23 +211,46 @@ function WatchlistSection({
     }
   }
 
+  // Removal used to fire instantly with no prompt and no way back. Drop the
+  // card now, defer the write, and let Undo cancel it.
   const handleRemove = async (itemId: string) => {
-    try {
-      setActioningId(itemId)
-      await fetch('/api/watchlist', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: itemId }),
-      })
-      setItems(prev => prev.filter(i => i.id !== itemId))
-      setTotal(prev => prev - 1)
-      if (selectedItem?.id === itemId) setSelectedItem(null)
-    } catch (err) {
-      console.error(err)
-      toast('Could not remove that item.', { tone: 'error' })
-    } finally {
-      setActioningId(null)
+    const removed = items.find(i => i.id === itemId)
+    if (!removed) return
+
+    const restore = () => {
+      setItems(prev => (prev.some(i => i.id === itemId) ? prev : [...prev, removed]))
+      setTotal(prev => prev + 1)
     }
+
+    setItems(prev => prev.filter(i => i.id !== itemId))
+    setTotal(prev => prev - 1)
+    if (selectedItem?.id === itemId) setSelectedItem(null)
+
+    schedule(itemId, async () => {
+      try {
+        const res = await fetch('/api/watchlist', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: itemId }),
+        })
+        if (!res.ok) throw new Error('Failed to remove item')
+      } catch (err) {
+        console.error(err)
+        restore()
+        toast('Could not remove that item.', { tone: 'error' })
+      }
+    })
+
+    toast(`Removed ${removed.media?.title ?? 'item'} from your watchlist.`, {
+      tone: 'success',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!cancel(itemId)) return
+          restore()
+        },
+      },
+    })
   }
 
   const handleMarkAsWatched = async (item: WatchlistItem, opts?: { rewatch?: boolean }) => {

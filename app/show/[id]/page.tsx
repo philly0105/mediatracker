@@ -6,6 +6,7 @@ import EpisodeTracker from '@/components/EpisodeTracker'
 import RatingStars from '@/components/RatingStars'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
+import { useDeferredAction } from '@/lib/useDeferredAction'
 import { Check, Loader2 } from 'lucide-react'
 import type { Media, Season, EpisodeProgress, WatchEntry } from '@/types'
 
@@ -21,6 +22,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   const [markingWatched, setMarkingWatched] = useState(false)
   const supabase = createClient()
   const { toast } = useToast()
+  const { schedule, cancel } = useDeferredAction()
 
   useEffect(() => {
     async function load() {
@@ -89,6 +91,15 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
     })
   }, [entry])
 
+  // Re-add rows without duplicating any the user has since re-checked by hand.
+  const restoreEpisodes = useCallback((rows: EpisodeProgress[]) => {
+    setProgress(prev => {
+      const present = new Set(prev.map(p => `${p.season_id}-${p.episode_number}`))
+      const missing = rows.filter(r => !present.has(`${r.season_id}-${r.episode_number}`))
+      return missing.length > 0 ? [...prev, ...missing] : prev
+    })
+  }, [])
+
   const handleProgressChange = useCallback(async (seasonId: string, episode: number | number[], watched: boolean) => {
     const episodes = Array.isArray(episode) ? episode : [episode]
     if (episodes.length === 0) return
@@ -114,14 +125,49 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
         })
       }
     } else {
-      await fetch('/api/episodes', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ season_id: seasonId, episodes }),
-      })
+      // Un-checking cascades: clicking E1 of a finished season removes every
+      // episode after it too. That was instant and irreversible, so a misclick
+      // cost the whole season with no warning. Defer the delete behind an Undo
+      // and drop the rows locally in the meantime.
+      const removed = progress.filter(
+        (p) => p.season_id === seasonId && episodes.includes(p.episode_number)
+      )
+      if (removed.length === 0) return
       setProgress(prev => prev.filter(p => !(p.season_id === seasonId && episodes.includes(p.episode_number))))
+
+      const key = `episodes-${seasonId}`
+      schedule(key, async () => {
+        try {
+          const res = await fetch('/api/episodes', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ season_id: seasonId, episodes }),
+          })
+          if (!res.ok) throw new Error('Failed to remove episodes')
+        } catch (err) {
+          console.error(err)
+          restoreEpisodes(removed)
+          toast('Could not update episode progress.', { tone: 'error' })
+        }
+      })
+
+      toast(
+        removed.length === 1
+          ? `Unmarked 1 episode.`
+          : `Unmarked ${removed.length} episodes.`,
+        {
+          tone: 'success',
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              if (!cancel(key)) return
+              restoreEpisodes(removed)
+            },
+          },
+        }
+      )
     }
-  }, [])
+  }, [progress, schedule, cancel, toast, restoreEpisodes])
 
   if (loading) {
     return (
