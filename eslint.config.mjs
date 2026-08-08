@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored agent/skill assets — prototype UI kits, not application source.
+    // They aren't built or shipped, and their 10 jsx-no-undef errors were pure
+    // noise in every lint run.
+    ".claude/**",
+    ".agents/**",
   ]),
 ]);
 

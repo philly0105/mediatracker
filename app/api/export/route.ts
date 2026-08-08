@@ -14,8 +14,8 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const [{ data: entries }, { data: watchlist }] = await Promise.all([
-    supabase.from('watch_entries').select('*, media(*)').order('watched_at', { ascending: false }),
-    supabase.from('watchlist_items').select('*, media(*)').order('added_at', { ascending: false }),
+    supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('watched_at', { ascending: false }),
+    supabase.from('watchlist_items').select('*, media(*)').eq('user_id', user.id).order('added_at', { ascending: false }),
   ])
 
   const rows = [

@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import type { TmdbSearchResult } from '@/types'
 import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv, Plus, Check, Loader2 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import { useMediaActions } from '@/lib/useMediaActions'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 
@@ -22,6 +23,8 @@ export default function PersonPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<TmdbSearchResult | null>(null)
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'must_watch' })
 
   useEffect(() => {
     if (!name) return
@@ -179,20 +182,8 @@ export default function PersonPage() {
         <MediaInfoModal
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selectedItem.tmdb_id, type: selectedItem.type, priority: 'must_watch' })
-            })
-          }}
-          onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selectedItem.tmdb_id, type: selectedItem.type, watched_at: new Date().toISOString().split('T')[0] })
-            })
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(selectedItem.tmdb_id, selectedItem.type) }}
+          onMarkAsWatched={async () => { await markWatched(selectedItem.tmdb_id, selectedItem.type) }}
         />
       )}
     </div>

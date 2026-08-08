@@ -5,9 +5,12 @@ import { useMultiSelect } from './MultiSelectProvider'
 import type { TmdbSearchResult } from '@/types'
 import { ReactNode } from 'react'
 
-export default function SelectableOverlay({ item, children }: { item: TmdbSearchResult, children: ReactNode }) {
-  if (!item) return <>{children}</>
+export default function SelectableOverlay({ item, children }: { item: TmdbSearchResult | null, children: ReactNode }) {
+  // Hooks must run before any early return — a row with a missing media join
+  // would otherwise change the hook count between renders and kill the page.
   const { selectedItems, toggleSelection, isSelectMode } = useMultiSelect()
+  if (!item) return <>{children}</>
+
   const key = `${item.type}-${item.tmdb_id}`
   const isSelected = selectedItems.has(key)
 

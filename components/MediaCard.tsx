@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import EditEntryModal from './EditEntryModal'
-import type { WatchEntry, TmdbSearchResult } from '@/types'
+import type { WatchEntry } from '@/types'
+import { useMediaActions } from '@/lib/useMediaActions'
+import { mediaToResult } from '@/lib/mediaToResult'
 import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
@@ -23,6 +25,8 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [tmdbRating, setTmdbRating] = useState<number | null>(media.vote_average ?? null)
 
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
+
   useEffect(() => {
     if (tmdbRating === null) {
       fetch(`/api/tmdb/rating?tmdb_id=${media.tmdb_id}&type=${media.type}`)
@@ -34,16 +38,7 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
     }
   }, [media.tmdb_id, media.type, tmdbRating])
 
-  const mediaAsResult: TmdbSearchResult = {
-    tmdb_id: media.tmdb_id,
-    type: media.type,
-    title: media.title,
-    overview: media.overview ?? '',
-    poster_url: media.poster_url,
-    release_year: media.release_year,
-    genres: media.genres,
-    vote_average: tmdbRating ?? media.vote_average ?? undefined,
-  }
+  const mediaAsResult = mediaToResult(media, { vote_average: tmdbRating })
 
   async function handleRatingChange(newRating: number) {
     setRating(newRating)
@@ -115,19 +110,9 @@ export default function MediaCard({ entry, hideWatchedDate }: Props) {
         <MediaInfoModal
           item={mediaAsResult}
           onClose={() => setShowInfo(false)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, priority: 'want_to_watch' }),
-            })
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(media.tmdb_id, media.type) }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: media.tmdb_id, type: media.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
+            await markWatched(media.tmdb_id, media.type)
             router.refresh()
           }}
         />,

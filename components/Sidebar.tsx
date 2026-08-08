@@ -16,7 +16,6 @@ import {
   User,
   Sparkles,
   Calendar,
-  Swords,
   Clapperboard,
   MoreHorizontal,
   X
@@ -45,7 +44,6 @@ const PRIMARY_NAV: NavEntry[] = [
 
 const MORE_NAV: NavEntry[] = [
   { name: 'Lists', href: '/lists', icon: Layers },
-  { name: 'Versus', href: '/versus', icon: Swords },
   { name: 'Collections', href: '/collections', icon: Library },
   { name: 'Stats', href: '/stats', icon: BarChart3 },
   { name: 'Calendar', href: '/calendar', icon: Calendar },

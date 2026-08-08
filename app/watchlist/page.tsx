@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2 } from 'lucide-react'
-import type { WatchlistItem, WatchlistPriority, TmdbSearchResult } from '@/types'
+import type { WatchlistItem, WatchlistPriority } from '@/types'
+import { mediaToResult } from '@/lib/mediaToResult'
+import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
@@ -119,6 +121,10 @@ function WatchlistSection({
   const config = PRIORITY_CONFIG[priority]
   const Icon = config.icon
 
+  // Only markWatched is shared. Removal here deletes by watchlist row id, not by
+  // tmdb_id/type like the hook's removeFromWatchlist, so it stays inline.
+  const { markWatched } = useMediaActions()
+
   useEffect(() => {
     setItems([])
     setPage(1)
@@ -222,15 +228,7 @@ function WatchlistSection({
     if (!item.media) return
     try {
       setActioningId(item.id)
-      await fetch('/api/watch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tmdb_id: item.media.tmdb_id,
-          type: item.media.type,
-          watched_at: new Date().toISOString().split('T')[0],
-        }),
-      })
+      await markWatched(item.media.tmdb_id, item.media.type)
       await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -246,20 +244,12 @@ function WatchlistSection({
     }
   }
 
-  const modalItem = selectedItem?.media ? {
-    tmdb_id: selectedItem.media.tmdb_id,
-    type: selectedItem.media.type as 'movie' | 'show',
-    title: selectedItem.media.title,
-    overview: selectedItem.media.overview || '',
-    poster_url: selectedItem.media.poster_url,
-    release_year: selectedItem.media.release_year,
-    genres: selectedItem.media.genres,
-    vote_average: selectedItem.media.vote_average ?? undefined,
-  } as TmdbSearchResult : null;
+  const modalItem = selectedItem?.media ? mediaToResult(selectedItem.media) : null
 
-  // Don't render anything if not loading and 0 items (unless it's Must Watch and no filters to avoid totally empty page look)
-  if (!loading && items.length === 0 && (typeFilter !== 'all' || genreFilter !== 'All' || priority !== 'must_watch')) {
-    if (typeFilter === 'all' && genreFilter === 'All') return null; // Fully empty queue naturally -> hide it
+  // Hide an empty section only when it's unfiltered and not the Must Watch bucket
+  // (which is always kept visible so the "No matching items." empty state can show).
+  if (!loading && items.length === 0 && priority !== 'must_watch' && typeFilter === 'all' && genreFilter === 'All') {
+    return null
   }
 
   return (
@@ -300,18 +290,10 @@ function WatchlistSection({
             <AnimatePresence mode="popLayout">
               {items.map((item) => {
                 const isActioning = actioningId === item.id
-                const selectableItem = item.media ? {
-                  tmdb_id: item.media.tmdb_id,
-                  type: item.media.type as 'movie' | 'show',
-                  title: item.media.title,
-                  overview: item.media.overview || '',
-                  poster_url: item.media.poster_url,
-                  release_year: item.media.release_year,
-                  genres: item.media.genres,
-                } : null;
+                const selectableItem = item.media ? mediaToResult(item.media) : null
 
                 return (
-                  <SelectableOverlay key={item.id} item={selectableItem as TmdbSearchResult}>
+                  <SelectableOverlay key={item.id} item={selectableItem}>
                   <motion.div
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}

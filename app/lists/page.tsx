@@ -14,7 +14,9 @@ export default function ListsPage() {
 
   async function loadLists() {
     const supabase = createClient()
-    const { data } = await supabase.from('lists').select('*').order('created_at', { ascending: false })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLists([]); return }
+    const { data } = await supabase.from('lists').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
     setLists(data ?? [])
   }
 

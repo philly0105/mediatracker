@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useLibraryIds } from '@/lib/useLibraryIds'
+import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
@@ -27,36 +28,9 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const { isSelectMode } = useMultiSelect()
-  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
-  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
+  const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
-  useEffect(() => {
-    async function fetchLibraryIds() {
-      const supabase = createClient()
-      const [watchedRes, watchlistRes] = await Promise.all([
-        supabase.from('watch_entries').select('media!inner(tmdb_id)'),
-        supabase.from('watchlist_items').select('media!inner(tmdb_id)')
-      ])
-      
-      if (watchedRes.data) {
-        setWatchedIds(new Set(
-          watchedRes.data.map((row: any) => {
-            const m = Array.isArray(row.media) ? row.media[0] : row.media
-            return m?.tmdb_id
-          }).filter(Boolean)
-        ))
-      }
-      if (watchlistRes.data) {
-        setWatchlistIds(new Set(
-          watchlistRes.data.map((row: any) => {
-            const m = Array.isArray(row.media) ? row.media[0] : row.media
-            return m?.tmdb_id
-          }).filter(Boolean)
-        ))
-      }
-    }
-    fetchLibraryIds()
-  }, [])
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
@@ -214,19 +188,11 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           item={selected}
           onClose={() => setSelected(null)}
           onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
-            })
+            await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
+            await markWatched(selected.tmdb_id, selected.type)
             setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
           }}
         />

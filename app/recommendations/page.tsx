@@ -15,6 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import { useMediaActions } from '@/lib/useMediaActions'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -48,6 +49,8 @@ export default function RecommendationsPage() {
   const [hasMoreByFilter, setHasMoreByFilter] = useState<Record<string, boolean>>({})
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'must_watch' })
 
   const loadRecommendations = useCallback(async (refresh = false) => {
     try {
@@ -87,11 +90,7 @@ export default function RecommendationsPage() {
   async function handleAddToWatchlist(tmdbId: number, type: 'movie' | 'show') {
     try {
       setActioningId(tmdbId)
-      const res = await fetch('/api/watchlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tmdb_id: tmdbId, type, priority: 'must_watch' }),
-      })
+      const res = await addToWatchlist(tmdbId, type)
       if (!res.ok) throw new Error('Failed to add to watchlist')
       
       // Animate card removal
@@ -106,15 +105,7 @@ export default function RecommendationsPage() {
   async function handleMarkAsWatched(tmdbId: number, type: 'movie' | 'show') {
     try {
       setActioningId(tmdbId)
-      const res = await fetch('/api/watch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tmdb_id: tmdbId,
-          type,
-          watched_at: new Date().toISOString().split('T')[0],
-        }),
-      })
+      const res = await markWatched(tmdbId, type)
       if (!res.ok) throw new Error('Failed to mark as watched')
 
       // Animate card removal

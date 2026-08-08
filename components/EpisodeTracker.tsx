@@ -5,7 +5,7 @@ import type { Season, EpisodeProgress } from '@/types'
 interface Props {
   seasons: Season[]
   progress: EpisodeProgress[]
-  onProgressChange: (seasonId: string, episode: number, watched: boolean) => void
+  onProgressChange: (seasonId: string, episode: number | number[], watched: boolean) => void
 }
 
 const glassCard = {
@@ -19,11 +19,12 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
   const watchedSet = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
 
   function handleEpisodeClick(seasonId: string, ep: number, watched: boolean) {
+    const affected: number[] = []
     if (!watched) {
       // Mark this episode and all unwatched episodes before it
       for (let e = 1; e <= ep; e++) {
         if (!watchedSet.has(`${seasonId}-${e}`)) {
-          onProgressChange(seasonId, e, true)
+          affected.push(e)
         }
       }
     } else {
@@ -32,9 +33,12 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
       const end = season?.episode_count ?? ep
       for (let e = ep; e <= end; e++) {
         if (watchedSet.has(`${seasonId}-${e}`)) {
-          onProgressChange(seasonId, e, false)
+          affected.push(e)
         }
       }
+    }
+    if (affected.length > 0) {
+      onProgressChange(seasonId, affected.length === 1 ? affected[0] : affected, !watched)
     }
   }
 

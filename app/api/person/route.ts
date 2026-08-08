@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TMDB_GENRES } from '@/lib/tmdb'
+import { createClient } from '@/lib/supabase/server'
+
+// A raw row from /person/:id/combined_credits. Only the fields we read are typed.
+type PersonCredit = {
+  id: number
+  media_type?: string
+  title?: string
+  name?: string
+  overview?: string | null
+  poster_path?: string | null
+  release_date?: string | null
+  first_air_date?: string | null
+  genre_ids?: number[]
+  vote_average?: number
+  vote_count?: number
+  job?: string
+}
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const name = searchParams.get('name')
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -12,7 +33,7 @@ export async function GET(request: NextRequest) {
   try {
     // 1. Search for person to get ID and Profile
     const qs1 = new URLSearchParams({ api_key: tmdbKey, query: name })
-    const searchRes = await fetch(`https://api.themoviedb.org/3/search/person?${qs1}`)
+    const searchRes = await fetch(`https://api.themoviedb.org/3/search/person?${qs1}`, { next: { revalidate: 7 * 24 * 60 * 60 } })
     if (!searchRes.ok) throw new Error('Failed to search person')
     const searchData = await searchRes.json()
     
@@ -25,18 +46,18 @@ export async function GET(request: NextRequest) {
 
     // 2. Fetch combined credits
     const qs2 = new URLSearchParams({ api_key: tmdbKey })
-    const creditsRes = await fetch(`https://api.themoviedb.org/3/person/${person.id}/combined_credits?${qs2}`)
+    const creditsRes = await fetch(`https://api.themoviedb.org/3/person/${person.id}/combined_credits?${qs2}`, { next: { revalidate: 7 * 24 * 60 * 60 } })
     if (!creditsRes.ok) throw new Error('Failed to fetch person credits')
     const creditsData = await creditsRes.json()
 
     // 3. Process credits
     // Combine cast and crew (director)
-    const directorCredits = (creditsData.crew || []).filter((c: any) => c.job === 'Director')
+    const directorCredits = (creditsData.crew || []).filter((c: PersonCredit) => c.job === 'Director')
     const castCredits = creditsData.cast || []
     
     // Deduplicate by tmdb_id
     const seen = new Set<number>()
-    const allCredits: any[] = []
+    const allCredits: PersonCredit[] = []
 
     for (const item of [...castCredits, ...directorCredits]) {
       if (item.media_type !== 'movie' && item.media_type !== 'tv') continue
@@ -46,7 +67,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const mapItem = (r: any) => ({
+    const mapItem = (r: PersonCredit) => ({
       tmdb_id: r.id,
       type: r.media_type === 'tv' ? 'show' : 'movie',
       title: r.title ?? r.name,
@@ -73,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     // Most Recent: Sort by release date descending
     const recentMovies = [...mapped]
-      .filter((m) => m.full_release_date)
+      .filter((m): m is (typeof mapped)[number] & { full_release_date: string } => Boolean(m.full_release_date))
       .sort((a, b) => {
         if (a.full_release_date < b.full_release_date) return 1
         if (a.full_release_date > b.full_release_date) return -1
@@ -103,8 +124,8 @@ export async function GET(request: NextRequest) {
       allMovies
     })
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 })
   }
 }
 

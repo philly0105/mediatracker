@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
-import { createClient } from '@/lib/supabase/client'
+import { useLibraryIds } from '@/lib/useLibraryIds'
+import { FilterPills } from '@/components/FilterPills'
+import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { motion } from 'framer-motion'
@@ -39,30 +41,9 @@ export default function StreamingPage() {
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
-  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
+  const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
-  useEffect(() => {
-    async function fetchLibraryIds() {
-      const supabase = createClient()
-      const [watchedRes, watchlistRes] = await Promise.all([
-        supabase.from('watch_entries').select('media!inner(tmdb_id)'),
-        supabase.from('watchlist_items').select('media!inner(tmdb_id)'),
-      ])
-      const extract = (rows: any[] | null) =>
-        new Set(
-          (rows ?? [])
-            .map((row: any) => {
-              const m = Array.isArray(row.media) ? row.media[0] : row.media
-              return m?.tmdb_id
-            })
-            .filter(Boolean)
-        )
-      setWatchedIds(extract(watchedRes.data) as Set<number>)
-      setWatchlistIds(extract(watchlistRes.data) as Set<number>)
-    }
-    fetchLibraryIds()
-  }, [])
+  const { addToWatchlist, markWatched, removeFromWatchlist } = useMediaActions({ priority: 'want_to_watch' })
 
   useEffect(() => {
     let cancelled = false
@@ -219,23 +200,7 @@ export default function StreamingPage() {
 
       {/* Sort and filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {SORT_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => changeSort(option.id)}
-              aria-pressed={sortBy === option.id}
-              className={`relative px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
-                sortBy === option.id
-                  ? 'text-white bg-[var(--accent)] border border-transparent shadow-lg shadow-green-600/20'
-                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <FilterPills options={SORT_OPTIONS} active={sortBy} onSelect={changeSort} />
         <button
           type="button"
           onClick={toggleHideWatched}
@@ -338,27 +303,15 @@ export default function StreamingPage() {
           item={selected}
           onClose={() => setSelected(null)}
           onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
-            })
+            await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds((prev) => new Set(prev).add(selected.tmdb_id))
           }}
           onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
+            await markWatched(selected.tmdb_id, selected.type)
             setWatchedIds((prev) => new Set(prev).add(selected.tmdb_id))
           }}
           onRemoveFromWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type }),
-            })
+            await removeFromWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds((prev) => {
               const next = new Set(prev)
               next.delete(selected.tmdb_id)

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Calendar, Film, Tv, ArrowRight, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
+import { useMediaActions } from '@/lib/useMediaActions'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 
@@ -15,6 +16,14 @@ interface Props {
 export default function DashboardUpcomingWidget({ releases }: Props) {
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const router = useRouter()
+
+  const { addToWatchlist, markWatched } = useMediaActions({
+    priority: 'want_to_watch',
+    onDone: () => {
+      setSelected(null)
+      router.refresh()
+    },
+  })
 
   // Take the first 3 releases to fit the bento grid neatly
   const upcoming = releases.slice(0, 3)
@@ -109,24 +118,8 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
         <MediaInfoModal
           item={selected}
           onClose={() => setSelected(null)}
-          onAddToWatchlist={async () => {
-            await fetch('/api/watchlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, priority: 'want_to_watch' }),
-            })
-            setSelected(null)
-            router.refresh()
-          }}
-          onMarkAsWatched={async () => {
-            await fetch('/api/watch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tmdb_id: selected.tmdb_id, type: selected.type, watched_at: new Date().toISOString().split('T')[0] }),
-            })
-            setSelected(null)
-            router.refresh()
-          }}
+          onAddToWatchlist={async () => { await addToWatchlist(selected.tmdb_id, selected.type) }}
+          onMarkAsWatched={async () => { await markWatched(selected.tmdb_id, selected.type) }}
         />,
         document.body
       )}

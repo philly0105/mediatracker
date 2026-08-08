@@ -11,10 +11,10 @@ export async function GET(request: NextRequest) {
 
   if (tmdbId) {
     const { data: media } = await supabase
-      .from('media').select('id').eq('tmdb_id', Number(tmdbId)).eq('type', 'show').single()
+      .from('media').select('id').eq('tmdb_id', Number(tmdbId)).eq('type', 'show').maybeSingle()
     if (!media) return NextResponse.json({ isFollowed: false })
     const { data } = await supabase
-      .from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).single()
+      .from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).maybeSingle()
     return NextResponse.json({ isFollowed: !!data })
   }
 
@@ -45,7 +45,7 @@ export async function DELETE(request: NextRequest) {
 
   const { tmdb_id } = await request.json()
   const { data: media } = await supabase
-    .from('media').select('id').eq('tmdb_id', Number(tmdb_id)).eq('type', 'show').single()
+    .from('media').select('id').eq('tmdb_id', Number(tmdb_id)).eq('type', 'show').maybeSingle()
   if (!media) return NextResponse.json({ ok: true })
   await supabase.from('followed_shows').delete().eq('user_id', user.id).eq('media_id', media.id)
   return NextResponse.json({ ok: true })
