@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Home,
   Search,
@@ -54,14 +54,7 @@ function isNavActive(pathname: string, href: string) {
 
 export default function Sidebar({ userEmail }: SidebarProps) {
   const pathname = usePathname()
-  const moreActive = MORE_NAV.some((item) => isNavActive(pathname, item.href))
   const [moreOpen, setMoreOpen] = useState(false)
-  const [desktopMoreOpen, setDesktopMoreOpen] = useState(moreActive)
-
-  // Keep desktop More expanded when navigating into one of its routes
-  useEffect(() => {
-    if (moreActive) setDesktopMoreOpen(true)
-  }, [moreActive])
 
   const primaryMobileItems = PRIMARY_NAV.slice(0, 4)
   const moreDrawerItems: NavEntry[] = [
@@ -88,123 +81,72 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           </span>
         </div>
 
+        {/* Search is an action, not a destination — a field-shaped trigger reads
+            as "summons the palette" and teaches the shortcut. */}
+        <button
+          type="button"
+          onClick={openSearchOverlay}
+          className="w-full h-9 mb-6 px-3 flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] hover:border-[var(--border-strong)] bg-white/[0.03] transition-colors text-left"
+        >
+          <Search className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+          <span className="flex-1 text-sm text-zinc-500 truncate">Search…</span>
+          <kbd className="inline-flex items-center text-[10px] font-semibold text-zinc-500 border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
+        </button>
+
         {/* Navigation Items */}
         <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-none">
-          {PRIMARY_NAV.map((item) =>
-            item.action === 'search-overlay' ? (
-              // Same shape as the More toggle below: NavItem's own onClick,
-              // no wrapper — a <button> around NavItem's <a> is invalid HTML.
-              <NavItem
-                key={item.href}
-                icon={item.icon}
-                label={item.name}
-                active={false}
-                onClick={openSearchOverlay}
-              />
-            ) : (
-              <Link key={item.href} href={item.href} passHref legacyBehavior>
-                <NavItem
-                  icon={item.icon}
-                  label={item.name}
-                  active={isNavActive(pathname, item.href)}
-                />
-              </Link>
-            )
-          )}
+          {PRIMARY_NAV.filter((item) => !item.action).map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.name}
+              active={isNavActive(pathname, item.href)}
+            />
+          ))}
 
-          {/* More section */}
-          <NavItem
-            icon={MoreHorizontal}
-            label="More"
-            active={moreActive && !desktopMoreOpen}
-            onClick={() => setDesktopMoreOpen((open) => !open)}
-          />
-          <AnimatePresence initial={false}>
-            {desktopMoreOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden flex flex-col gap-1 pl-3 ml-3"
-                style={{ borderLeft: '1px solid var(--border-subtle)' }}
-              >
-                {MORE_NAV.map((item) => (
-                  <Link key={item.href} href={item.href} passHref legacyBehavior>
-                    <NavItem
-                      icon={item.icon}
-                      label={item.name}
-                      active={isNavActive(pathname, item.href)}
-                    />
-                  </Link>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Divider between primary and secondary destinations */}
+          <div aria-hidden style={{ borderTop: '1px solid var(--border-subtle)', margin: '12px 12px' }} />
+
+          {MORE_NAV.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.name}
+              active={isNavActive(pathname, item.href)}
+            />
+          ))}
         </nav>
 
-        {/* Footer Info / Settings */}
-        <div className="mt-auto pt-4 space-y-1" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-          <Link href="/settings" passHref legacyBehavior>
-            <NavItem
-              icon={Settings}
-              label="Settings"
-              active={pathname === '/settings'}
-            />
-          </Link>
-
-          {userEmail && (
-            <div
+        {/* Footer: a single Settings destination — the account card moves
+            into the row so the whole thing is one tappable link. */}
+        <div className="mt-auto pt-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          {userEmail ? (
+            <Link
+              href="/settings"
+              className="flex items-center gap-3 rounded-[var(--radius-md)] transition-colors"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
                 padding: '10px 12px',
-                marginTop: 8,
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(236, 231, 218, 0.01)',
-                border: '1px solid var(--border-faint)',
+                background: pathname === '/settings' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                border: `1px solid ${pathname === '/settings' ? 'var(--border-default)' : 'var(--border-faint)'}`,
               }}
             >
               <img
                 src={'https://api.dicebear.com/7.x/notionists/svg?seed=' + encodeURIComponent(userEmail)}
                 alt=""
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  background: 'var(--zinc-800)',
-                  border: '1px solid var(--border-subtle)',
-                }}
+                style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--zinc-800)', border: '1px solid var(--border-subtle)' }}
               />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {userEmail.split('@')[0]}
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 10,
-                    color: 'var(--text-muted)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {userEmail}
-                </p>
-              </div>
-            </div>
+              <p
+                className="flex-1"
+                style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
+              >
+                {userEmail.split('@')[0]}
+              </p>
+              <Settings className="w-4 h-4 flex-shrink-0" style={{ color: pathname === '/settings' ? 'var(--accent)' : 'var(--text-muted)' }} />
+            </Link>
+          ) : (
+            <NavItem href="/settings" icon={Settings} label="Settings" active={pathname === '/settings'} />
           )}
         </div>
       </aside>
@@ -232,7 +174,8 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           >
             <Search className="w-5 h-5 text-zinc-400" />
           </button>
-          <div
+          <Link
+            href="/settings"
             className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
             style={{
               background: 'var(--zinc-800)',
@@ -244,7 +187,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             ) : (
               <User className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
             )}
-          </div>
+          </Link>
         </div>
       </div>
 
@@ -286,27 +229,6 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 {moreDrawerItems.map((item) => {
                   const isActive = isNavActive(pathname, item.href)
                   const Icon = item.icon
-                  if (item.action === 'search-overlay') {
-                    return (
-                      <button
-                        key={item.href}
-                        type="button"
-                        onClick={() => {
-                          setMoreOpen(false)
-                          openSearchOverlay()
-                        }}
-                        className="flex flex-col items-center gap-1.5 p-3 rounded-md text-[10px] font-medium transition-colors"
-                        style={{
-                          color: 'var(--text-secondary)',
-                          background: 'transparent',
-                          border: '1px solid transparent',
-                        }}
-                      >
-                        <Icon className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
-                        <span>{item.name}</span>
-                      </button>
-                    )
-                  }
                   return (
                     <Link
                       key={item.href}

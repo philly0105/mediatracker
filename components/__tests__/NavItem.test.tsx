@@ -13,7 +13,7 @@ describe('NavItem', () => {
 
   it('applies active styles when active prop is true', () => {
     const { getByText } = render(
-      <NavItem icon={Home} label="Dashboard" active />
+      <NavItem icon={Home} label="Dashboard" active href="/dashboard" />
     )
     const linkElement = getByText('Dashboard').closest('a')
     expect(linkElement).toHaveStyle({
@@ -29,5 +29,20 @@ describe('NavItem', () => {
     )
     fireEvent.click(getByText('Dashboard'))
     expect(handleClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders a link when an href is provided', () => {
+    const { getByRole } = render(
+      <NavItem icon={Home} label="Stats" href="/stats" />
+    )
+    const link = getByRole('link')
+    expect(link).toHaveAttribute('href', '/stats')
+  })
+
+  it('renders a button when no href is provided', () => {
+    const { getByRole } = render(
+      <NavItem icon={Home} label="Search" />
+    )
+    expect(getByRole('button')).toBeInTheDocument()
   })
 })
