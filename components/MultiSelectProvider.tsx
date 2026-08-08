@@ -1,9 +1,9 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Plus, X, Loader2 } from 'lucide-react'
+import { Check, CheckSquare, Plus, X, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -14,6 +14,17 @@ interface MultiSelectContextType {
   toggleSelection: (item: TmdbSearchResult) => void
   clearSelection: () => void
   isSelectMode: boolean
+  // SelectableOverlay wraps every selectable card in the app, so having each one
+  // register itself is what lets the action bar offer "select all" without any
+  // page needing to hand over its list.
+  register: (key: string, item: TmdbSearchResult) => void
+  unregister: (key: string) => void
+  selectableCount: number
+  selectAll: () => void
+}
+
+export function selectionKey(item: TmdbSearchResult) {
+  return `${item.type}-${item.tmdb_id}`
 }
 
 const Context = createContext<MultiSelectContextType | null>(null)
@@ -31,8 +42,27 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
 
   const isSelectMode = selectedItems.size > 0
 
+  // Held in a ref, not state: cards mount and unmount constantly (filtering,
+  // infinite scroll) and re-rendering the whole tree on each one would be
+  // wasteful. Only the count is state, and only when it actually changes.
+  const selectable = useRef(new Map<string, TmdbSearchResult>())
+  const [selectableCount, setSelectableCount] = useState(0)
+
+  const register = useCallback((key: string, item: TmdbSearchResult) => {
+    selectable.current.set(key, item)
+    setSelectableCount(selectable.current.size)
+  }, [])
+
+  const unregister = useCallback((key: string) => {
+    if (selectable.current.delete(key)) setSelectableCount(selectable.current.size)
+  }, [])
+
+  const selectAll = useCallback(() => {
+    setSelectedItems(new Map(selectable.current))
+  }, [])
+
   function toggleSelection(item: TmdbSearchResult) {
-    const key = `${item.type}-${item.tmdb_id}`
+    const key = selectionKey(item)
     setSelectedItems((prev) => {
       const next = new Map(prev)
       if (next.has(key)) next.delete(key)
@@ -105,7 +135,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Context.Provider value={{ selectedItems, toggleSelection, clearSelection, isSelectMode }}>
+    <Context.Provider value={{ selectedItems, toggleSelection, clearSelection, isSelectMode, register, unregister, selectableCount, selectAll }}>
       {children}
       
       {/* Floating Action Bar */}
@@ -127,6 +157,19 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             </div>
             
             <div className="h-6 w-px bg-white/10" />
+
+            {selectedItems.size < selectableCount && (
+              <Button
+                disabled={loadingAction !== null}
+                onClick={selectAll}
+                variant="ghost"
+                size="sm"
+              >
+                <CheckSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Select all {selectableCount}</span>
+                <span className="sm:hidden">All</span>
+              </Button>
+            )}
 
             <Button
               disabled={loadingAction !== null}

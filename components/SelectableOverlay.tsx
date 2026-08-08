@@ -1,17 +1,30 @@
 'use client'
 
 import { CheckSquare, Square } from 'lucide-react'
-import { useMultiSelect } from './MultiSelectProvider'
+import { useMultiSelect, selectionKey } from './MultiSelectProvider'
 import type { TmdbSearchResult } from '@/types'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 
 export default function SelectableOverlay({ item, children }: { item: TmdbSearchResult | null, children: ReactNode }) {
   // Hooks must run before any early return — a row with a missing media join
   // would otherwise change the hook count between renders and kill the page.
-  const { selectedItems, toggleSelection, isSelectMode } = useMultiSelect()
+  const { selectedItems, toggleSelection, isSelectMode, register, unregister } = useMultiSelect()
+
+  // Registering here is what gives the action bar a "select all": every
+  // selectable card in the app is wrapped in this component, so no page has to
+  // hand its list over. Keyed on type+tmdb_id rather than the item object,
+  // whose identity changes on every render at most call sites.
+  const registryKey = item ? selectionKey(item) : null
+  useEffect(() => {
+    if (!registryKey || !item) return
+    register(registryKey, item)
+    return () => unregister(registryKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registryKey, register, unregister])
+
   if (!item) return <>{children}</>
 
-  const key = `${item.type}-${item.tmdb_id}`
+  const key = selectionKey(item)
   const isSelected = selectedItems.has(key)
 
   return (

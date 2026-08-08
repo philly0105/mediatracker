@@ -212,7 +212,11 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           Dorf<span style={{ color: 'var(--brand-mark)' }}>Movies</span>
         </span>
         <div className="flex items-center gap-3">
-          <Search className="w-5 h-5 text-zinc-400" />
+          {/* Was a bare icon with no link and no handler: it looked tappable
+              and did nothing. */}
+          <Link href="/search" aria-label="Search" className="p-1 -m-1 rounded-sm transition-colors hover:text-white">
+            <Search className="w-5 h-5 text-zinc-400" />
+          </Link>
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
             style={{
