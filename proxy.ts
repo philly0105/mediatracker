@@ -1,7 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/share']
+// /reset-password is deliberately absent: it is reached with a real session,
+// the one /auth/callback mints from the emailed recovery code, so the normal
+// gate is what stops anyone else from loading it.
+const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/callback', '/share']
+
+// Signed in already, so these three have nothing to offer. /auth/callback is
+// not among them — following a confirmation link while signed in as someone
+// else has to be able to complete the exchange.
+const SIGNED_OUT_ONLY = ['/login', '/signup', '/forgot-password']
 
 export async function proxy(request: NextRequest) {
   try {
@@ -38,7 +46,7 @@ export async function proxy(request: NextRequest) {
       return redirectToLogin
     }
 
-    if (user && path === '/login') {
+    if (user && SIGNED_OUT_ONLY.includes(path)) {
       const redirectToHome = NextResponse.redirect(new URL('/', request.url))
       supabaseResponse.cookies.getAll().forEach(c => redirectToHome.cookies.set(c))
       return redirectToHome

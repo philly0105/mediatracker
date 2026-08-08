@@ -17,8 +17,9 @@ export default function PasswordChangeForm() {
       setError('Passwords do not match')
       return
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    // 8 to match /signup and /reset-password; Supabase's own floor is 6.
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       return
     }
 
