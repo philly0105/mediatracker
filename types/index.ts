@@ -25,6 +25,18 @@ export interface Season {
   episode_count: number
 }
 
+// Shared TMDB cache, not per-user state — see EpisodeProgress for the latter.
+export interface Episode {
+  id: string
+  season_id: string
+  episode_number: number
+  name: string | null
+  air_date: string | null
+  overview: string | null
+  runtime_mins: number | null
+  still_url: string | null
+}
+
 export interface WatchEntry {
   id: string
   user_id: string

@@ -1,9 +1,16 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import EpisodeTracker from '../EpisodeTracker'
-import type { Season, EpisodeProgress } from '@/types'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import EpisodeTracker, { formatAirDate, isUnaired } from '../EpisodeTracker'
+import type { Season, Episode, EpisodeProgress } from '@/types'
 
 const season: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 5 }
+
+function episode(n: number, name: string | null, air_date: string | null): Episode {
+  return {
+    id: `e${n}`, season_id: 's1', episode_number: n, name, air_date,
+    overview: null, runtime_mins: null, still_url: null,
+  }
+}
 
 function watched(...episodes: number[]): EpisodeProgress[] {
   return episodes.map((n) => ({
@@ -55,5 +62,84 @@ describe('EpisodeTracker season actions', () => {
     renderTracker(watched())
     fireEvent.click(screen.getByText('E3'))
     expect(onProgressChange).toHaveBeenCalledWith('s1', [1, 2, 3], true)
+  })
+})
+
+describe('EpisodeTracker episode metadata', () => {
+  beforeEach(() => { onProgressChange.mockReset() })
+  afterEach(() => { vi.useRealTimers() })
+
+  function renderWithMeta(episodes: Episode[]) {
+    return render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={[]}
+        episodes={episodes}
+        onProgressChange={onProgressChange}
+      />
+    )
+  }
+
+  it('renders titles and air dates alongside the numbers', () => {
+    renderWithMeta([episode(1, 'Pilot', '2008-01-20'), episode(2, "Cat's in the Bag...", '2008-01-27')])
+
+    expect(screen.getByText('Pilot')).toBeInTheDocument()
+    expect(screen.getByText("Cat's in the Bag...")).toBeInTheDocument()
+    expect(screen.getByText('Jan 20, 2008')).toBeInTheDocument()
+    // The number stays: it is what episode_progress keys on, and what the
+    // click-to-here cascade is described in.
+    expect(screen.getByText('E1')).toBeInTheDocument()
+  })
+
+  it('falls back to bare numbers when metadata has not arrived', () => {
+    renderTracker(watched())
+    for (const n of [1, 2, 3, 4, 5]) {
+      expect(screen.getByText(`E${n}`)).toBeInTheDocument()
+    }
+  })
+
+  it('covers episodes the fill did not return', () => {
+    // A partial fill must not blank out the rest of the season.
+    renderWithMeta([episode(1, 'Pilot', '2008-01-20')])
+    expect(screen.getByText('Pilot')).toBeInTheDocument()
+    expect(screen.getByText('E5')).toBeInTheDocument()
+  })
+
+  it('labels an episode that has not aired yet', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 8))
+    renderWithMeta([episode(1, 'Pilot', '2026-08-01'), episode(2, 'Next Week', '2026-08-15')])
+
+    expect(screen.queryByText('Aug 15, 2026')).not.toBeInTheDocument()
+    expect(screen.getByText('Airs Aug 15, 2026')).toBeInTheDocument()
+    expect(screen.getByText('Aug 1, 2026')).toBeInTheDocument()
+  })
+
+  it('still clicks through on an episode with a title', () => {
+    renderWithMeta([episode(3, 'And the Bag\'s in the River', '2008-02-10')])
+    fireEvent.click(screen.getByText('E3'))
+    expect(onProgressChange).toHaveBeenCalledWith('s1', [1, 2, 3], true)
+  })
+})
+
+describe('air date helpers', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('reads a bare date as local midnight, not UTC', () => {
+    // Date('2008-01-20') is UTC midnight, which renders as Jan 19 anywhere
+    // west of Greenwich. This is the bug the helper exists to avoid.
+    expect(formatAirDate('2008-01-20')).toBe('Jan 20, 2008')
+  })
+
+  it('returns null for a date it cannot parse', () => {
+    expect(formatAirDate('')).toBeNull()
+    expect(formatAirDate('not-a-date')).toBeNull()
+  })
+
+  it('treats today as aired and tomorrow as not', () => {
+    const today = new Date(2026, 7, 8)
+    expect(isUnaired('2026-08-08', today)).toBe(false)
+    expect(isUnaired('2026-08-09', today)).toBe(true)
+    expect(isUnaired(null, today)).toBe(false)
   })
 })

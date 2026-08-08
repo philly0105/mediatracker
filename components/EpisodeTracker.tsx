@@ -1,10 +1,13 @@
 'use client'
 import { useState } from 'react'
-import type { Season, EpisodeProgress } from '@/types'
+import type { Season, Episode, EpisodeProgress } from '@/types'
 
 interface Props {
   seasons: Season[]
   progress: EpisodeProgress[]
+  /** Titles and air dates, when they have been fetched. Absent is normal — the
+   *  grid falls back to numbers, which is all it could ever render before. */
+  episodes?: Episode[]
   onProgressChange: (seasonId: string, episode: number | number[], watched: boolean) => void
 }
 
@@ -13,10 +16,29 @@ const glassCard = {
   border: '1px solid var(--border-subtle)',
 }
 
-export default function EpisodeTracker({ seasons, progress, onProgressChange }: Props) {
+// Explicit locale so the label is the same on the server, in the browser and in
+// tests. Parsed as local midnight rather than through Date(dateString), which
+// reads a bare YYYY-MM-DD as UTC and can render the day before.
+export function formatAirDate(airDate: string): string | null {
+  const [y, m, d] = airDate.split('-').map(Number)
+  if (!y || !m || !d) return null
+  const date = new Date(y, m - 1, d)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+export function isUnaired(airDate: string | null, today = new Date()): boolean {
+  if (!airDate) return false
+  const [y, m, d] = airDate.split('-').map(Number)
+  if (!y || !m || !d) return false
+  return new Date(y, m - 1, d).getTime() > today.getTime()
+}
+
+export default function EpisodeTracker({ seasons, progress, episodes, onProgressChange }: Props) {
   const [open, setOpen] = useState<string | null>(seasons[0]?.id ?? null)
 
   const watchedSet = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
+  const episodeMap = new Map((episodes ?? []).map(e => [`${e.season_id}-${e.episode_number}`, e]))
 
   function handleEpisodeClick(seasonId: string, ep: number, watched: boolean) {
     const affected: number[] = []
@@ -60,6 +82,9 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
         const watchedCount = progress.filter(p => p.season_id === season.id).length
         const isOpen = open === season.id
         const allWatched = season.episode_count > 0 && watchedCount >= season.episode_count
+        // One row per episode once there are titles to show; the four-across
+        // grid only works when every cell is three characters wide.
+        const hasTitles = (episodes ?? []).some(e => e.season_id === season.id && e.name)
         return (
           <div key={season.id} className="rounded-lg overflow-hidden backdrop-blur-md" style={glassCard}>
             <button
@@ -99,22 +124,35 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
                     {allWatched ? 'Unmark whole season' : 'Mark whole season watched'}
                   </button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className={hasTitles ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : 'grid grid-cols-2 sm:grid-cols-4 gap-2'}>
                 {Array.from({ length: season.episode_count }, (_, i) => i + 1).map(ep => {
                   const watched = watchedSet.has(`${season.id}-${ep}`)
+                  const meta = episodeMap.get(`${season.id}-${ep}`)
+                  const airLabel = meta?.air_date ? formatAirDate(meta.air_date) : null
+                  const unaired = isUnaired(meta?.air_date ?? null)
                   return (
                     <button
                       key={ep}
                       onClick={() => handleEpisodeClick(season.id, ep, watched)}
+                      title={meta?.name ?? undefined}
                       className="flex items-center gap-2 px-3 py-2 rounded-sm text-left transition-colors"
                       style={{
                         background: watched ? 'var(--teal-tint-bg)' : 'rgba(255,255,255,0.04)',
                         border: watched ? '1px solid var(--teal-tint-border)' : '1px solid var(--border-subtle)',
+                        opacity: unaired && !watched ? 0.55 : 1,
                       }}
                     >
-                      <span className="text-sm font-medium" style={{ color: watched ? 'var(--teal-400)' : 'var(--text-muted)' }}>
+                      <span className="text-sm font-medium shrink-0" style={{ color: watched ? 'var(--teal-400)' : 'var(--text-muted)' }}>
                         E{ep}
                       </span>
+                      {meta?.name && (
+                        <span className="min-w-0 flex-1 truncate text-sm text-white">{meta.name}</span>
+                      )}
+                      {airLabel && (
+                        <span className="shrink-0 text-xs text-zinc-500">
+                          {unaired ? `Airs ${airLabel}` : airLabel}
+                        </span>
+                      )}
                     </button>
                   )
                 })}

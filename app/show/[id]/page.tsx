@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
 import { Check, Loader2 } from 'lucide-react'
-import type { Media, Season, EpisodeProgress, WatchEntry } from '@/types'
+import type { Media, Season, Episode, EpisodeProgress, WatchEntry } from '@/types'
 
 export default function ShowDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -17,6 +17,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   const [media, setMedia] = useState<Media | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
   const [progress, setProgress] = useState<EpisodeProgress[]>([])
+  const [episodes, setEpisodes] = useState<Episode[]>([])
   const [entry, setEntry] = useState<WatchEntry | null>(null)
   const [rating, setRating] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -55,6 +56,19 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
       setLoading(false)
     }
     load()
+  }, [id])
+
+  // Episode titles are fetched apart from the page load on purpose: the first
+  // read of a show fills them from TMDB one request per season, which is slow
+  // enough that blocking on it would delay the tracker. It renders E-numbers
+  // until this lands, and keeps doing so if it fails.
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/episodes/meta?media_id=${id}`)
+      .then((res) => (res.ok ? res.json() : { episodes: [] }))
+      .then((data) => { if (!cancelled) setEpisodes(data.episodes ?? []) })
+      .catch((err) => console.error(err))
+    return () => { cancelled = true }
   }, [id])
 
   // Tracking episodes never creates a watch_entries row, so the normal path —
@@ -227,7 +241,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
 
       <div>
         <h2 className="text-lg font-semibold tracking-tight mb-3">Episodes</h2>
-        <EpisodeTracker seasons={seasons} progress={progress} onProgressChange={handleProgressChange} />
+        <EpisodeTracker seasons={seasons} progress={progress} episodes={episodes} onProgressChange={handleProgressChange} />
       </div>
     </div>
   )

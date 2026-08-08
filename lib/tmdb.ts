@@ -3,6 +3,7 @@ import type { TmdbSearchResult, MediaType, TmdbCollectionDetails, TmdbCollection
 const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
 const BACKDROP = 'https://image.tmdb.org/t/p/w1280'
+const STILL = 'https://image.tmdb.org/t/p/w300' // episode stills are thumbnail-sized
 
 // TMDB responses are public, never user-specific. Windows are chosen by how volatile
 // the underlying data actually is: near-static detail/credits metadata gets a long
@@ -281,6 +282,64 @@ export async function fetchTmdbDetails(
       vote_average: d.vote_average,
     }
   }
+}
+
+// A raw episode from /tv/:id/season/:n.
+type TmdbEpisode = {
+  episode_number?: number
+  name?: string | null
+  overview?: string | null
+  air_date?: string | null
+  runtime?: number | null
+  still_path?: string | null
+}
+
+export interface TmdbSeasonEpisode {
+  episode_number: number
+  name: string | null
+  air_date: string | null
+  overview: string | null
+  runtime_mins: number | null
+  still_url: string | null
+}
+
+// TMDB writes an unknown air date as "" rather than omitting it, and air_date is
+// a `date` column — inserting "" is a 22007 invalid_datetime_format, so every
+// empty string has to become null before it reaches the database.
+function nullIfBlank(value: string | null | undefined): string | null {
+  const trimmed = (value ?? '').trim()
+  return trimmed === '' ? null : trimmed
+}
+
+export function mapSeasonEpisodes(data: { episodes?: TmdbEpisode[] }): TmdbSeasonEpisode[] {
+  return (data.episodes ?? [])
+    // A season's episode list is the one place numbering can be missing or
+    // zero (TMDB uses episode 0 for some specials); episode_progress keys on
+    // this number, so anything that is not a positive integer is unusable.
+    .filter((e): e is TmdbEpisode & { episode_number: number } =>
+      typeof e.episode_number === 'number' && Number.isInteger(e.episode_number) && e.episode_number > 0
+    )
+    .map((e) => ({
+      episode_number: e.episode_number,
+      name: nullIfBlank(e.name),
+      air_date: nullIfBlank(e.air_date),
+      overview: nullIfBlank(e.overview),
+      runtime_mins: typeof e.runtime === 'number' && e.runtime > 0 ? e.runtime : null,
+      still_url: e.still_path ? `${STILL}${e.still_path}` : null,
+    }))
+}
+
+// Per-episode metadata for one season. Same 7-day window as the other detail
+// endpoints: an episode's title and air date change about as often.
+export async function fetchTmdbSeasonEpisodes(
+  tmdbId: number,
+  seasonNumber: number
+): Promise<TmdbSeasonEpisode[]> {
+  const res = await fetch(apiUrl(`/tv/${tmdbId}/season/${seasonNumber}`), {
+    next: { revalidate: CACHE_7D },
+  })
+  if (!res.ok) throw new Error(`TMDB season failed: ${res.status}`)
+  return mapSeasonEpisodes(await res.json())
 }
 
 export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, page = 1): Promise<TmdbSearchResult[]> {

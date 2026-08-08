@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins } from '@/lib/tmdb'
+import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -311,5 +311,72 @@ describe('discoverStreaming', () => {
     expect(url.pathname).toBe('/3/discover/tv')
     expect(url.searchParams.get('sort_by')).toBe('first_air_date.desc')
     expect(url.searchParams.has('vote_count.gte')).toBe(false)
+  })
+})
+
+describe('mapSeasonEpisodes', () => {
+  it('maps the fields the tracker renders', () => {
+    const episodes = mapSeasonEpisodes({
+      episodes: [{
+        episode_number: 1,
+        name: 'Pilot',
+        overview: 'A chemistry teacher.',
+        air_date: '2008-01-20',
+        runtime: 58,
+        still_path: '/still.jpg',
+      }],
+    })
+
+    expect(episodes).toEqual([{
+      episode_number: 1,
+      name: 'Pilot',
+      air_date: '2008-01-20',
+      overview: 'A chemistry teacher.',
+      runtime_mins: 58,
+      still_url: 'https://image.tmdb.org/t/p/w300/still.jpg',
+    }])
+  })
+
+  it('turns TMDB\'s empty strings into nulls', () => {
+    // air_date is a `date` column: inserting "" is an invalid_datetime_format
+    // error, not an empty value, so this mapping is load-bearing.
+    const [ep] = mapSeasonEpisodes({
+      episodes: [{ episode_number: 1, name: '', overview: '  ', air_date: '', runtime: 0, still_path: null }],
+    })
+    expect(ep.air_date).toBeNull()
+    expect(ep.name).toBeNull()
+    expect(ep.overview).toBeNull()
+    expect(ep.runtime_mins).toBeNull()
+    expect(ep.still_url).toBeNull()
+  })
+
+  it('drops episodes that cannot be keyed on a number', () => {
+    // episode_progress keys on (season_id, episode_number), so episode 0 —
+    // TMDB uses it for some specials — has nowhere to go.
+    const episodes = mapSeasonEpisodes({
+      episodes: [
+        { episode_number: 0, name: 'Special' },
+        { name: 'Unnumbered' },
+        { episode_number: 2, name: 'Real' },
+      ],
+    })
+    expect(episodes.map(e => e.episode_number)).toEqual([2])
+  })
+
+  it('handles a season payload with no episodes at all', () => {
+    expect(mapSeasonEpisodes({})).toEqual([])
+  })
+})
+
+describe('fetchTmdbSeasonEpisodes', () => {
+  it('requests the season endpoint', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ episodes: [] }) })
+    await fetchTmdbSeasonEpisodes(1396, 2)
+    expect(new URL(mockFetch.mock.calls[0][0]).pathname).toBe('/3/tv/1396/season/2')
+  })
+
+  it('throws when TMDB rejects the request', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
+    await expect(fetchTmdbSeasonEpisodes(1396, 99)).rejects.toThrow('TMDB season failed: 404')
   })
 })
