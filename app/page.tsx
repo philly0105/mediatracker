@@ -205,7 +205,7 @@ export default async function DashboardPage() {
             <MonitorPlay className="w-12 h-12 text-zinc-600 mx-auto mb-4 opacity-50" />
             <p className="text-zinc-400 text-base font-medium font-sans">Nothing watched yet.</p>
             <Link
-              href="/search"
+              href="/?search=1"
               className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[var(--accent)] hover:text-[var(--accent)] transition-opacity hover:opacity-80 bg-[var(--accent)]/10 px-4 py-2 rounded-sm border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20"
             >
               <span>Start searching</span>

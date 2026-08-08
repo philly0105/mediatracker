@@ -1,14 +1,19 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { useModal } from '@/lib/useModal'
 
 // SearchOverlay refreshes the route after logging an item; shortcut wiring just
-// needs the call to exist, not to do anything.
+// needs the call to exist, not to do anything. The ?search=1 param path reads
+// search params and rewrites the URL, so the mock provides those too.
+let mockSearch = ''
 const refresh = vi.fn()
+const replace = vi.fn()
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh }),
+  useRouter: () => ({ refresh, replace }),
+  useSearchParams: () => new URLSearchParams(mockSearch),
+  usePathname: () => '/',
 }))
 
 // The overlay pulls the user's watched/watchlist ids from Supabase purely to
@@ -36,6 +41,12 @@ function TestModal({ onClose }: { onClose: () => void }) {
 }
 
 describe('KeyboardShortcuts', () => {
+  beforeEach(() => {
+    mockSearch = ''
+    replace.mockReset()
+    refresh.mockReset()
+  })
+
   it('opens the search overlay on Cmd/Ctrl+K', () => {
     render(<KeyboardShortcuts />)
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
@@ -101,5 +112,18 @@ describe('KeyboardShortcuts', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('opens the overlay and strips the ?search=1 param', () => {
+    mockSearch = 'search=1'
+    render(<KeyboardShortcuts />)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(replace).toHaveBeenCalledWith('/', { scroll: false })
+  })
+
+  it('does not open the overlay when the param is absent', () => {
+    render(<KeyboardShortcuts />)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(replace).not.toHaveBeenCalled()
   })
 })

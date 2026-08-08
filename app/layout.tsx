@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Outfit } from 'next/font/google'
 import './globals.css'
 import { createClient } from '@/lib/supabase/server'
@@ -39,7 +40,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         {/* Layout wrapper */}
         <ToastProvider>
-          <KeyboardShortcuts />
+          <Suspense>
+            <KeyboardShortcuts />
+          </Suspense>
           <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
             {user && <Sidebar userEmail={user.email} />}
             

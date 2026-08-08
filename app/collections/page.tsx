@@ -62,7 +62,7 @@ export default async function CollectionsPage() {
           <p className="text-zinc-500 text-sm italic pl-1">
             No collections yet. Log franchise movies to discover your series.{' '}
             <Link
-              href="/search"
+              href="/?search=1"
               className="text-[var(--accent)] hover:underline transition-all not-italic"
             >
               Search to add one.

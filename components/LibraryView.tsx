@@ -16,6 +16,7 @@ import {
 } from '@/lib/libraryFilters'
 import { useDeferredAction } from '@/lib/useDeferredAction'
 import { useUrlFilters } from '@/lib/useUrlFilters'
+import { openSearchOverlay } from '@/lib/searchOverlayBus'
 import { useToast } from '@/components/ToastProvider'
 
 // Matches the watchlist's page size.
@@ -289,9 +290,13 @@ export default function LibraryView() {
           {entries.length === 0 && (
             <p className="text-zinc-400">
               No {typeFilter === 'movie' ? 'movies' : typeFilter === 'show' ? 'shows' : 'titles'} logged yet.{' '}
-              <a href="/search" className="text-white underline underline-offset-2">
+              <button
+                type="button"
+                onClick={openSearchOverlay}
+                className="text-white underline underline-offset-2"
+              >
                 Search to add one.
-              </a>
+              </button>
             </p>
           )}
           {entries.length > 0 && filteredEntries.length === 0 && (

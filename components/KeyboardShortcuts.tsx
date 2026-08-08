@@ -1,10 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { isAnyModalOpen } from '@/lib/useModal'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import SearchOverlay from '@/components/SearchOverlay'
 
 export default function KeyboardShortcuts() {
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -46,6 +50,22 @@ export default function KeyboardShortcuts() {
       window.removeEventListener(SEARCH_OVERLAY_EVENT, handleSearchOverlayEvent)
     }
   }, [open])
+
+  // ?search=1 is how the retired /search route (and server-rendered links
+  // that can't call openSearchOverlay) summon the overlay. Consume the param:
+  // open, then strip it from the URL so refresh/back don't reopen.
+  useEffect(() => {
+    if (searchParams.get('search') !== '1') return
+    // Opening on a param is the one intentional setState-in-effect; the effect
+    // is keyed to searchParams so it re-runs exactly when the param appears.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!isAnyModalOpen() && !open) setOpen(true)
+    const params = new URLSearchParams(searchParams)
+    params.delete('search')
+    const qs = params.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   return open ? <SearchOverlay onClose={() => setOpen(false)} /> : null
 }
