@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import LibraryView from '../LibraryView'
 import { ToastProvider } from '../ToastProvider'
@@ -81,63 +81,99 @@ describe('LibraryView', () => {
     refresh.mockClear()
     mockFetch.mockReset()
     global.fetch = mockFetch
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // No confirm() spy: deleting no longer prompts, it offers an Undo instead.
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
-  it('removes a deleted row without refetching the list', async () => {
+  function deleteCalls() {
+    return mockFetch.mock.calls.filter(([, init]) => init?.method === 'DELETE')
+  }
+
+  it('removes a deleted row immediately and commits the delete after the undo window', async () => {
+    vi.useFakeTimers()
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ entries: [entry('1', 'Heat'), entry('2', 'Sicario')] }),
     })
 
     renderLibrary()
-    await screen.findByText('Heat')
-    expect(screen.getByText('Sicario')).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
     expect(screen.getByText('2 watched')).toBeInTheDocument()
 
-    // The DELETE response. If the component were still relying on
-    // router.refresh(), the row would survive this and the test would fail.
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) })
-
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
     await act(async () => {
       fireEvent.click(screen.getAllByTitle('Delete entry')[0])
     })
 
-    await waitFor(() => {
-      expect(screen.queryByText('Heat')).not.toBeInTheDocument()
-    })
+    // Gone from the UI at once, but nothing has been sent yet — that is what
+    // makes Undo a cancellation rather than a reconstruction.
+    expect(screen.queryByText('Heat')).not.toBeInTheDocument()
     expect(screen.getByText('Sicario')).toBeInTheDocument()
     expect(screen.getByText('1 watched')).toBeInTheDocument()
+    expect(deleteCalls()).toHaveLength(0)
 
-    // One GET on mount, one DELETE. No refetch of the list.
-    expect(mockFetch).toHaveBeenCalledTimes(2)
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+    expect(deleteCalls()).toHaveLength(1)
+    expect(JSON.parse(String(deleteCalls()[0][1]?.body))).toEqual({ id: '1' })
+
+    vi.useRealTimers()
   })
 
-  it('keeps the row and stops the spinner when the delete fails', async () => {
+  it('undo restores the row and never sends the delete', async () => {
+    vi.useFakeTimers()
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ entries: [entry('1', 'Heat')] }),
     })
 
     renderLibrary()
-    await screen.findByText('Heat')
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
 
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) })
-
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
     await act(async () => {
       fireEvent.click(screen.getAllByTitle('Delete entry')[0])
     })
+    expect(screen.queryByText('Heat')).not.toBeInTheDocument()
 
-    // Row stays, an error is announced, and the button is interactive again —
-    // a non-ok response used to leave isDeleting stuck on forever.
-    expect(screen.getByText('Heat')).toBeInTheDocument()
-    await screen.findByText('Could not delete that entry.')
-    await waitFor(() => {
-      expect(screen.getAllByTitle('Delete entry')[0]).not.toBeDisabled()
+    await act(async () => {
+      fireEvent.click(screen.getByText('Undo'))
     })
+
+    expect(screen.getByText('Heat')).toBeInTheDocument()
+    expect(screen.getByText('1 watched')).toBeInTheDocument()
+
+    // Well past the window: the cancelled request must never fire.
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
+    expect(deleteCalls()).toHaveLength(0)
+
+    vi.useRealTimers()
+  })
+
+  it('puts the row back when the deferred delete fails', async () => {
+    vi.useFakeTimers()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    mockFetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
+    await act(async () => {
+      fireEvent.click(screen.getAllByTitle('Delete entry')[0])
+    })
+    expect(screen.queryByText('Heat')).not.toBeInTheDocument()
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000) })
+
+    // The server still has it, so the UI must not keep pretending otherwise.
+    expect(screen.getByText('Heat')).toBeInTheDocument()
+    expect(screen.getByText('Could not remove Heat.')).toBeInTheDocument()
+
+    vi.useRealTimers()
   })
 })

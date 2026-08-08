@@ -10,7 +10,6 @@ import { Pencil, Trash2, Loader2 } from 'lucide-react'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
 import { MediaRow } from './ui/MediaRow'
-import { useToast } from './ToastProvider'
 
 interface Props {
   entry: WatchEntry
@@ -33,7 +32,6 @@ export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated
   const [tmdbRating, setTmdbRating] = useState<number | null>(media.vote_average ?? null)
 
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
-  const { toast } = useToast()
 
   useEffect(() => {
     if (tmdbRating === null) {
@@ -57,26 +55,13 @@ export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated
     })
   }
 
-  async function handleDelete(e: React.MouseEvent) {
+  // The owner performs the delete so it can defer it behind an Undo. There is
+  // no confirm() any more — an undo you can ignore beats a dialog you have to
+  // dismiss every time.
+  function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirm('Are you sure you want to delete this entry?')) return
     setIsDeleting(true)
-    try {
-      const res = await fetch('/api/watch', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: entry.id }),
-      })
-      // A non-ok response used to fall through every branch: nothing cleared
-      // isDeleting, so the row kept spinning forever with no explanation.
-      if (!res.ok) throw new Error('Failed to delete entry')
-      toast(`Removed ${media.title}.`, { tone: 'success' })
-      onDeleted?.(entry.id)
-    } catch (err) {
-      console.error(err)
-      toast('Could not delete that entry.', { tone: 'error' })
-      setIsDeleting(false)
-    }
+    onDeleted?.(entry.id)
   }
 
   return (

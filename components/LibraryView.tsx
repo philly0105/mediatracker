@@ -8,6 +8,8 @@ import { FilterPills } from '@/components/FilterPills'
 import { Search, RefreshCw, Loader2 } from 'lucide-react'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
+import { useDeferredAction } from '@/lib/useDeferredAction'
+import { useToast } from '@/components/ToastProvider'
 
 interface LibraryViewProps {
   type: 'movie' | 'show'
@@ -28,6 +30,8 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
   const [sortBy, setSortBy] = useState<WatchEntrySort>('recent')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const { schedule, cancel } = useDeferredAction()
+  const { toast } = useToast()
 
   const fetchEntries = useCallback(
     () =>
@@ -50,11 +54,44 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
       .finally(() => setRefreshing(false))
   }, [fetchEntries])
 
-  // Drop the row locally rather than refetching: the delete already succeeded,
-  // and a round-trip would leave the card on screen in the meantime.
+  // Deleting drops the row immediately and defers the write, so Undo just
+  // cancels the pending request rather than trying to reconstruct the entry.
   const handleEntryDeleted = useCallback((entryId: string) => {
+    const removed = entries.find((entry) => entry.id === entryId)
+    if (!removed) return
     setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
-  }, [])
+
+    schedule(entryId, async () => {
+      try {
+        const res = await fetch('/api/watch', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: entryId }),
+        })
+        if (!res.ok) throw new Error('Failed to delete entry')
+      } catch (err) {
+        // Put it back — the row is gone from the UI but the server still has it.
+        console.error(err)
+        setEntries((prev) =>
+          prev.some((entry) => entry.id === entryId) ? prev : [...prev, removed]
+        )
+        toast(`Could not remove ${removed.media?.title ?? 'that entry'}.`, { tone: 'error' })
+      }
+    })
+
+    toast(`Removed ${removed.media?.title ?? 'entry'}.`, {
+      tone: 'success',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!cancel(entryId)) return
+          setEntries((prev) =>
+            prev.some((entry) => entry.id === entryId) ? prev : [...prev, removed]
+          )
+        },
+      },
+    })
+  }, [entries, schedule, cancel, toast])
 
   // An edit can change rating, review or watched_at — any of which feeds the
   // active sort — so re-pull rather than trying to patch the row in place.
