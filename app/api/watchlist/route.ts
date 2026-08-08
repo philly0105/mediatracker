@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type')
   const genre = searchParams.get('genre')
   const priority = searchParams.get('priority')
+  const q = searchParams.get('q')
+  const sort = searchParams.get('sort')
   
   const offset = (page - 1) * limit
 
@@ -62,10 +64,21 @@ export async function GET(request: NextRequest) {
   if (priority) {
     query = query.eq('priority', priority)
   }
+  // Free-text search on the embedded media title; the `!inner` join already in
+  // the select means a filter here excludes non-matching rows rather than just
+  // nulling out their media.
+  if (q && q.trim()) {
+    query = query.ilike('media.title', `%${q.trim()}%`)
+  }
 
-  const { data, error, count } = await query
-    .order('added_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+  // Ordering the parent rows by an embedded to-one column uses PostgREST's
+  // `media(title)` order syntax — postgrest-js passes the string through.
+  const { data, error, count } = await (
+    sort === 'oldest' ? query.order('added_at', { ascending: true })
+    : sort === 'title' ? query.order('media(title)', { ascending: true })
+    : sort === 'year' ? query.order('media(release_year)', { ascending: false })
+    : query.order('added_at', { ascending: false })
+  ).range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ items: data, total: count ?? 0, page, limit }, { status: 200 })

@@ -3,7 +3,7 @@ import Image from 'next/image'
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices, Search } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaActions } from '@/lib/useMediaActions'
@@ -13,6 +13,7 @@ import SelectableOverlay from '@/components/SelectableOverlay'
 import TonightPickModal from '@/components/TonightPickModal'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
 import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
@@ -26,7 +27,7 @@ const PRIORITY_ORDER: Array<keyof typeof PRIORITY_LABELS> = ['must_watch', 'want
 
 // Filter state mirrored into the URL so a filtered view is bookmarkable and
 // survives reloads; params are omitted from the URL while at their default.
-const WATCHLIST_DEFAULTS = { type: 'all', genre: 'All' }
+const WATCHLIST_DEFAULTS = { type: 'all', genre: 'All', sort: 'added', q: '' }
 
 function WatchlistContent() {
   const [filters, setFilter] = useUrlFilters(WATCHLIST_DEFAULTS)
@@ -35,6 +36,11 @@ function WatchlistContent() {
   // free-vocabulary: the facet effect below corrects unknown values.
   const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
   const genreFilter = filters.genre
+  // Free-text `q` and enumerated `sort` are read straight off the URL mirror;
+  // the former is debounced by useUrlFilters, the latter is validated inside
+  // the API route (anything unknown falls back to 'added').
+  const searchQuery = filters.q
+  const sortOrder = filters.sort
   const [availableGenres, setAvailableGenres] = useState<string[]>([])
   const [showPick, setShowPick] = useState(false)
   const [refreshSignals, setRefreshSignals] = useState<Record<WatchlistPriority, number>>({
@@ -103,7 +109,15 @@ function WatchlistContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-[180px]">
+            <Input
+              icon={<Search className="w-4 h-4" />}
+              placeholder="Search your watchlist..."
+              value={searchQuery}
+              onChange={(e) => setFilter('q', e.target.value)}
+            />
+          </div>
           <select
             value={typeFilter}
             onChange={(e) => setFilter('type', e.target.value)}
@@ -123,6 +137,17 @@ function WatchlistContent() {
             {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
           </select>
 
+          <select
+            value={sortOrder}
+            onChange={(e) => setFilter('sort', e.target.value)}
+            className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[140px]"
+          >
+            <option value="added" className="bg-[var(--bg-void)]">Recently Added</option>
+            <option value="oldest" className="bg-[var(--bg-void)]">Oldest First</option>
+            <option value="title" className="bg-[var(--bg-void)]">Title A–Z</option>
+            <option value="year" className="bg-[var(--bg-void)]">Release Year</option>
+          </select>
+
           <Button onClick={() => setShowPick(true)}>
             <Dices className="w-4 h-4" />
             <span>Pick for me</span>
@@ -137,6 +162,8 @@ function WatchlistContent() {
             priority={priority}
             typeFilter={typeFilter}
             genreFilter={genreFilter}
+            searchQuery={searchQuery}
+            sortOrder={sortOrder}
             refreshSignal={refreshSignals[priority]}
             onPriorityChanged={handlePriorityChanged}
           />
@@ -161,12 +188,16 @@ function WatchlistSection({
   priority,
   typeFilter,
   genreFilter,
+  searchQuery,
+  sortOrder,
   refreshSignal,
   onPriorityChanged,
 }: {
   priority: WatchlistPriority;
   typeFilter: 'all' | 'movie' | 'show';
   genreFilter: string;
+  searchQuery: string;
+  sortOrder: string;
   refreshSignal: number;
   onPriorityChanged: (toPriority: WatchlistPriority) => void;
 }) {
@@ -196,7 +227,7 @@ function WatchlistSection({
     setHasMore(true)
     fetchPage(1, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priority, typeFilter, genreFilter, refreshSignal])
+  }, [priority, typeFilter, genreFilter, searchQuery, sortOrder, refreshSignal])
 
   async function fetchPage(targetPage: number, isInitial = false) {
     if (isInitial) setLoading(true)
@@ -209,6 +240,8 @@ function WatchlistSection({
       params.set('limit', '24')
       if (typeFilter !== 'all') params.set('type', typeFilter)
       if (genreFilter !== 'All') params.set('genre', genreFilter)
+      if (searchQuery.trim() !== '') params.set('q', searchQuery)
+      if (sortOrder !== 'added') params.set('sort', sortOrder)
 
       const res = await fetch(`/api/watchlist?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to load')

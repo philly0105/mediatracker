@@ -61,6 +61,12 @@ export default function SearchOverlay({ onClose }: Props) {
   // destinations instead, so the palette doubles as quick navigation.
   const showQuickNav = query.trim().length < 2
 
+  // Typing filters destinations too — prefix match keeps it to what the user
+  // is plausibly steering at ("sta" → Stats) without drowning TMDB results.
+  const matchedPages = showQuickNav
+    ? []
+    : QUICK_NAV.filter((page) => page.name.toLowerCase().startsWith(query.trim().toLowerCase()))
+
   function navigateTo(href: string) {
     router.push(href)
     handleClose()
@@ -96,7 +102,7 @@ export default function SearchOverlay({ onClose }: Props) {
   }
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const itemCount = showQuickNav ? QUICK_NAV.length : results.length
+    const itemCount = showQuickNav ? QUICK_NAV.length : matchedPages.length + results.length
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (itemCount === 0) return
@@ -113,10 +119,18 @@ export default function SearchOverlay({ onClose }: Props) {
           navigateTo(active.href)
         }
       } else {
-        const active = results[activeIndex]
-        if (active) {
-          e.preventDefault()
-          setSelected(active)
+        if (activeIndex < matchedPages.length) {
+          const page = matchedPages[activeIndex]
+          if (page) {
+            e.preventDefault()
+            navigateTo(page.href)
+          }
+        } else {
+          const active = results[activeIndex - matchedPages.length]
+          if (active) {
+            e.preventDefault()
+            setSelected(active)
+          }
         }
       }
     }
@@ -178,23 +192,45 @@ export default function SearchOverlay({ onClose }: Props) {
               })}
             </>
           )}
+          {!showQuickNav && matchedPages.length > 0 && (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Pages</div>
+              {matchedPages.map((page, i) => {
+                const Icon = page.icon
+                return (
+                  <button
+                    key={page.href}
+                    type="button"
+                    data-index={i}
+                    onMouseEnter={() => setActiveIndex(i)}
+                    onClick={() => navigateTo(page.href)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                  >
+                    <Icon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                    <span className="text-sm text-zinc-300">{page.name}</span>
+                  </button>
+                )
+              })}
+            </>
+          )}
           {query.trim().length >= 2 && loading && (
             <div className="py-8 text-sm text-zinc-600 text-center">Searching…</div>
           )}
-          {query.trim().length >= 2 && !loading && results.length === 0 && (
+          {query.trim().length >= 2 && !loading && results.length === 0 && matchedPages.length === 0 && (
             <div className="py-8 text-sm text-zinc-600 text-center">No matches for &ldquo;{query}&rdquo;.</div>
           )}
           {results.map((r, i) => {
+            const listIndex = i + matchedPages.length
             const watched = watchedIds.has(r.tmdb_id)
             const listed = watchlistIds.has(r.tmdb_id)
             return (
               <button
                 key={`${r.type}-${r.tmdb_id}`}
                 type="button"
-                data-index={i}
-                onMouseEnter={() => setActiveIndex(i)}
+                data-index={listIndex}
+                onMouseEnter={() => setActiveIndex(listIndex)}
                 onClick={() => setSelected(r)}
-                className={`flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                className={`flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${listIndex === activeIndex ? 'bg-white/[0.06]' : ''}`}
               >
                 {r.poster_url ? (
                   <Image
