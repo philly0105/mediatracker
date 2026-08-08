@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     let isWatched = false
     let isWatchlisted = false
     let isFollowed = false
+    let watch_entry: { id: string; rating: number | null } | null = null
     
     const { data: media } = await supabase
       .from('media')
@@ -32,10 +33,14 @@ export async function GET(request: NextRequest) {
 
     if (media) {
       const [watchRes, watchlistRes] = await Promise.all([
-        supabase.from('watch_entries').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
+        // The latest row (rewatches included) is what the modal rates in place.
+        supabase.from('watch_entries').select('id, rating').eq('user_id', user.id).eq('media_id', media.id).order('watched_at', { ascending: false }).limit(1),
         supabase.from('watchlist_items').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
       ])
       isWatched = !!(watchRes.data && watchRes.data.length > 0)
+      if (watchRes.data && watchRes.data.length > 0) {
+        watch_entry = { id: watchRes.data[0].id, rating: watchRes.data[0].rating ?? null }
+      }
       isWatchlisted = !!(watchlistRes.data && watchlistRes.data.length > 0)
       if (type === 'show') {
         const { data: followData } = await supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).maybeSingle()
@@ -49,6 +54,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...details,
       media_id: media?.id ?? null,
+      watch_entry,
       isWatched,
       isWatchlisted,
       isFollowed,

@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 import SimilarModal from './SimilarModal'
+import RatingStars from './RatingStars'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
 import { useModal } from '@/lib/useModal'
@@ -58,6 +59,7 @@ interface FullDetails {
   isWatched: boolean
   isWatchlisted: boolean
   isFollowed: boolean
+  watch_entry: { id: string; rating: number | null } | null
   trailer_url: string | null
   watch_providers?: any
   vote_average?: number | null
@@ -78,6 +80,7 @@ export default function MediaInfoModal({
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [userRating, setUserRating] = useState<number | null>(null)
   const [showSimilar, setShowSimilar] = useState(false)
   const { toast } = useToast()
   const { containerRef } = useModal(onClose)
@@ -86,35 +89,48 @@ export default function MediaInfoModal({
     setMounted(true)
   }, [])
 
-  useEffect(() => {
-    async function fetchDetails() {
-      try {
-        setLoading(true)
-        const res = await fetch(`/api/tmdb/details?id=${item.tmdb_id}&type=${item.type}`)
-        if (!res.ok) throw new Error('Failed to load movie details')
-        const data = await res.json()
-        setDetails({
-          imdb_id: data.imdb_id ?? null,
-          media_id: data.media_id ?? null,
-          runtime_mins: data.runtime_mins ?? null,
-          director: data.director ?? null,
-          cast_members: data.cast_members ?? [],
-          genres: data.genres ?? [],
-          isWatched: data.isWatched ?? false,
-          isWatchlisted: data.isWatchlisted ?? false,
-          isFollowed: data.isFollowed ?? false,
-          trailer_url: data.trailer_url ?? null,
-          watch_providers: data.watch_providers ?? null,
-          vote_average: data.vote_average ?? null,
-        })
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+  // Fetched on mount and re-run after a watch/rewatch so watch_entry appears
+  // without reopening the modal. A `refreshing` call keeps the existing content
+  // on screen — only the first load shows the shimmer.
+  // `loading` starts true, so the first load never has to set it — which also
+  // keeps the mount effect free of synchronous setState.
+  const loadDetails = useCallback(async (refreshing = false) => {
+    try {
+      const res = await fetch(`/api/tmdb/details?id=${item.tmdb_id}&type=${item.type}`)
+      if (!res.ok) throw new Error('Failed to load movie details')
+      const data = await res.json()
+      setDetails({
+        imdb_id: data.imdb_id ?? null,
+        media_id: data.media_id ?? null,
+        runtime_mins: data.runtime_mins ?? null,
+        director: data.director ?? null,
+        cast_members: data.cast_members ?? [],
+        genres: data.genres ?? [],
+        isWatched: data.isWatched ?? false,
+        isWatchlisted: data.isWatchlisted ?? false,
+        isFollowed: data.isFollowed ?? false,
+        watch_entry: data.watch_entry ?? null,
+        trailer_url: data.trailer_url ?? null,
+        watch_providers: data.watch_providers ?? null,
+        vote_average: data.vote_average ?? null,
+      })
+      setUserRating(data.watch_entry?.rating ?? null)
+    } catch (err: any) {
+      // A failed refresh keeps the content already on screen; only the first
+      // load has nothing better to show than the error state.
+      if (refreshing) console.error(err)
+      else setError(err.message)
+    } finally {
+      if (!refreshing) setLoading(false)
     }
-    fetchDetails()
   }, [item.tmdb_id, item.type])
+
+  useEffect(() => {
+    async function run() {
+      await loadDetails()
+    }
+    run()
+  }, [loadDetails])
 
   async function handleWatchlistClick() {
     try {
@@ -142,6 +158,8 @@ export default function MediaInfoModal({
           : `Logged ${item.title} as watched.`,
         { tone: 'success' }
       )
+      // Refresh so watch_entry (and the rating row) appears without reopening.
+      loadDetails(true)
       // Modal stays open after action
     } catch (err) {
       console.error(err)
@@ -158,6 +176,25 @@ export default function MediaInfoModal({
       }
     } finally {
       setActioning(null)
+    }
+  }
+
+  async function handleRatingChange(newRating: number) {
+    if (!details?.watch_entry) return
+    const previous = userRating
+    // Optimistic: the stars are their own feedback, so no success toast.
+    setUserRating(newRating)
+    try {
+      const res = await fetch('/api/watch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: details.watch_entry.id, rating: newRating }),
+      })
+      if (!res.ok) throw new Error('Failed to save rating')
+    } catch (err) {
+      console.error(err)
+      setUserRating(previous)
+      toast('Could not save your rating.', { tone: 'error' })
     }
   }
 
@@ -379,6 +416,21 @@ export default function MediaInfoModal({
           </div>
 
           <hr className="border-white/5" />
+
+          {/* Your Rating — only once there's a watch entry to rate against. */}
+          {details?.isWatched && details.watch_entry && (
+            <div className="space-y-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Your Rating
+              </h3>
+              <div className="flex items-center gap-3">
+                <RatingStars value={userRating} onChange={handleRatingChange} />
+                {userRating != null && (
+                  <span className="text-xs text-zinc-500">{userRating} / 5</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Watchlist Priority Switcher */}
           {currentPriority && (

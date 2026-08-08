@@ -45,14 +45,15 @@ const mockFetch = vi.fn()
 
 // The modal loads /api/tmdb/details on mount; isWatched drives which primary
 // button renders.
-function mockDetails(isWatched: boolean) {
+function mockDetails(opts: { isWatched: boolean; watchEntry?: { id: string; rating: number | null } | null }) {
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({
       ...item,
-      isWatched,
+      isWatched: opts.isWatched,
       isWatchlisted: false,
       isFollowed: false,
+      watch_entry: opts.watchEntry ?? null,
       director: null,
       cast_members: [],
       genres: [],
@@ -88,7 +89,7 @@ describe('MediaInfoModal rewatch flow', () => {
   })
 
   it('offers a rewatch instead of an error when the entry already exists', async () => {
-    mockDetails(false)
+    mockDetails({ isWatched: false })
     const onMarkAsWatched = vi
       .fn()
       .mockRejectedValueOnce(new MediaActionError('Already in your watch history', 409))
@@ -119,7 +120,7 @@ describe('MediaInfoModal rewatch flow', () => {
   })
 
   it('surfaces a non-409 failure as an error and does not claim success', async () => {
-    mockDetails(false)
+    mockDetails({ isWatched: false })
     const onMarkAsWatched = vi
       .fn()
       .mockRejectedValue(new MediaActionError('Database exploded', 500))
@@ -137,7 +138,7 @@ describe('MediaInfoModal rewatch flow', () => {
   })
 
   it('renders an enabled Log rewatch action for something already watched', async () => {
-    mockDetails(true)
+    mockDetails({ isWatched: true })
     const onMarkAsWatched = vi.fn().mockResolvedValue(undefined)
 
     renderModal(onMarkAsWatched)
@@ -153,5 +154,32 @@ describe('MediaInfoModal rewatch flow', () => {
     await waitFor(() => {
       expect(onMarkAsWatched).toHaveBeenCalledWith({ rewatch: true })
     })
+  })
+
+  it('renders the rating stars once a watch entry exists', async () => {
+    mockDetails({ isWatched: true, watchEntry: { id: 'entry-1', rating: 3.5 } })
+    renderModal(vi.fn().mockResolvedValue(undefined))
+
+    await screen.findByText('Your Rating')
+    expect(screen.getByText('3.5 / 5')).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-half]')).toHaveLength(10)
+  })
+
+  it('PATCHes /api/watch with the entry id when a star is clicked', async () => {
+    mockDetails({ isWatched: true, watchEntry: { id: 'entry-1', rating: null } })
+    renderModal(vi.fn().mockResolvedValue(undefined))
+
+    await screen.findByText('Your Rating')
+    await act(async () => {
+      fireEvent.click(document.querySelector('[data-half="3.0"]')!)
+    })
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/watch',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ id: 'entry-1', rating: 3 }),
+      })
+    )
   })
 })
