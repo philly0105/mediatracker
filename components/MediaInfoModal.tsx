@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
@@ -82,24 +82,34 @@ export default function MediaInfoModal({
   const [error, setError] = useState<string | null>(null)
   const [userRating, setUserRating] = useState<number | null>(null)
   const [showSimilar, setShowSimilar] = useState(false)
+  const [ratingPulse, setRatingPulse] = useState(false)
   const { toast } = useToast()
   const { containerRef } = useModal(onClose)
+  const ratingRowRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // The pulse is a one-shot cue: once fired, a timeout turns it back off so the
+  // ring doesn't linger on the rating row.
+  useEffect(() => {
+    if (!ratingPulse) return
+    const t = setTimeout(() => setRatingPulse(false), 1600)
+    return () => clearTimeout(t)
+  }, [ratingPulse])
 
   // Fetched on mount and re-run after a watch/rewatch so watch_entry appears
   // without reopening the modal. A `refreshing` call keeps the existing content
   // on screen — only the first load shows the shimmer.
   // `loading` starts true, so the first load never has to set it — which also
   // keeps the mount effect free of synchronous setState.
-  const loadDetails = useCallback(async (refreshing = false) => {
+  const loadDetails = useCallback(async (refreshing = false): Promise<FullDetails | null> => {
     try {
       const res = await fetch(`/api/tmdb/details?id=${item.tmdb_id}&type=${item.type}`)
       if (!res.ok) throw new Error('Failed to load movie details')
       const data = await res.json()
-      setDetails({
+      const fresh: FullDetails = {
         imdb_id: data.imdb_id ?? null,
         media_id: data.media_id ?? null,
         runtime_mins: data.runtime_mins ?? null,
@@ -113,13 +123,16 @@ export default function MediaInfoModal({
         trailer_url: data.trailer_url ?? null,
         watch_providers: data.watch_providers ?? null,
         vote_average: data.vote_average ?? null,
-      })
+      }
+      setDetails(fresh)
       setUserRating(data.watch_entry?.rating ?? null)
+      return fresh
     } catch (err: any) {
       // A failed refresh keeps the content already on screen; only the first
       // load has nothing better to show than the error state.
       if (refreshing) console.error(err)
       else setError(err.message)
+      return null
     } finally {
       if (!refreshing) setLoading(false)
     }
@@ -152,14 +165,20 @@ export default function MediaInfoModal({
       setActioning('watched')
       await onMarkAsWatched(opts)
       if (details) setDetails({ ...details, isWatched: true })
-      toast(
-        opts?.rewatch
-          ? `Logged a rewatch of ${item.title}.`
-          : `Logged ${item.title} as watched.`,
-        { tone: 'success' }
-      )
-      // Refresh so watch_entry (and the rating row) appears without reopening.
-      loadDetails(true)
+      // The refetch is awaited so the fresh watch_entry (and its id, for Undo)
+      // exists before the toast points the user at the rating row.
+      const fresh = await loadDetails(true)
+      if (opts?.rewatch) {
+        toast(`Logged a rewatch of ${item.title}.`, { tone: 'success' })
+      } else {
+        const entryId = fresh?.watch_entry?.id
+        toast(`Logged ${item.title} as watched — rate it below.`, {
+          tone: 'success',
+          ...(entryId ? { action: { label: 'Undo', onClick: () => undoWatch(entryId) } } : {}),
+        })
+        ratingRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setRatingPulse(true)
+      }
       // Modal stays open after action
     } catch (err) {
       console.error(err)
@@ -176,6 +195,25 @@ export default function MediaInfoModal({
       }
     } finally {
       setActioning(null)
+    }
+  }
+
+  // Undo for a first log only — a rewatch's new entry id is not recoverable
+  // from the details endpoint, so rewatches never offer this.
+  async function undoWatch(entryId: string) {
+    try {
+      const res = await fetch('/api/watch', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: entryId }),
+      })
+      if (!res.ok) throw new Error('Failed to undo')
+      setUserRating(null)
+      await loadDetails(true)
+      toast(`Removed ${item.title} from your history.`, { tone: 'info' })
+    } catch (err) {
+      console.error(err)
+      toast('Could not undo — the entry is still logged.', { tone: 'error' })
     }
   }
 
@@ -419,7 +457,10 @@ export default function MediaInfoModal({
 
           {/* Your Rating — only once there's a watch entry to rate against. */}
           {details?.isWatched && details.watch_entry && (
-            <div className="space-y-2.5">
+            <div
+              ref={ratingRowRef}
+              className={`space-y-2.5 rounded-[var(--radius-md)] transition-shadow duration-500 ${ratingPulse ? 'ring-2 ring-[var(--accent)]/60 ring-offset-4 ring-offset-transparent' : ''}`}
+            >
               <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                 Your Rating
               </h3>

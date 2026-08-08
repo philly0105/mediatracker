@@ -82,6 +82,9 @@ describe('MediaInfoModal rewatch flow', () => {
   beforeEach(() => {
     mockFetch.mockReset()
     global.fetch = mockFetch
+    // The success path scrolls the rating row into view; jsdom doesn't
+    // implement scrollIntoView, so stub it (same as KeyboardShortcuts.test.tsx).
+    HTMLElement.prototype.scrollIntoView = vi.fn()
   })
 
   afterEach(() => {
@@ -181,5 +184,65 @@ describe('MediaInfoModal rewatch flow', () => {
         body: JSON.stringify({ id: 'entry-1', rating: 3 }),
       })
     )
+  })
+
+  it('shows a success toast pointing at the rating row with an Undo action for a non-rewatch log', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...item, isWatched: false, isWatchlisted: false, isFollowed: false, watch_entry: null, director: null, cast_members: [], genres: [], runtime_mins: 170, trailer_url: null, watch_providers: null, vote_average: 8.3 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...item, isWatched: true, isWatchlisted: false, isFollowed: false, watch_entry: { id: 'entry-1', rating: null }, director: null, cast_members: [], genres: [], runtime_mins: 170, trailer_url: null, watch_providers: null, vote_average: 8.3 }),
+      })
+    renderModal(vi.fn().mockResolvedValue(undefined))
+
+    const button = await screen.findByText('Mark as Watched')
+    await act(async () => {
+      fireEvent.click(button)
+    })
+
+    await screen.findByText('Logged Heat as watched — rate it below.')
+    expect(screen.getByText('Undo')).toBeInTheDocument()
+  })
+
+  it('Undo issues DELETE /api/watch with the entry id and confirms with an info toast', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...item, isWatched: false, isWatchlisted: false, isFollowed: false, watch_entry: null, director: null, cast_members: [], genres: [], runtime_mins: 170, trailer_url: null, watch_providers: null, vote_average: 8.3 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...item, isWatched: true, isWatchlisted: false, isFollowed: false, watch_entry: { id: 'entry-1', rating: null }, director: null, cast_members: [], genres: [], runtime_mins: 170, trailer_url: null, watch_providers: null, vote_average: 8.3 }),
+      })
+      // The DELETE response is never JSON-parsed, it only needs ok: true.
+      .mockResolvedValueOnce({ ok: true })
+      // Refresh after the delete returns the entry removed again.
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...item, isWatched: false, isWatchlisted: false, isFollowed: false, watch_entry: null, director: null, cast_members: [], genres: [], runtime_mins: 170, trailer_url: null, watch_providers: null, vote_average: 8.3 }),
+      })
+    renderModal(vi.fn().mockResolvedValue(undefined))
+
+    const button = await screen.findByText('Mark as Watched')
+    await act(async () => {
+      fireEvent.click(button)
+    })
+
+    await screen.findByText('Logged Heat as watched — rate it below.')
+    await act(async () => {
+      fireEvent.click(screen.getByText('Undo'))
+    })
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/watch',
+      expect.objectContaining({
+        method: 'DELETE',
+        body: JSON.stringify({ id: 'entry-1' }),
+      })
+    )
+    await screen.findByText('Removed Heat from your history.')
   })
 })
