@@ -1,8 +1,9 @@
 'use client'
 import Image from 'next/image'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { useUrlFilters } from '@/lib/useUrlFilters'
 import { FilterPills } from '@/components/FilterPills'
 import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
@@ -28,11 +29,20 @@ const SORT_OPTIONS: { id: StreamingSort; label: string }[] = [
   { id: 'latest', label: 'Latest release' },
 ]
 
-export default function StreamingPage() {
-  const [provider, setProvider] = useState('8')
-  const [type, setType] = useState<'movie' | 'show'>('movie')
-  const [sortBy, setSortBy] = useState<StreamingSort>('popular')
-  const [hideWatched, setHideWatched] = useState(false)
+// The filter/sort state mirrored into the URL so a view is bookmarkable and
+// survives reloads. `watched` is special: it's omitted at its default (absent)
+// and only present as watched=hide when hide-watched is on. `page` is NOT
+// mirrored — infinite-scroll position doesn't belong in a URL.
+const STREAMING_DEFAULTS = { provider: '8', type: 'movie', sort: 'popular', watched: '' }
+
+function StreamingContent() {
+  const [filters, setFilter] = useUrlFilters(STREAMING_DEFAULTS)
+  // Re-validate URL-supplied values against the option sets above so a
+  // malformed param in a shared link falls back to the default.
+  const provider = PROVIDERS.some((p) => p.id === filters.provider) ? filters.provider : '8'
+  const type = (filters.type === 'movie' || filters.type === 'show' ? filters.type : 'movie') as 'movie' | 'show'
+  const sortBy = SORT_OPTIONS.some((o) => o.id === filters.sort) ? (filters.sort as StreamingSort) : 'popular'
+  const hideWatched = filters.watched === 'hide'
   const [page, setPage] = useState(1)
 
   const [results, setResults] = useState<TmdbSearchResult[]>([])
@@ -111,27 +121,27 @@ export default function StreamingPage() {
 
   function changeProvider(id: string) {
     if (id === provider) return
-    setProvider(id)
+    setFilter('provider', id)
     setResults([])
     setPage(1)
   }
 
   function changeType(t: 'movie' | 'show') {
     if (t === type) return
-    setType(t)
+    setFilter('type', t)
     setResults([])
     setPage(1)
   }
 
   function changeSort(sort: StreamingSort) {
     if (sort === sortBy) return
-    setSortBy(sort)
+    setFilter('sort', sort)
     setResults([])
     setPage(1)
   }
 
   function toggleHideWatched() {
-    setHideWatched((hidden) => !hidden)
+    setFilter('watched', hideWatched ? '' : 'hide')
     setPage(1)
   }
 
@@ -324,5 +334,15 @@ export default function StreamingPage() {
         />
       )}
     </div>
+  )
+}
+
+// useSearchParams inside StreamingContent (via useUrlFilters) needs a Suspense
+// boundary; without one the route opts out of static rendering during prerender.
+export default function StreamingPage() {
+  return (
+    <Suspense>
+      <StreamingContent />
+    </Suspense>
   )
 }

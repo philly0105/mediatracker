@@ -15,6 +15,7 @@ import {
   type LibraryFilters,
 } from '@/lib/libraryFilters'
 import { useDeferredAction } from '@/lib/useDeferredAction'
+import { useUrlFilters } from '@/lib/useUrlFilters'
 import { useToast } from '@/components/ToastProvider'
 
 interface LibraryViewProps {
@@ -43,13 +44,25 @@ const ratingOptions: { id: string; label: string }[] = [
   { id: 'Unrated', label: 'Unrated' },
 ]
 
+// Which filters live in the URL, and their fallback values. Params are omitted
+// from the URL while at their default so /movies stays /movies; `q` is the
+// free-text key (default '') and so gets its URL write debounced.
+const FILTER_DEFAULTS = { q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All' }
+
 export default function LibraryView({ type, title, noun }: LibraryViewProps) {
   const [entries, setEntries] = useState<WatchEntry[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<WatchEntrySort>('recent')
-  const [genreFilter, setGenreFilter] = useState<string>('All')
-  const [ratingFilter, setRatingFilter] = useState<string>('All')
-  const [decadeFilter, setDecadeFilter] = useState<string>('All')
+  // Filter state now lives in the URL (via useUrlFilters) so a view is
+  // bookmarkable and survives reloads; state stays the source of truth and the
+  // URL is a mirror. Values are re-validated against the option sets below so
+  // a malformed param in a shared link falls back to the default.
+  const [filters, setFilter] = useUrlFilters(FILTER_DEFAULTS)
+  const searchQuery = filters.q
+  const sortBy = sortOptions.some((o) => o.id === filters.sort)
+    ? (filters.sort as WatchEntrySort)
+    : 'recent'
+  const genreFilter = filters.genre
+  const ratingFilter = ratingOptions.some((o) => o.id === filters.rating) ? filters.rating : 'All'
+  const decadeFilter = filters.decade
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -192,11 +205,11 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
         </div>
         {!loading && entries.length > 0 && (
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            <FilterPills options={sortOptions} active={sortBy} onSelect={setSortBy} />
-            <FilterPills options={ratingOptions} active={ratingFilter} onSelect={setRatingFilter} />
+            <FilterPills options={sortOptions} active={sortBy} onSelect={(id) => setFilter('sort', id)} />
+            <FilterPills options={ratingOptions} active={ratingFilter} onSelect={(id) => setFilter('rating', id)} />
             <select
               value={genreFilter}
-              onChange={(e) => setGenreFilter(e.target.value)}
+              onChange={(e) => setFilter('genre', e.target.value)}
               className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[140px]"
             >
               <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
@@ -206,7 +219,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
             </select>
             <select
               value={decadeFilter}
-              onChange={(e) => setDecadeFilter(e.target.value)}
+              onChange={(e) => setFilter('decade', e.target.value)}
               className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[120px]"
             >
               <option value="All" className="bg-[var(--bg-void)]">All Years</option>
@@ -219,7 +232,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
                 icon={<Search className="w-4 h-4 text-zinc-500" />}
                 placeholder={`Search ${noun}, director, cast...`}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => setFilter('q', e.target.value)}
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
               />
             </div>

@@ -31,8 +31,11 @@ vi.mock('framer-motion', () => ({
 }))
 
 const refresh = vi.fn()
+const replace = vi.fn()
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh, push: vi.fn(), back: vi.fn() }),
+  useRouter: () => ({ refresh, push: vi.fn(), back: vi.fn(), replace }),
+  useSearchParams: () => new URLSearchParams(''),
+  usePathname: () => '/movies',
 }))
 
 function entry(id: string, title: string): WatchEntry {
