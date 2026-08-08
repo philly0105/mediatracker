@@ -4,6 +4,7 @@ import './globals.css'
 import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
 import { MultiSelectProvider } from '@/components/MultiSelectProvider'
+import { ToastProvider } from '@/components/ToastProvider'
 
 const outfit = Outfit({ subsets: ['latin'] })
 
@@ -36,17 +37,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </div>
 
         {/* Layout wrapper */}
-        <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
-          {user && <Sidebar userEmail={user.email} />}
-          
-          <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
-            user ? 'pt-20 md:pt-8 md:pl-72 pb-24 md:pb-8' : 'pb-8'
-          }`}>
-            <MultiSelectProvider>
-              {children}
-            </MultiSelectProvider>
-          </main>
-        </div>
+        <ToastProvider>
+          <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
+            {user && <Sidebar userEmail={user.email} />}
+            
+            <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
+              user ? 'pt-20 md:pt-8 md:pl-72 pb-24 md:pb-8' : 'pb-8'
+            }`}>
+              <MultiSelectProvider>
+                {children}
+              </MultiSelectProvider>
+            </main>
+          </div>
+        </ToastProvider>
       </body>
     </html>
   )

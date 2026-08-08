@@ -9,6 +9,7 @@ import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
+import { useToast } from '@/components/ToastProvider'
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -124,6 +125,7 @@ function WatchlistSection({
   // Only markWatched is shared. Removal here deletes by watchlist row id, not by
   // tmdb_id/type like the hook's removeFromWatchlist, so it stays inline.
   const { markWatched } = useMediaActions()
+  const { toast } = useToast()
 
   useEffect(() => {
     setItems([])
@@ -201,6 +203,7 @@ function WatchlistSection({
       onPriorityChanged(newPriority)
     } catch (err) {
       console.error(err)
+      toast('Could not move that item.', { tone: 'error' })
     } finally {
       setActioningId(null)
     }
@@ -219,6 +222,7 @@ function WatchlistSection({
       if (selectedItem?.id === itemId) setSelectedItem(null)
     } catch (err) {
       console.error(err)
+      toast('Could not remove that item.', { tone: 'error' })
     } finally {
       setActioningId(null)
     }
@@ -237,8 +241,10 @@ function WatchlistSection({
       setItems(prev => prev.filter(i => i.id !== item.id))
       setTotal(prev => prev - 1)
       if (selectedItem?.id === item.id) setSelectedItem(null)
+      toast('Marked as watched.', { tone: 'success' })
     } catch (err) {
       console.error(err)
+      toast('Could not mark that as watched.', { tone: 'error' })
     } finally {
       setActioningId(null)
     }
