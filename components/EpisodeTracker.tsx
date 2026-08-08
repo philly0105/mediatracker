@@ -42,11 +42,24 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
     }
   }
 
+  // Marking a finished season was 24 clicks. The API already takes an array of
+  // episode numbers, so this is the same call the click-to-here cascade makes.
+  function handleSeasonToggle(season: Season, allWatched: boolean) {
+    const affected: number[] = []
+    for (let e = 1; e <= season.episode_count; e++) {
+      const isWatched = watchedSet.has(`${season.id}-${e}`)
+      if (allWatched ? isWatched : !isWatched) affected.push(e)
+    }
+    if (affected.length === 0) return
+    onProgressChange(season.id, affected.length === 1 ? affected[0] : affected, !allWatched)
+  }
+
   return (
     <div className="space-y-2">
       {seasons.map(season => {
         const watchedCount = progress.filter(p => p.season_id === season.id).length
         const isOpen = open === season.id
+        const allWatched = season.episode_count > 0 && watchedCount >= season.episode_count
         return (
           <div key={season.id} className="rounded-lg overflow-hidden backdrop-blur-md" style={glassCard}>
             <button
@@ -71,8 +84,22 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
               </div>
             </button>
             {isOpen && (
-              <div className="px-4 pb-4 pt-1 grid grid-cols-2 sm:grid-cols-4 gap-2"
+              <div className="px-4 pb-4 pt-1 space-y-3"
                 style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                <div className="pt-3">
+                  <button
+                    onClick={() => handleSeasonToggle(season, allWatched)}
+                    className="px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
+                    style={{
+                      background: allWatched ? 'rgba(255,255,255,0.04)' : 'var(--teal-tint-bg)',
+                      border: `1px solid ${allWatched ? 'var(--border-subtle)' : 'var(--teal-tint-border)'}`,
+                      color: allWatched ? 'var(--text-muted)' : 'var(--teal-300)',
+                    }}
+                  >
+                    {allWatched ? 'Unmark whole season' : 'Mark whole season watched'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {Array.from({ length: season.episode_count }, (_, i) => i + 1).map(ep => {
                   const watched = watchedSet.has(`${season.id}-${ep}`)
                   return (
@@ -91,6 +118,7 @@ export default function EpisodeTracker({ seasons, progress, onProgressChange }: 
                     </button>
                   )
                 })}
+                </div>
               </div>
             )}
           </div>

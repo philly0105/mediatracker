@@ -268,6 +268,11 @@ export async function fetchTmdbDetails(
       director: null,
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: TmdbCastMember) => c.name),
       seasons: (d.seasons ?? [])
+        // Season 0 is TMDB's "Specials" bucket — recaps, behind-the-scenes,
+        // webisodes — and it is often larger than a real season. Dropping it
+        // keeps the tracker to episodes people actually watch through. This is
+        // deliberate, not an oversight: making specials trackable means adding
+        // a Season 0 to every show, which is a product call, not a bug fix.
         .filter((s: TmdbSeason) => s.season_number > 0)
         .map((s: TmdbSeason) => ({ season_number: s.season_number, episode_count: s.episode_count })),
       full_release_date: d.next_episode_to_air?.air_date || null,
