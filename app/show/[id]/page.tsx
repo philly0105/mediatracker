@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -198,7 +199,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
         ← Back
       </button>
       <div className="flex gap-4">
-        {media.poster_url && <img src={media.poster_url} alt={media.title} className="w-32 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-lg" />}
+        {media.poster_url && <Image src={media.poster_url} alt={media.title} width={128} height={192} className="w-32 h-auto rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-lg" />}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-white">{media.title}</h1>
           <p className="text-zinc-400">{media.release_year} · TV Show</p>

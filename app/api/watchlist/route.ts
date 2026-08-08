@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
+import { collectGenres } from '@/lib/libraryFilters'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -8,6 +9,37 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
+
+  // Facets mode: return the distinct genres across the user's watchlist rows,
+  // honouring the optional type filter so switching to "Movies Only" narrows
+  // the genre list too. Just the genres column (media.genres is a text[]) —
+  // flattening and dedupe happen in JS, no extra SQL needed at this scale.
+  if (searchParams.get('facets') === '1') {
+    const type = searchParams.get('type')
+    // !inner for the same reason the paged query below uses it: without it a
+    // filter on the embedded resource only nulls out media on non-matching rows
+    // instead of excluding them, so every watchlist row would come back. The
+    // genre list would still come out right — collectGenres skips nulls — but
+    // only by accident, and the query would read the whole watchlist to do it.
+    let query = supabase
+      .from('watchlist_items')
+      .select('media!inner(genres)')
+      .eq('user_id', user.id)
+
+    if (type && type !== 'all') {
+      query = query.eq('media.type', type)
+    }
+
+    const { data, error } = await query
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // The generated types model the media relationship as an array, but the
+    // runtime rows are a single object (as the rest of this route already uses).
+    return NextResponse.json(
+      { genres: collectGenres((data ?? []) as { media?: { genres?: string[] | null } | null }[]) },
+      { status: 200 }
+    )
+  }
+
   const page = parseInt(searchParams.get('page') ?? '1', 10)
   const limit = parseInt(searchParams.get('limit') ?? '24', 10)
   const type = searchParams.get('type')

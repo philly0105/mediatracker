@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import type { ListItem } from '@/types'
 import { notFound } from 'next/navigation'
@@ -32,7 +33,7 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
         {(items ?? []).map((item: ListItem & { media?: any }) => (
           <div key={item.id} className="bg-gray-900 rounded-xl p-3 flex gap-3">
             {item.media?.poster_url
-              ? <img src={item.media.poster_url} alt={item.media.title} className="w-14 rounded" />
+              ? <Image src={item.media.poster_url} alt={item.media.title} width={56} height={84} className="w-14 h-auto rounded" />
               : <div className="w-14 h-20 bg-gray-700 rounded" />}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-white line-clamp-1">{item.media?.title}</p>

@@ -25,21 +25,44 @@ const PRIORITY_CONFIG = {
   someday: { color: 'text-zinc-400 border-[var(--border-subtle)] bg-white/5', icon: Inbox },
 }
 
-const GENRES = [
-  "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary", "Drama", 
-  "Family", "Fantasy", "History", "Horror", "Music", "Mystery", "Romance", 
-  "Science Fiction", "TV Movie", "Thriller", "War", "Western",
-  "Action & Adventure", "Kids", "News", "Reality", "Sci-Fi & Fantasy", "Soap", "Talk", "War & Politics"
-]
-
 export default function WatchlistPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'show'>('all')
   const [genreFilter, setGenreFilter] = useState<string>('All')
+  const [availableGenres, setAvailableGenres] = useState<string[]>([])
   const [refreshSignals, setRefreshSignals] = useState<Record<WatchlistPriority, number>>({
     must_watch: 0,
     want_to_watch: 0,
     someday: 0,
   })
+
+  // The genre dropdown is built from the genres actually in the user's watchlist
+  // rather than a fixed TMDB list (which mixed movie and TV vocabularies and
+  // offered dozens of empty options). Refetch when the type filter changes so
+  // "Movies Only" narrows the genre list too, and reset the selection if the
+  // current genre no longer exists — otherwise the user is stuck on a filter
+  // that matches nothing with no obvious cause.
+  useEffect(() => {
+    let active = true
+    const params = new URLSearchParams()
+    params.set('facets', '1')
+    if (typeFilter !== 'all') params.set('type', typeFilter)
+
+    fetch(`/api/watchlist?${params.toString()}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!active) return
+        const genres = (Array.isArray(data?.genres) ? data.genres : []) as string[]
+        setAvailableGenres(genres)
+        setGenreFilter((prev) => (prev === 'All' || genres.includes(prev) ? prev : 'All'))
+      })
+      .catch(() => {
+        if (active) setAvailableGenres([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [typeFilter])
 
   function handlePriorityChanged(toPriority: WatchlistPriority) {
     setRefreshSignals(prev => ({ ...prev, [toPriority]: prev[toPriority] + 1 }))
@@ -75,7 +98,7 @@ export default function WatchlistPage() {
             className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[140px]"
           >
             <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
-            {GENRES.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
+            {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
           </select>
         </div>
       </div>

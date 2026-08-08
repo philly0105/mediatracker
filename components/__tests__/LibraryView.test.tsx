@@ -92,6 +92,58 @@ describe('LibraryView', () => {
     return mockFetch.mock.calls.filter(([, init]) => init?.method === 'DELETE')
   }
 
+  it('renders only the first page and grows as the sentinel is reached', async () => {
+    // jsdom has no IntersectionObserver; capture the callback so the test can
+    // fire it directly rather than trying to fake a scroll.
+    let trigger: (() => void) | null = null
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(cb: (entries: { isIntersecting: boolean }[]) => void) {
+        trigger = () => cb([{ isIntersecting: true }])
+      }
+      observe() {}
+      disconnect() {}
+    })
+
+    const many = Array.from({ length: 30 }, (_, i) => entry(String(i + 1), `Film ${i + 1}`))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ entries: many }) })
+
+    renderLibrary()
+    await screen.findByText('Film 1')
+
+    // 30 loaded, 24 rendered — the count still reports the whole library.
+    expect(screen.getAllByTitle('Delete entry')).toHaveLength(24)
+    expect(screen.getByText('30 watched')).toBeInTheDocument()
+    expect(screen.queryByText('Film 30')).not.toBeInTheDocument()
+
+    await act(async () => { trigger?.() })
+    expect(screen.getAllByTitle('Delete entry')).toHaveLength(30)
+    expect(screen.getByText('Film 30')).toBeInTheDocument()
+  })
+
+  it('resets the window when a filter narrows the list', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const many = Array.from({ length: 30 }, (_, i) => entry(String(i + 1), `Film ${i + 1}`))
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ entries: many }) })
+
+    renderLibrary()
+    await screen.findByText('Film 1')
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText(/Search movies/), {
+        target: { value: 'Film 3' },
+      })
+    })
+
+    // Substring matching, so "3" also catches 13, 23 and 30 — four rows. The
+    // point is the header reports the subset rather than the whole library.
+    expect(screen.getByText('4 of 30 watched')).toBeInTheDocument()
+    expect(screen.getAllByTitle('Delete entry')).toHaveLength(4)
+  })
+
   it('removes a deleted row immediately and commits the delete after the undo window', async () => {
     vi.useFakeTimers()
     mockFetch.mockResolvedValueOnce({
