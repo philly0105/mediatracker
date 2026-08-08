@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { useMediaActions } from '@/lib/useMediaActions'
+import { useModal } from '@/lib/useModal'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
@@ -29,6 +30,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
 
   const { isSelectMode } = useMultiSelect()
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
+  const { containerRef } = useModal(onClose)
 
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
@@ -91,6 +93,10 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-md" onClick={onClose}>
       <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="similar-modal-title"
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
@@ -98,7 +104,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-          <h2 className="font-bold text-white text-sm">
+          <h2 id="similar-modal-title" className="font-bold text-white text-sm">
             Similar {type === 'movie' ? 'Movies' : 'TV Shows'}
           </h2>
           <button

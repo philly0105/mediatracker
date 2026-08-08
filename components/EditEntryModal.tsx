@@ -4,6 +4,7 @@ import RatingStars from './RatingStars'
 import type { WatchEntry } from '@/types'
 import { Loader2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useModal } from '@/lib/useModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -23,6 +24,7 @@ const glassModal = {
 export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
   const media = entry.media!
   const router = useRouter()
+  const { containerRef } = useModal(onClose)
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [review, setReview] = useState(entry.review ?? '')
   const [watchedAt, setWatchedAt] = useState(entry.watched_at)
@@ -59,7 +61,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style={{ background: 'var(--scrim)' }} onClick={(e) => { e.stopPropagation(); onClose(); }}>
-      <div className="w-full max-w-md p-6 space-y-5 rounded-[var(--radius-2xl)] relative backdrop-blur-xl" style={glassModal} onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Edit Watch Entry" className="w-full max-w-md p-6 space-y-5 rounded-[var(--radius-2xl)] relative backdrop-blur-xl" style={glassModal} onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           {media.poster_url && (
             <img src={media.poster_url} alt={media.title} className="w-16 rounded-[var(--radius-xl)] shadow-md" />

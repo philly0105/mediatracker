@@ -27,6 +27,7 @@ import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 import SimilarModal from './SimilarModal'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
+import { useModal } from '@/lib/useModal'
 import { isAlreadyWatchedError } from '@/lib/useMediaActions'
 
 const PRIORITY_LABELS: Record<WatchlistPriority, string> = {
@@ -78,6 +79,7 @@ export default function MediaInfoModal({
   const [error, setError] = useState<string | null>(null)
   const [showSimilar, setShowSimilar] = useState(false)
   const { toast } = useToast()
+  const { containerRef } = useModal(onClose)
 
   useEffect(() => {
     setMounted(true)
@@ -241,6 +243,10 @@ export default function MediaInfoModal({
       <div className="absolute inset-0" onClick={onClose} />
 
       <motion.div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="media-info-title"
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -299,7 +305,7 @@ export default function MediaInfoModal({
                 )}
               </div>
 
-              <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">
+              <h2 id="media-info-title" className="text-2xl md:text-3xl font-black text-white leading-tight">
                 {item.title}
               </h2>
 

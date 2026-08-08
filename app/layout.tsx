@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
 import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 import { ToastProvider } from '@/components/ToastProvider'
+import KeyboardShortcuts from '@/components/KeyboardShortcuts'
 
 const outfit = Outfit({ subsets: ['latin'] })
 
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         {/* Layout wrapper */}
         <ToastProvider>
+          <KeyboardShortcuts />
           <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
             {user && <Sidebar userEmail={user.email} />}
             
