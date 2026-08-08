@@ -1,17 +1,21 @@
 'use client'
 import Image from 'next/image'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2 } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaActions } from '@/lib/useMediaActions'
+import { useUrlFilters } from '@/lib/useUrlFilters'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import TonightPickModal from '@/components/TonightPickModal'
 import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
+import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -20,21 +24,33 @@ const PRIORITY_LABELS = {
 }
 const PRIORITY_ORDER: Array<keyof typeof PRIORITY_LABELS> = ['must_watch', 'want_to_watch', 'someday']
 
-const PRIORITY_CONFIG = {
-  must_watch: { color: 'text-[var(--rust-300)] border-[var(--rust-tint-border)] bg-[var(--rust-tint-bg)]', icon: Flame },
-  want_to_watch: { color: 'text-[var(--amber-300)] border-[var(--amber-tint-border)] bg-[var(--amber-tint-bg)]', icon: Sparkles },
-  someday: { color: 'text-zinc-400 border-[var(--border-subtle)] bg-white/5', icon: Inbox },
-}
+// Filter state mirrored into the URL so a filtered view is bookmarkable and
+// survives reloads; params are omitted from the URL while at their default.
+const WATCHLIST_DEFAULTS = { type: 'all', genre: 'All' }
 
-export default function WatchlistPage() {
-  const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'show'>('all')
-  const [genreFilter, setGenreFilter] = useState<string>('All')
+function WatchlistContent() {
+  const [filters, setFilter] = useUrlFilters(WATCHLIST_DEFAULTS)
+  // Re-validate the URL-supplied type so a malformed param in a shared link
+  // falls back to the default instead of flowing into the API query. Genre is
+  // free-vocabulary: the facet effect below corrects unknown values.
+  const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
+  const genreFilter = filters.genre
   const [availableGenres, setAvailableGenres] = useState<string[]>([])
+  const [showPick, setShowPick] = useState(false)
   const [refreshSignals, setRefreshSignals] = useState<Record<WatchlistPriority, number>>({
     must_watch: 0,
     want_to_watch: 0,
     someday: 0,
   })
+
+  // Keep the latest genre handy for the facet effect below without re-running
+  // it on every genre change (the fetch is meant to key off the type only).
+  // Updated in an effect rather than during render so the ref write stays out
+  // of the render pass.
+  const genreFilterRef = useRef(genreFilter)
+  useEffect(() => {
+    genreFilterRef.current = genreFilter
+  }, [genreFilter])
 
   // The genre dropdown is built from the genres actually in the user's watchlist
   // rather than a fixed TMDB list (which mixed movie and TV vocabularies and
@@ -54,7 +70,12 @@ export default function WatchlistPage() {
         if (!active) return
         const genres = (Array.isArray(data?.genres) ? data.genres : []) as string[]
         setAvailableGenres(genres)
-        setGenreFilter((prev) => (prev === 'All' || genres.includes(prev) ? prev : 'All'))
+        // Reset to All when the active genre disappears from this type's facet,
+        // and mirror the correction into the URL so the shared link matches
+        // what's actually shown.
+        if (genreFilterRef.current !== 'All' && !genres.includes(genreFilterRef.current)) {
+          setFilter('genre', 'All')
+        }
       })
       .catch(() => {
         if (active) setAvailableGenres([])
@@ -63,7 +84,7 @@ export default function WatchlistPage() {
     return () => {
       active = false
     }
-  }, [typeFilter])
+  }, [typeFilter, setFilter])
 
   function handlePriorityChanged(toPriority: WatchlistPriority) {
     setRefreshSignals(prev => ({ ...prev, [toPriority]: prev[toPriority] + 1 }))
@@ -85,7 +106,7 @@ export default function WatchlistPage() {
         <div className="flex items-center gap-3">
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as any)}
+            onChange={(e) => setFilter('type', e.target.value)}
             className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[120px]"
           >
             <option value="all" className="bg-[var(--bg-void)]">All Types</option>
@@ -95,12 +116,17 @@ export default function WatchlistPage() {
 
           <select
             value={genreFilter}
-            onChange={(e) => setGenreFilter(e.target.value)}
+            onChange={(e) => setFilter('genre', e.target.value)}
             className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[140px]"
           >
             <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
             {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
           </select>
+
+          <Button onClick={() => setShowPick(true)}>
+            <Dices className="w-4 h-4" />
+            <span>Pick for me</span>
+          </Button>
         </div>
       </div>
 
@@ -116,6 +142,17 @@ export default function WatchlistPage() {
           />
         ))}
       </div>
+
+      {/* "Pick for me" modal */}
+      <AnimatePresence>
+        {showPick && (
+          <TonightPickModal
+            typeFilter={typeFilter}
+            genreFilter={genreFilter}
+            onClose={() => setShowPick(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -463,6 +500,17 @@ function WatchlistSection({
           />
         )}
       </AnimatePresence>
+
     </div>
+  )
+}
+
+// useSearchParams inside WatchlistContent (via useUrlFilters) needs a Suspense
+// boundary; without one the route opts out of static rendering during prerender.
+export default function WatchlistPage() {
+  return (
+    <Suspense>
+      <WatchlistContent />
+    </Suspense>
   )
 }
