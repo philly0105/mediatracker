@@ -3,12 +3,16 @@ import Image from 'next/image'
 import { use, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import EpisodeTracker from '@/components/EpisodeTracker'
+import EpisodeTracker, { formatAirDate, isUnaired } from '@/components/EpisodeTracker'
+import MediaInfoModal from '@/components/MediaInfoModal'
 import RatingStars from '@/components/RatingStars'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
-import { Check, Loader2 } from 'lucide-react'
+import { useMediaActions } from '@/lib/useMediaActions'
+import { mediaToResult } from '@/lib/mediaToResult'
+import { findNextUp } from '@/lib/nextUp'
+import { Check, Info, Loader2 } from 'lucide-react'
 import type { Media, Season, Episode, EpisodeProgress, WatchEntry } from '@/types'
 
 export default function ShowDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -22,9 +26,11 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   const [rating, setRating] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [markingWatched, setMarkingWatched] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const supabase = createClient()
   const { toast } = useToast()
   const { schedule, cancel } = useDeferredAction()
+  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   useEffect(() => {
     async function load() {
@@ -71,6 +77,21 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
     return () => { cancelled = true }
   }, [id])
 
+  // Fetch the latest watch entry and fold it into state — both the header button
+  // and the details modal's mark-as-watched re-run this so the stars appear
+  // without a reload, instead of each duplicating their own fetch.
+  const refreshEntry = useCallback(async () => {
+    const { data: e } = await supabase
+      .from('watch_entries')
+      .select('*')
+      .eq('media_id', id)
+      .order('watched_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    setEntry(e)
+    setRating(e?.rating ?? null)
+  }, [id, supabase])
+
   // Tracking episodes never creates a watch_entries row, so the normal path —
   // start a show, watch episodes — left this page with no way to rate the show
   // and no way to log it. The stars only render once an entry exists.
@@ -85,8 +106,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
       })
       const body = await res.json().catch(() => null)
       if (!res.ok) throw new Error(body?.error ?? 'Failed to mark as watched')
-      setEntry(body.entry)
-      setRating(body.entry?.rating ?? null)
+      await refreshEntry()
       toast(`Logged ${media.title} as watched.`, { tone: 'success' })
     } catch (err) {
       console.error(err)
@@ -94,7 +114,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
     } finally {
       setMarkingWatched(false)
     }
-  }, [media, toast])
+  }, [media, toast, refreshEntry])
 
   const handleRatingChange = useCallback(async (newRating: number) => {
     if (!entry) return
@@ -206,6 +226,26 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!media) return <div className="text-zinc-400">That show is not in your library.</div>
 
+  const total = seasons.reduce((sum, s) => sum + s.episode_count, 0)
+  const watched = progress.length
+  // "~Nh left" only makes sense once there is a runtime to multiply against and
+  // at least one episode still unwatched; and it is dropped when it rounds to 0.
+  const hoursLeft = total > watched && media.runtime_mins != null
+    ? Math.round(((total - watched) * media.runtime_mins) / 60)
+    : 0
+
+  const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
+  const nextUp = findNextUp(seasons, watchedKeys)
+  const nextUpMeta = nextUp
+    ? episodes.find(e => e.season_id === nextUp.season_id && e.episode_number === nextUp.episode_number)
+    : null
+  const nextUpUnaired = nextUp ? isUnaired(nextUpMeta?.air_date ?? null) : false
+
+  const glassCard = {
+    background: 'var(--glass-card)',
+    border: '1px solid var(--border-subtle)',
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <button onClick={() => router.back()}
@@ -217,6 +257,12 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-white">{media.title}</h1>
           <p className="text-zinc-400">{media.release_year} · TV Show</p>
+          {total > 0 && (
+            <p className="text-sm text-zinc-400">
+              {watched}/{total} episodes
+              {hoursLeft > 0 && ` · ~${hoursLeft}h left`}
+            </p>
+          )}
           {media.genres.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {media.genres.map(g => (
@@ -228,21 +274,71 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           )}
           {entry ? (
-            <RatingStars value={rating} onChange={handleRatingChange} />
+            <>
+              <RatingStars value={rating} onChange={handleRatingChange} />
+              <Button variant="ghost" size="sm" onClick={() => setShowDetails(true)}>
+                <Info className="w-4 h-4" />
+                <span>Details</span>
+              </Button>
+            </>
           ) : (
-            <Button onClick={handleMarkShowWatched} disabled={markingWatched} size="sm">
-              {markingWatched ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              <span>Mark show as watched</span>
-            </Button>
+            <>
+              <Button onClick={handleMarkShowWatched} disabled={markingWatched} size="sm">
+                {markingWatched ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                <span>Mark show as watched</span>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowDetails(true)}>
+                <Info className="w-4 h-4" />
+                <span>Details</span>
+              </Button>
+            </>
           )}
           {media.overview && <p className="text-sm text-zinc-400 max-w-prose leading-relaxed">{media.overview}</p>}
         </div>
       </div>
 
+      {nextUp && (
+        <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg backdrop-blur-md" style={glassCard}>
+          {nextUpUnaired ? (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">All caught up</div>
+              <div className="text-sm font-semibold text-white">
+                S{nextUp.season_number} E{nextUp.episode_number} airs {formatAirDate(nextUpMeta?.air_date ?? '')}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Next up</div>
+                <div className="text-sm font-semibold text-white">
+                  S{nextUp.season_number} E{nextUp.episode_number}
+                  {nextUpMeta?.name ? ` · ${nextUpMeta.name}` : ''}
+                </div>
+              </div>
+              <Button size="sm" onClick={() => handleProgressChange(nextUp.season_id, nextUp.episode_number, true)}>
+                <Check className="w-4 h-4" />
+                <span>Mark watched</span>
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       <div>
         <h2 className="text-lg font-semibold tracking-tight mb-3">Episodes</h2>
         <EpisodeTracker seasons={seasons} progress={progress} episodes={episodes} onProgressChange={handleProgressChange} />
       </div>
+
+      {showDetails && (
+        <MediaInfoModal
+          item={mediaToResult(media)}
+          onClose={() => setShowDetails(false)}
+          onAddToWatchlist={async () => { await addToWatchlist(media.tmdb_id, 'show') }}
+          onMarkAsWatched={async (opts) => {
+            await markWatched(media.tmdb_id, 'show', opts)
+            await refreshEntry()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -70,7 +70,13 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
     const affected: number[] = []
     for (let e = 1; e <= season.episode_count; e++) {
       const isWatched = watchedSet.has(`${season.id}-${e}`)
-      if (allWatched ? isWatched : !isWatched) affected.push(e)
+      if (allWatched ? isWatched : !isWatched) {
+        // Marking the whole season skips episodes that have not aired yet — one
+        // click should not claim time-travel into the future. Unmarking is
+        // unchanged and clears every watched episode regardless of air date.
+        if (!allWatched && isUnaired(episodeMap.get(`${season.id}-${e}`)?.air_date ?? null)) continue
+        affected.push(e)
+      }
     }
     if (affected.length === 0) return
     onProgressChange(season.id, affected.length === 1 ? affected[0] : affected, !allWatched)
@@ -81,7 +87,13 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
       {seasons.map(season => {
         const watchedCount = progress.filter(p => p.season_id === season.id).length
         const isOpen = open === season.id
-        const allWatched = season.episode_count > 0 && watchedCount >= season.episode_count
+        // Episodes that have not aired yet can't be watched, so they don't count
+        // toward the header fraction or whether the season reads as complete.
+        // A season with no metadata at all still counts everything, as before.
+        const unairedCount = Array.from({ length: season.episode_count }, (_, i) => i + 1)
+          .filter(e => isUnaired(episodeMap.get(`${season.id}-${e}`)?.air_date ?? null)).length
+        const airedCount = unairedCount > 0 ? season.episode_count - unairedCount : season.episode_count
+        const allWatched = airedCount > 0 && watchedCount >= airedCount
         // One row per episode once there are titles to show; the four-across
         // grid only works when every cell is three characters wide.
         const hasTitles = (episodes ?? []).some(e => e.season_id === season.id && e.name)
@@ -100,10 +112,10 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                   <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
                     <div
                       className="h-full rounded-full transition-all"
-                      style={{ width: `${(watchedCount / season.episode_count) * 100}%`, background: 'var(--teal-400)' }}
+                      style={{ width: `${airedCount > 0 ? (watchedCount / airedCount) * 100 : 0}%`, background: 'var(--teal-400)' }}
                     />
                   </div>
-                  <span className="text-xs text-zinc-400">{watchedCount}/{season.episode_count}</span>
+                  <span className="text-xs text-zinc-400">{watchedCount}/{airedCount}</span>
                 </div>
                 <span className="text-zinc-500 text-xs">{isOpen ? '▲' : '▼'}</span>
               </div>

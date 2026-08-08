@@ -11,6 +11,7 @@ import DashboardSearchBar from '@/components/DashboardSearchBar'
 import DashboardUpcomingWidget from '@/components/DashboardUpcomingWidget'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '@/components/ContinueWatchingRow'
 import { fetchUpcomingReleases } from '@/lib/tmdb'
+import { findNextUp } from '@/lib/nextUp'
 
 type ProgressWithSeason = {
   season_id: string
@@ -29,23 +30,6 @@ type SeasonWithMedia = {
 function joinedOne<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
-}
-
-function findNextUp(seasons: ContinueWatchingShow['seasons'], watchedKeys: Set<string>) {
-  for (const season of seasons) {
-    if (season.episode_count <= 0) continue
-    for (let episode = 1; episode <= season.episode_count; episode++) {
-      if (!watchedKeys.has(`${season.id}-${episode}`)) {
-        return {
-          season_id: season.id,
-          season_number: season.season_number,
-          episode_number: episode,
-        }
-      }
-    }
-  }
-
-  return null
 }
 
 export default async function DashboardPage() {
@@ -206,7 +190,7 @@ export default async function DashboardPage() {
             Recently Watched
           </h2>
           <Link
-            href="/movies"
+            href="/library"
             className="text-xs font-bold text-zinc-400 hover:text-white flex items-center gap-1 transition-colors group bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/5"
           >
             <span>View all</span>

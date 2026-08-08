@@ -143,3 +143,63 @@ describe('air date helpers', () => {
     expect(isUnaired(null, today)).toBe(false)
   })
 })
+
+describe('EpisodeTracker unaired episodes', () => {
+  beforeEach(() => { onProgressChange.mockReset() })
+  afterEach(() => { vi.useRealTimers() })
+
+  const threeEpisodeSeason: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 3 }
+
+  function renderWithUnairedThird() {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 10))
+    return render(
+      <EpisodeTracker
+        seasons={[threeEpisodeSeason]}
+        progress={[]}
+        episodes={[
+          episode(1, 'One', '2026-07-01'),
+          episode(2, 'Two', '2026-07-08'),
+          episode(3, 'Three', '2026-07-15'),
+        ]}
+        onProgressChange={onProgressChange}
+      />
+    )
+  }
+
+  it('skips the unaired last episode when marking the whole season watched', () => {
+    renderWithUnairedThird()
+    fireEvent.click(screen.getByText('Mark whole season watched'))
+
+    // Episode 3 has not aired, so only 1 and 2 are marked — not all three.
+    expect(onProgressChange).toHaveBeenCalledTimes(1)
+    expect(onProgressChange).toHaveBeenCalledWith('s1', [1, 2], true)
+  })
+
+  it('keeps unmarking every watched episode even when one has not aired', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 10))
+    render(
+      <EpisodeTracker
+        seasons={[threeEpisodeSeason]}
+        progress={watched(1, 2)}
+        episodes={[
+          episode(1, 'One', '2026-07-01'),
+          episode(2, 'Two', '2026-07-08'),
+          episode(3, 'Three', '2026-07-15'),
+        ]}
+        onProgressChange={onProgressChange}
+      />
+    )
+    fireEvent.click(screen.getByText('Unmark whole season'))
+    // Unmarking is unchanged: it clears every watched episode, air date is ignored.
+    expect(onProgressChange).toHaveBeenCalledWith('s1', [1, 2], false)
+  })
+
+  it('shows the header fraction minus the unaired episode', () => {
+    renderWithUnairedThird()
+    // Three episodes, one unaired — the header counts it as 0/2, not 0/3.
+    expect(screen.getByText('0/2')).toBeInTheDocument()
+    expect(screen.queryByText('0/3')).not.toBeInTheDocument()
+  })
+})
