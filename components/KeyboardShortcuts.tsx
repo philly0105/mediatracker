@@ -1,10 +1,10 @@
 'use client'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { isAnyModalOpen } from '@/lib/useModal'
+import SearchOverlay from '@/components/SearchOverlay'
 
 export default function KeyboardShortcuts() {
-  const router = useRouter()
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -15,21 +15,25 @@ export default function KeyboardShortcuts() {
       const isSlash = event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey
       if (!isCmdK && !isSlash) return
 
-      // Escape belongs to the modal; don't navigate out from under one.
+      // Escape belongs to the modal; don't open the overlay from under one. The
+      // overlay itself registers with useModal, so once it's up this check is
+      // already true — the local `open` guard covers the brief window before
+      // that registration lands, preventing a double-open.
       if (isAnyModalOpen()) return
+      if (open) return
 
       // / must stay typeable inside inputs and contenteditable regions.
       if (isSlash && isTypingTarget(event.target)) return
 
       event.preventDefault()
-      router.push('/search')
+      setOpen(true)
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [router])
+  }, [open])
 
-  return null
+  return open ? <SearchOverlay onClose={() => setOpen(false)} /> : null
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {

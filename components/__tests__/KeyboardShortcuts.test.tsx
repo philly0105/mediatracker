@@ -1,11 +1,21 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
 import { useModal } from '@/lib/useModal'
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }))
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
+// The overlay pulls the user's watched/watchlist ids from Supabase purely to
+// badge rows; irrelevant to the shortcut wiring, so mock it out here.
+vi.mock('@/lib/useLibraryIds', () => ({
+  useLibraryIds: () => ({
+    watchedIds: new Set<number>(),
+    watchlistIds: new Set<number>(),
+    setWatchedIds: vi.fn(),
+    setWatchlistIds: vi.fn(),
+  }),
+}))
+
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({ from: () => ({ select: async () => ({ data: [] }) }) }),
 }))
 
 function TestModal({ onClose }: { onClose: () => void }) {
@@ -18,17 +28,19 @@ function TestModal({ onClose }: { onClose: () => void }) {
 }
 
 describe('KeyboardShortcuts', () => {
-  beforeEach(() => {
-    push.mockClear()
+  it('opens the search overlay on Cmd/Ctrl+K', () => {
+    render(<KeyboardShortcuts />)
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  it('navigates to /search on /', () => {
+  it('opens the search overlay on /', () => {
     render(<KeyboardShortcuts />)
     fireEvent.keyDown(document, { key: '/' })
-    expect(push).toHaveBeenCalledWith('/search')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
-  it('does not navigate on / while typing in an input', () => {
+  it('does not open on / while typing in an input', () => {
     render(
       <>
         <KeyboardShortcuts />
@@ -38,10 +50,10 @@ describe('KeyboardShortcuts', () => {
     const box = screen.getByTestId('box')
     box.focus()
     fireEvent.keyDown(box, { key: '/' })
-    expect(push).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('does not navigate on / while typing in a textarea', () => {
+  it('does not open on / while typing in a textarea', () => {
     render(
       <>
         <KeyboardShortcuts />
@@ -51,19 +63,18 @@ describe('KeyboardShortcuts', () => {
     const area = screen.getByTestId('area')
     area.focus()
     fireEvent.keyDown(area, { key: '/' })
-    expect(push).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('navigates to /search on Cmd/Ctrl+K', () => {
+  it('closes the overlay on Escape', () => {
     render(<KeyboardShortcuts />)
-    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    expect(push).toHaveBeenCalledWith('/search')
-    push.mockClear()
     fireEvent.keyDown(document, { key: 'k', metaKey: true })
-    expect(push).toHaveBeenCalledWith('/search')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('does not fire while a modal is open', () => {
+  it('does not open while another modal is open', () => {
     render(
       <>
         <KeyboardShortcuts />
@@ -71,8 +82,8 @@ describe('KeyboardShortcuts', () => {
       </>
     )
     fireEvent.keyDown(document, { key: '/' })
-    expect(push).not.toHaveBeenCalled()
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    expect(push).not.toHaveBeenCalled()
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
   })
 })

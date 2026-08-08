@@ -1,26 +1,26 @@
 'use client'
 import Image from 'next/image'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Loader2, Film, Tv } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import type { TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { useMediaActions } from '@/lib/useMediaActions'
+import { useTmdbSearch } from '@/lib/useTmdbSearch'
 import { createPortal } from 'react-dom'
 
 export default function DashboardSearchBar() {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<TmdbSearchResult[]>([])
-  const [loading, setLoading] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
-  
+
+  // Query, debounce, and abort-on-supersede now live in the shared hook; this
+  // component keeps only its dropdown visibility and the modal selection.
+  const { query, setQuery, results, loading } = useTmdbSearch()
+
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
 
   const { addToWatchlist, markWatched } = useMediaActions({
     priority: 'want_to_watch',
@@ -29,6 +29,22 @@ export default function DashboardSearchBar() {
       router.refresh()
     },
   })
+
+  // The hook owns the debounce timer; the dropdown just needs to open once a
+  // request is actually in flight rather than on the first keystroke. The open
+  // state is a latch driven by the hook's loading transition, so it can't be
+  // derived from current props alone.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (loading) setShowDropdown(true)
+  }, [loading])
+
+  // A query below the two-character threshold clears the results out; close the
+  // dropdown to match the old behaviour.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (query.trim().length < 2) setShowDropdown(false)
+  }, [query])
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -41,70 +57,13 @@ export default function DashboardSearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Cancel any pending debounce/request on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      abortRef.current?.abort()
-    }
-  }, [])
-
-  // Search API fetch
-  const search = useCallback(async (q: string) => {
-    if (q.trim().length < 2) {
-      setResults([])
-      setShowDropdown(false)
-      return
-    }
-
-    // Cancel any in-flight request before starting a new one
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    setLoading(true)
-    setShowDropdown(true)
-    try {
-      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`, {
-        signal: controller.signal,
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setResults(data.results?.slice(0, 5) ?? []) // limit to 5 quick results
-      } else {
-        setResults([])
-      }
-    } catch (err) {
-      // Ignore aborts from superseded requests; log real errors
-      if ((err as Error)?.name !== 'AbortError') {
-        console.error(err)
-        setResults([])
-      }
-      return
-    } finally {
-      if (abortRef.current === controller) {
-        setLoading(false)
-      }
-    }
-  }, [])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setQuery(val)
-
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      search(val)
-    }, 350)
-  }
-
   return (
     <div ref={containerRef} className="relative w-full max-w-xl z-30">
       <Input
         icon={loading ? <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" /> : <Search className="w-5 h-5 text-zinc-500" />}
         placeholder="Quick log a movie or TV show..."
         value={query}
-        onChange={handleInputChange}
+        onChange={(e) => setQuery(e.target.value)}
         onFocus={() => { if (query.trim().length >= 2) setShowDropdown(true) }}
         className="w-full bg-[var(--surface-shell)]/80 backdrop-blur-xl border-[var(--border-default)] hover:border-[var(--border-strong)] focus:border-[var(--accent)] transition-all rounded-full h-11 px-5"
       />
@@ -132,7 +91,7 @@ export default function DashboardSearchBar() {
                 <span className="text-[10px] text-zinc-500">Click to configure</span>
               </div>
               
-              {results.map((item) => (
+              {results.slice(0, 5).map((item) => (
                 <button
                   key={`${item.type}-${item.tmdb_id}`}
                   onClick={() => {
