@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState } from 'react'
 import RatingStars from './RatingStars'
 import type { WatchEntry } from '@/types'
@@ -64,7 +65,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
       <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Edit Watch Entry" className="w-full max-w-md p-6 space-y-5 rounded-[var(--radius-2xl)] relative backdrop-blur-xl" style={glassModal} onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           {media.poster_url && (
-            <img src={media.poster_url} alt={media.title} className="w-16 rounded-[var(--radius-xl)] shadow-md" />
+            <Image src={media.poster_url} alt={media.title} width={64} height={96} className="w-16 h-auto rounded-[var(--radius-xl)] shadow-md" />
           )}
           <div>
             <h2 className="font-bold text-white text-lg">{media.title}</h2>

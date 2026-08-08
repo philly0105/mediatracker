@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
@@ -268,10 +269,13 @@ export default function MediaInfoModal({
           <div className="flex flex-col md:flex-row gap-6">
             {/* Poster */}
             {item.poster_url ? (
-              <img
+              <Image
                 src={item.poster_url}
                 alt={item.title}
-                className="w-32 md:w-40 rounded-[var(--radius-xl)] object-cover shadow-2xl shadow-black/50 border border-white/5 mx-auto md:mx-0 shrink-0 self-start"
+                width={160}
+                height={240}
+                sizes="(max-width: 768px) 128px, 160px"
+                className="w-32 md:w-40 h-auto rounded-[var(--radius-xl)] object-cover shadow-2xl shadow-black/50 border border-white/5 mx-auto md:mx-0 shrink-0 self-start"
               />
             ) : (
               <div className="w-32 h-48 md:w-40 md:h-60 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-xs text-zinc-600 mx-auto md:mx-0 shrink-0">

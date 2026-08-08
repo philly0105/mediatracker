@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import React, { useState } from 'react'
 import RatingStars from '@/components/RatingStars'
 import { Badge } from './Badge'
@@ -54,8 +55,11 @@ export function MediaRow({
       }}
     >
       {hasImg ? (
-        <img src={posterUrl!} alt={title} onError={() => setImgErr(true)} style={{
-          width: 64, height: 96, borderRadius: 'var(--radius-md)', objectFit: 'cover',
+        // Fixed 64x96 thumbnail, so width/height props rather than `fill`. They
+        // also reserve the space, which is what stops the list jumping as
+        // posters load.
+        <Image src={posterUrl!} alt={title} width={64} height={96} onError={() => setImgErr(true)} style={{
+          borderRadius: 'var(--radius-md)', objectFit: 'cover',
           boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-subtle)', flexShrink: 0,
         }} />
       ) : (

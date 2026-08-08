@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
@@ -137,9 +138,12 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
                 >
                   <div className="relative">
                     {item.poster_url ? (
-                      <img
+                      <Image
                         src={item.poster_url}
                         alt={item.title}
+                        width={200}
+                        height={300}
+                        sizes="(max-width: 640px) 33vw, 160px"
                         className="w-full aspect-[2/3] rounded-[var(--radius-xl)] object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
                       />
                     ) : (

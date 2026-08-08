@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
@@ -141,7 +142,7 @@ function SearchRow({ r, watched, listed, onClick }: { r: TmdbSearchResult, watch
       }}
     >
       {r.poster_url ? (
-        <img src={r.poster_url} alt="" className="w-10 h-14 object-cover rounded-[var(--radius-xl)] flex-shrink-0" />
+        <Image src={r.poster_url} alt="" width={40} height={56} className="w-10 h-14 object-cover rounded-[var(--radius-xl)] flex-shrink-0" />
       ) : (
         <div className="w-10 h-14 rounded-[var(--radius-xl)] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-black border border-white/5 text-zinc-600 text-xs">
           No Poster

@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import React, { useState } from 'react'
 import RatingStars from '@/components/RatingStars'
 
@@ -47,13 +48,18 @@ export function PosterCard({
     >
       <div style={{ position: 'relative', aspectRatio: '2 / 3', overflow: 'hidden', background: 'var(--zinc-900)' }}>
         {hasImg ? (
-          <img
+          // `fill` rather than fixed dimensions: the wrapper above is already
+          // position:relative with a 2/3 aspect ratio, so the box is reserved
+          // before the image loads and the grid no longer reflows as posters
+          // arrive. `sizes` matches the responsive grid this card sits in
+          // (2 columns on mobile, 3 on tablet, 5 on desktop).
+          <Image
             src={posterUrl}
             alt={title}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             onError={() => setImgErr(true)}
             style={{
-              width: '100%',
-              height: '100%',
               objectFit: 'cover',
               transform: hover ? 'scale(1.10) rotate(1deg)' : 'none',
               transition: 'transform var(--dur-slower) var(--ease-out-expo)',
