@@ -184,6 +184,32 @@ export interface TmdbFullDetails {
 
 export type StreamingSort = 'popular' | 'rating' | 'latest'
 
+type ShowRuntimeSource = {
+  episode_run_time?: number[] | null
+  last_episode_to_air?: { runtime?: number | null } | null
+  next_episode_to_air?: { runtime?: number | null } | null
+}
+
+// A show's per-episode runtime, which is what the stats page multiplies by the
+// number of watched episodes.
+//
+// `episode_run_time` is the obvious field and used to be the only one read here,
+// but TMDB has been deprecating it and returns an empty array for most shows now
+// — 24 of the 26 shows in this database have a null runtime because of it. So
+// fall back to an actual episode's runtime, which TMDB does still populate.
+// Anything <= 0 is treated as missing rather than trusted.
+export function showRuntimeMins(d: ShowRuntimeSource): number | null {
+  const candidates = [
+    d.episode_run_time?.[0],
+    d.last_episode_to_air?.runtime,
+    d.next_episode_to_air?.runtime,
+  ]
+  for (const value of candidates) {
+    if (typeof value === 'number' && value > 0) return value
+  }
+  return null
+}
+
 export async function fetchTmdbDetails(
   tmdbId: number,
   type: MediaType,
@@ -238,7 +264,7 @@ export async function fetchTmdbDetails(
       poster_url: d.poster_path ? `${IMG}${d.poster_path}` : null,
       genres: (d.genres ?? []).map((g: TmdbGenre) => g.name),
       release_year: d.first_air_date ? parseInt(d.first_air_date.split('-')[0]) : null,
-      runtime_mins: d.episode_run_time?.[0] ?? null,
+      runtime_mins: showRuntimeMins(d),
       director: null,
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: TmdbCastMember) => c.name),
       seasons: (d.seasons ?? [])
