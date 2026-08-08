@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Check, Loader2, Play, Tv } from 'lucide-react'
+import { findNextUp } from '@/lib/nextUp'
+import { useToast } from '@/components/ToastProvider'
 
 export type ContinueWatchingSeason = {
   id: string
@@ -31,25 +33,6 @@ type Props = {
   shows: ContinueWatchingShow[]
 }
 
-function findNextUp(seasons: ContinueWatchingSeason[], watchedKeys: Set<string>) {
-  const orderedSeasons = [...seasons].sort((a, b) => a.season_number - b.season_number)
-
-  for (const season of orderedSeasons) {
-    if (season.episode_count <= 0) continue
-    for (let episode = 1; episode <= season.episode_count; episode++) {
-      if (!watchedKeys.has(`${season.id}-${episode}`)) {
-        return {
-          season_id: season.id,
-          season_number: season.season_number,
-          episode_number: episode,
-        }
-      }
-    }
-  }
-
-  return null
-}
-
 function getEpisodeStats(seasons: ContinueWatchingSeason[], watchedKeys: Set<string>) {
   let watched = 0
   let total = 0
@@ -75,9 +58,12 @@ export default function ContinueWatchingRow({ shows }: Props) {
   )
   const [loadingById, setLoadingById] = useState<Record<string, boolean>>({})
   const [errorById, setErrorById] = useState<Record<string, boolean>>({})
+  const { toast } = useToast()
 
   async function markWatched(show: ContinueWatchingShow) {
     const currentNextUp = show.nextUp
+    const snapshotItem = show
+    const snapshotIndex = items.findIndex((item) => item.media.id === show.media.id)
     setLoadingById((prev) => ({ ...prev, [show.media.id]: true }))
     setErrorById((prev) => ({ ...prev, [show.media.id]: false }))
 
@@ -109,10 +95,51 @@ export default function ContinueWatchingRow({ shows }: Props) {
           }]
         })
       )
+
+      toast(
+        `Marked ${show.media.title} S${currentNextUp.season_number} E${currentNextUp.episode_number} as watched.`,
+        {
+          tone: 'success',
+          action: { label: 'Undo', onClick: () => undoMarkWatched(snapshotItem, snapshotIndex, currentNextUp) },
+        }
+      )
     } catch {
       setErrorById((prev) => ({ ...prev, [show.media.id]: true }))
     } finally {
       setLoadingById((prev) => ({ ...prev, [show.media.id]: false }))
+    }
+  }
+
+  // Restores the exact pre-action card: the episode is un-marked server-side
+  // and the snapshot replaces (or re-inserts, if the advance removed a finished
+  // show) the current card. Indexes may have drifted if other cards changed;
+  // clamping to the list length keeps the restore stable rather than perfect.
+  async function undoMarkWatched(
+    snapshotItem: ContinueWatchingShow,
+    snapshotIndex: number,
+    nextUp: ContinueWatchingNextUp
+  ) {
+    try {
+      const response = await fetch('/api/episodes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          season_id: nextUp.season_id,
+          episode_number: nextUp.episode_number,
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to undo')
+
+      setItems((prev) => {
+        const existing = prev.findIndex((item) => item.media.id === snapshotItem.media.id)
+        if (existing !== -1) {
+          return prev.map((item, i) => (i === existing ? snapshotItem : item))
+        }
+        const insertAt = Math.min(Math.max(snapshotIndex, 0), prev.length)
+        return [...prev.slice(0, insertAt), snapshotItem, ...prev.slice(insertAt)]
+      })
+    } catch {
+      toast('Could not undo — the episode is still marked watched.', { tone: 'error' })
     }
   }
 
