@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -57,9 +58,12 @@ export default async function CollectionDetailPage({
       {/* Hero */}
       <div className="relative rounded-2xl overflow-hidden">
         {collection.backdrop_url ? (
-          <img
+          <Image
             src={collection.backdrop_url}
             alt={collection.name}
+            width={1280}
+            height={256}
+            sizes="100vw"
             className="w-full h-48 sm:h-64 object-cover"
           />
         ) : (
@@ -68,10 +72,12 @@ export default async function CollectionDetailPage({
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 flex items-end gap-4">
           {collection.poster_url && (
-            <img
+            <Image
               src={collection.poster_url}
               alt={collection.name}
-              className="hidden sm:block w-20 rounded-xl border border-white/10 shadow-lg shrink-0"
+              width={80}
+              height={120}
+              className="hidden sm:block w-20 h-auto rounded-xl border border-white/10 shadow-lg shrink-0"
             />
           )}
           <div>

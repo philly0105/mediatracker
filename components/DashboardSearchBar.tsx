@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -142,9 +143,11 @@ export default function DashboardSearchBar() {
                   className="w-full flex items-center gap-3 p-3 text-left hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors group"
                 >
                   {item.poster_url ? (
-                    <img
+                    <Image
                       src={item.poster_url}
                       alt=""
+                      width={36}
+                      height={48}
                       className="w-9 h-12 object-cover rounded-md flex-shrink-0 border border-white/5"
                     />
                   ) : (

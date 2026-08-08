@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -366,9 +367,11 @@ function WatchlistSection({
                       className="group cursor-pointer"
                     >
                       {item.media?.poster_url ? (
-                        <img
-                          src={item.media?.poster_url}
-                          alt={item.media?.title}
+                        <Image
+                          src={item.media.poster_url}
+                          alt={item.media?.title ?? ''}
+                          width={56}
+                          height={80}
                           className="w-14 h-20 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/20 border border-[var(--border-subtle)] shrink-0 bg-[var(--bg-void)]"
                         />
                       ) : (

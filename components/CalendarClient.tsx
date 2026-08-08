@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Calendar as CalendarIcon, Film, Tv, Clock, Bell, LayoutGrid } from 'lucide-react'
@@ -126,9 +127,11 @@ export default function CalendarClient({ releases }: Props) {
                         className="p-3 flex gap-4 transition-colors cursor-pointer rounded-lg bg-[var(--glass-card)] border border-white/5 hover:border-zinc-500/30"
                       >
                         {item.poster_url ? (
-                          <img
+                          <Image
                             src={item.poster_url}
                             alt={item.title}
+                            width={64}
+                            height={96}
                             className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-white/5 shrink-0"
                           />
                         ) : (

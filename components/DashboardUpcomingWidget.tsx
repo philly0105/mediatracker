@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -88,9 +89,11 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
                   className="w-full flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-void)]/60 border border-white/5 hover:border-[var(--border-strong)] hover:bg-white/5 transition-all text-left group/item"
                 >
                   {item.poster_url ? (
-                    <img
+                    <Image
                       src={item.poster_url}
                       alt=""
+                      width={32}
+                      height={48}
                       className="w-8 h-12 object-cover rounded-md flex-shrink-0 border border-white/5"
                     />
                   ) : (

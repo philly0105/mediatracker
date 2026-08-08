@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
@@ -246,10 +247,12 @@ export default function StreamingPage() {
                 >
                   <div className="relative aspect-[2/3] rounded-[var(--radius-xl)] overflow-hidden border border-white/10 bg-[var(--bg-void)] shadow-md shadow-black/30 group-hover:border-[var(--border-strong)] group-hover:-translate-y-0.5 transition-all duration-300">
                     {item.poster_url ? (
-                      <img
+                      <Image
                         src={item.poster_url}
                         alt={item.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 180px"
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-zinc-600">

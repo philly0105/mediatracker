@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import type { TmdbSearchResult } from '@/types'
@@ -71,9 +72,11 @@ export default function PersonPage() {
             className="flex gap-3 cursor-pointer group"
           >
             {item.poster_url ? (
-              <img
+              <Image
                 src={item.poster_url}
                 alt={item.title}
+                width={64}
+                height={96}
                 className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-[var(--border-subtle)] shrink-0 group-hover:scale-[1.02] transition-transform"
               />
             ) : (
@@ -137,9 +140,11 @@ export default function PersonPage() {
 
       <Card className="flex flex-col md:flex-row items-center md:items-start gap-6 p-6">
         {profileUrl ? (
-          <img
+          <Image
             src={profileUrl}
             alt={name}
+            width={128}
+            height={128}
             className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-lg border-2 border-[var(--border-subtle)]"
           />
         ) : (

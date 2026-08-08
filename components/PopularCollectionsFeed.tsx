@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -130,9 +131,9 @@ export default function PopularCollectionsFeed() {
             >
               <div className="relative aspect-video">
                 {c.backdrop_url ? (
-                  <img src={c.backdrop_url} alt={c.name} className="w-full h-full object-cover" />
+                  <Image src={c.backdrop_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
                 ) : c.poster_url ? (
-                  <img src={c.poster_url} alt={c.name} className="w-full h-full object-contain bg-zinc-900" />
+                  <Image src={c.poster_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain bg-zinc-900" />
                 ) : (
                   <div className="w-full h-full bg-zinc-900" />
                 )}

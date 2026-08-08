@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -429,9 +430,11 @@ export default function RecommendationsPage() {
                   >
                     {/* Poster image */}
                     {item.poster_url ? (
-                      <img
+                      <Image
                         src={item.poster_url}
                         alt={item.title}
+                        width={80}
+                        height={112}
                         className="w-20 h-28 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/30 border border-[var(--border-subtle)] shrink-0"
                       />
                     ) : (
