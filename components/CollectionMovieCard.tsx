@@ -56,7 +56,7 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
           item={item}
           onClose={() => setShowInfo(false)}
           onAddToWatchlist={async () => { await addToWatchlist(part.tmdb_id, 'movie') }}
-          onMarkAsWatched={async () => { await markWatched(part.tmdb_id, 'movie') }}
+          onMarkAsWatched={async (opts) => { await markWatched(part.tmdb_id, 'movie', opts) }}
         />,
         document.body
       )}

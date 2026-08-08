@@ -126,8 +126,8 @@ export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated
           item={mediaAsResult}
           onClose={() => setShowInfo(false)}
           onAddToWatchlist={async () => { await addToWatchlist(media.tmdb_id, media.type) }}
-          onMarkAsWatched={async () => {
-            await markWatched(media.tmdb_id, media.type)
+          onMarkAsWatched={async (opts) => {
+            await markWatched(media.tmdb_id, media.type, opts)
             router.refresh()
           }}
         />,

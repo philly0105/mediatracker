@@ -228,11 +228,11 @@ function WatchlistSection({
     }
   }
 
-  const handleMarkAsWatched = async (item: WatchlistItem) => {
+  const handleMarkAsWatched = async (item: WatchlistItem, opts?: { rewatch?: boolean }) => {
     if (!item.media) return
     try {
       setActioningId(item.id)
-      await markWatched(item.media.tmdb_id, item.media.type)
+      await markWatched(item.media.tmdb_id, item.media.type, opts)
       await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -241,10 +241,14 @@ function WatchlistSection({
       setItems(prev => prev.filter(i => i.id !== item.id))
       setTotal(prev => prev - 1)
       if (selectedItem?.id === item.id) setSelectedItem(null)
-      toast('Marked as watched.', { tone: 'success' })
     } catch (err) {
+      // Rethrow rather than reporting here. This is only ever reached through
+      // MediaInfoModal, which owns the messaging — including turning a 409 into
+      // a "log a rewatch" offer. Swallowing here would make the modal believe
+      // the write succeeded, so it would show a success toast on top of an
+      // error one and never offer the rewatch.
       console.error(err)
-      toast('Could not mark that as watched.', { tone: 'error' })
+      throw err
     } finally {
       setActioningId(null)
     }
@@ -401,7 +405,7 @@ function WatchlistSection({
             item={modalItem}
             onClose={() => setSelectedItem(null)}
             onAddToWatchlist={async () => {}}
-            onMarkAsWatched={async () => handleMarkAsWatched(selectedItem)}
+            onMarkAsWatched={async (opts) => handleMarkAsWatched(selectedItem, opts)}
             currentPriority={selectedItem.priority}
             onUpdatePriority={async (newPriority) => handleUpdatePriority(selectedItem.id, newPriority)}
             onRemoveFromWatchlist={async () => handleRemove(selectedItem.id)}
