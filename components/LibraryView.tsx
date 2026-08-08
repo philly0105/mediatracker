@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { FilterPills } from '@/components/FilterPills'
 import { Search, RefreshCw, Loader2 } from 'lucide-react'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
+import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
 
 interface LibraryViewProps {
   type: 'movie' | 'show'
@@ -62,9 +63,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
   }, [fetchEntries])
 
   const filteredEntries = useMemo(() => {
-    const filtered = entries.filter((entry) =>
-      entry.media?.title.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filtered = entries.filter((entry) => matchesLibraryQuery(entry, searchQuery))
     return sortWatchEntries(filtered, sortBy)
   }, [entries, searchQuery, sortBy])
 
@@ -83,7 +82,7 @@ export default function LibraryView({ type, title, noun }: LibraryViewProps) {
             <div className="w-full sm:w-64">
               <Input
                 icon={<Search className="w-4 h-4 text-zinc-500" />}
-                placeholder={`Search logged ${noun}...`}
+                placeholder={`Search ${noun}, director, cast...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
