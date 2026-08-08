@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import SearchPage from '@/app/search/page'
+import { ToastProvider } from '@/components/ToastProvider'
 
 // The page pulls the user's watched/watchlist ids from Supabase on mount purely
 // to badge rows; it is irrelevant to the debounce and needs no network here.
@@ -43,7 +44,11 @@ describe('SearchPage query debounce', () => {
   })
 
   it('issues one request for a burst of keystrokes instead of one per key', async () => {
-    render(<SearchPage />)
+    render(
+      <ToastProvider>
+        <SearchPage />
+      </ToastProvider>
+    )
 
     // Typing "breaking bad" used to fire a TMDB request per character.
     for (const value of ['b', 'br', 'bre', 'brea', 'break', 'breaking']) {
@@ -59,7 +64,11 @@ describe('SearchPage query debounce', () => {
   })
 
   it('does not call the API for queries shorter than two characters', async () => {
-    render(<SearchPage />)
+    render(
+      <ToastProvider>
+        <SearchPage />
+      </ToastProvider>
+    )
 
     act(() => { type('b') })
     await act(async () => { vi.advanceTimersByTime(1000) })
@@ -68,7 +77,11 @@ describe('SearchPage query debounce', () => {
   })
 
   it('aborts an in-flight request when a newer query supersedes it', async () => {
-    render(<SearchPage />)
+    render(
+      <ToastProvider>
+        <SearchPage />
+      </ToastProvider>
+    )
 
     act(() => { type('heat') })
     await act(async () => { vi.advanceTimersByTime(350) })
@@ -87,7 +100,11 @@ describe('SearchPage query debounce', () => {
   })
 
   it('clears results and stops loading when the query is emptied', async () => {
-    render(<SearchPage />)
+    render(
+      <ToastProvider>
+        <SearchPage />
+      </ToastProvider>
+    )
 
     act(() => { type('heat') })
     await act(async () => { vi.advanceTimersByTime(350) })
