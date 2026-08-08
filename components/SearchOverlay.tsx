@@ -1,6 +1,7 @@
 'use client'
 import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Search, CheckCircle2, Bookmark } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
@@ -18,7 +19,13 @@ interface Props {
 export default function SearchOverlay({ onClose }: Props) {
   const { query, setQuery, results, loading, clear } = useTmdbSearch()
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
-  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
+  // The old dashboard dropdown refreshed the route after an action so Recently
+  // Watched updated; the overlay now owns that responsibility.
+  const router = useRouter()
+  const { addToWatchlist, markWatched } = useMediaActions({
+    priority: 'want_to_watch',
+    onDone: () => router.refresh(),
+  })
 
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)

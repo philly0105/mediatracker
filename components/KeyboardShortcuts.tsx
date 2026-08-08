@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { isAnyModalOpen } from '@/lib/useModal'
+import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import SearchOverlay from '@/components/SearchOverlay'
 
 export default function KeyboardShortcuts() {
@@ -29,8 +30,21 @@ export default function KeyboardShortcuts() {
       setOpen(true)
     }
 
+    // The same guards cover the bus event — a button elsewhere in the app asked
+    // the overlay to open, but a modal would still block it (and the latch
+    // stops a second copy stacking above the first).
+    function handleSearchOverlayEvent() {
+      if (isAnyModalOpen()) return
+      if (open) return
+      setOpen(true)
+    }
+
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener(SEARCH_OVERLAY_EVENT, handleSearchOverlayEvent)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener(SEARCH_OVERLAY_EVENT, handleSearchOverlayEvent)
+    }
   }, [open])
 
   return open ? <SearchOverlay onClose={() => setOpen(false)} /> : null

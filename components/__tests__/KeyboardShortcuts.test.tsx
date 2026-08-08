@@ -1,7 +1,15 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
+import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { useModal } from '@/lib/useModal'
+
+// SearchOverlay refreshes the route after logging an item; shortcut wiring just
+// needs the call to exist, not to do anything.
+const refresh = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh }),
+}))
 
 // The overlay pulls the user's watched/watchlist ids from Supabase purely to
 // badge rows; irrelevant to the shortcut wiring, so mock it out here.
@@ -84,6 +92,14 @@ describe('KeyboardShortcuts', () => {
     fireEvent.keyDown(document, { key: '/' })
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('opens the search overlay via the window event and does not double-open', () => {
+    render(<KeyboardShortcuts />)
+    act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
   })
 })

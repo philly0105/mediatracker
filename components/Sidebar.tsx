@@ -6,21 +6,20 @@ import { useEffect, useState } from 'react'
 import {
   Home,
   Search,
-  Film,
-  Tv,
   ListTodo,
   Library,
+  List,
   Layers,
   BarChart3,
   Settings,
   User,
   Sparkles,
-  Calendar,
   Clapperboard,
   MoreHorizontal,
   X
 } from 'lucide-react'
 import { NavItem } from './ui/NavItem'
+import { openSearchOverlay } from '@/lib/searchOverlayBus'
 
 interface SidebarProps {
   userEmail?: string | null
@@ -30,23 +29,22 @@ type NavEntry = {
   name: string
   href: string
   icon: React.ComponentType<any>
+  action?: 'search-overlay'
 }
 
 const PRIMARY_NAV: NavEntry[] = [
   { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Search', href: '/search', icon: Search },
-  { name: 'Movies', href: '/movies', icon: Film },
-  { name: 'Shows', href: '/shows', icon: Tv },
-  { name: 'Streaming', href: '/streaming', icon: Clapperboard },
+  { name: 'Search', href: '/search', icon: Search, action: 'search-overlay' },
+  { name: 'Library', href: '/library', icon: Library },
   { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
+  { name: 'Streaming', href: '/streaming', icon: Clapperboard },
   { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
 ]
 
 const MORE_NAV: NavEntry[] = [
-  { name: 'Lists', href: '/lists', icon: Layers },
-  { name: 'Collections', href: '/collections', icon: Library },
+  { name: 'Lists', href: '/lists', icon: List },
+  { name: 'Franchises', href: '/collections', icon: Layers },
   { name: 'Stats', href: '/stats', icon: BarChart3 },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
 ]
 
 function isNavActive(pathname: string, href: string) {
@@ -92,15 +90,27 @@ export default function Sidebar({ userEmail }: SidebarProps) {
 
         {/* Navigation Items */}
         <nav className="flex-1 flex flex-col gap-1 overflow-y-auto scrollbar-none">
-          {PRIMARY_NAV.map((item) => (
-            <Link key={item.href} href={item.href} passHref legacyBehavior>
+          {PRIMARY_NAV.map((item) =>
+            item.action === 'search-overlay' ? (
+              // Same shape as the More toggle below: NavItem's own onClick,
+              // no wrapper — a <button> around NavItem's <a> is invalid HTML.
               <NavItem
+                key={item.href}
                 icon={item.icon}
                 label={item.name}
-                active={isNavActive(pathname, item.href)}
+                active={false}
+                onClick={openSearchOverlay}
               />
-            </Link>
-          ))}
+            ) : (
+              <Link key={item.href} href={item.href} passHref legacyBehavior>
+                <NavItem
+                  icon={item.icon}
+                  label={item.name}
+                  active={isNavActive(pathname, item.href)}
+                />
+              </Link>
+            )
+          )}
 
           {/* More section */}
           <NavItem
@@ -214,9 +224,14 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         <div className="flex items-center gap-3">
           {/* Was a bare icon with no link and no handler: it looked tappable
               and did nothing. */}
-          <Link href="/search" aria-label="Search" className="p-1 -m-1 rounded-sm transition-colors hover:text-white">
+          <button
+            type="button"
+            onClick={openSearchOverlay}
+            aria-label="Search"
+            className="p-1 -m-1 rounded-sm transition-colors hover:text-white"
+          >
             <Search className="w-5 h-5 text-zinc-400" />
-          </Link>
+          </button>
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
             style={{
@@ -271,6 +286,27 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 {moreDrawerItems.map((item) => {
                   const isActive = isNavActive(pathname, item.href)
                   const Icon = item.icon
+                  if (item.action === 'search-overlay') {
+                    return (
+                      <button
+                        key={item.href}
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
+                          openSearchOverlay()
+                        }}
+                        className="flex flex-col items-center gap-1.5 p-3 rounded-md text-[10px] font-medium transition-colors"
+                        style={{
+                          color: 'var(--text-secondary)',
+                          background: 'transparent',
+                          border: '1px solid transparent',
+                        }}
+                      >
+                        <Icon className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+                        <span>{item.name}</span>
+                      </button>
+                    )
+                  }
                   return (
                     <Link
                       key={item.href}
@@ -305,6 +341,21 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         {primaryMobileItems.map((item) => {
           const isActive = isNavActive(pathname, item.href)
           const Icon = item.icon
+
+          if (item.action === 'search-overlay') {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={openSearchOverlay}
+                className="relative flex flex-col items-center gap-1 p-2 rounded-md text-[10px] font-medium transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <Icon className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />
+                <span>{item.name}</span>
+              </button>
+            )
+          }
 
           return (
             <Link
