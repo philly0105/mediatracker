@@ -5,7 +5,7 @@ import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { FilterPills } from '@/components/FilterPills'
-import { Search, RefreshCw, Loader2 } from 'lucide-react'
+import { Search, RefreshCw, Loader2, List, LayoutGrid } from 'lucide-react'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
 import {
@@ -42,7 +42,7 @@ const ratingOptions: { id: string; label: string }[] = [
 // Which filters live in the URL, and their fallback values. Params are omitted
 // from the URL while at their default so /movies stays /movies; `q` is the
 // free-text key (default '') and so gets its URL write debounced.
-const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All' }
+const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All', view: 'list' }
 
 export default function LibraryView() {
   const [entries, setEntries] = useState<WatchEntry[]>([])
@@ -58,6 +58,9 @@ export default function LibraryView() {
   const genreFilter = filters.genre
   const ratingFilter = ratingOptions.some((o) => o.id === filters.rating) ? filters.rating : 'All'
   const decadeFilter = filters.decade
+  // The view toggle switches the card layout between the detailed row (default)
+  // and the poster wall; a malformed param in a shared link falls back to 'list'.
+  const view = filters.view === 'grid' ? 'grid' : 'list'
   // The type filter splits the combined library into movies, shows, or the
   // whole set; a malformed param in a shared link falls back to 'all'.
   const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
@@ -243,6 +246,26 @@ export default function LibraryView() {
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
               />
             </div>
+            <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] self-start">
+              <button
+                type="button"
+                onClick={() => setFilter('view', 'list')}
+                aria-label="List view"
+                aria-pressed={view === 'list'}
+                className={`p-1.5 rounded-sm transition-colors ${view === 'list' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white'}`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter('view', 'grid')}
+                aria-label="Grid view"
+                aria-pressed={view === 'grid'}
+                className={`p-1.5 rounded-sm transition-colors ${view === 'grid' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white'}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
             <Button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -271,17 +294,32 @@ export default function LibraryView() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
-            {visibleEntries.map((entry) => (
-              <MediaCard
-                key={entry.id}
-                entry={entry}
-                hideWatchedDate={true}
-                onDeleted={handleEntryDeleted}
-                onUpdated={handleEntryUpdated}
-              />
-            ))}
-          </div>
+          {view === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {visibleEntries.map((entry) => (
+                <MediaCard
+                  key={entry.id}
+                  entry={entry}
+                  view="poster"
+                  hideWatchedDate={true}
+                  onDeleted={handleEntryDeleted}
+                  onUpdated={handleEntryUpdated}
+                />
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+              {visibleEntries.map((entry) => (
+                <MediaCard
+                  key={entry.id}
+                  entry={entry}
+                  hideWatchedDate={true}
+                  onDeleted={handleEntryDeleted}
+                  onUpdated={handleEntryUpdated}
+                />
+              ))}
+            </div>
+          )}
           {hasMore && (
             <div ref={sentinelRef} className="h-20 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />

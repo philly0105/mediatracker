@@ -262,4 +262,35 @@ describe('LibraryView', () => {
     })
     expect(mockFetch).toHaveBeenCalledWith('/api/watch')
   })
+
+  it('toggles between row and poster layouts', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await screen.findByText('Heat')
+
+    // The default list view renders MediaRow, whose root is a div, so the title
+    // is not exposed as a button until we switch to the poster grid.
+    expect(screen.queryByRole('button', { name: /Heat/ })).not.toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Grid view' }))
+    })
+    // PosterCard's root is a button, so the title now shows up as one.
+    expect(screen.getByRole('button', { name: /Heat/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute('aria-pressed', 'true')
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'List view' }))
+    })
+    expect(screen.queryByRole('button', { name: /Heat/ })).not.toBeInTheDocument()
+  })
 })
