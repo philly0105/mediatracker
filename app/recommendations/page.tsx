@@ -1,7 +1,6 @@
 'use client'
 import Image from 'next/image'
 import { useCallback, useEffect, useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
   Bookmark,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { useMediaActions, isAlreadyWatchedError } from '@/lib/useMediaActions'
+import { FilterPills } from '@/components/FilterPills'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -269,14 +269,11 @@ export default function RecommendationsPage() {
   }, [loadMoreRecommendations])
 
   return (
-    <div className="space-y-10 pb-12">
+    <div className="space-y-6 pb-12">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 flex items-center gap-2.5">
-            <Sparkles className="w-7 h-7 text-[var(--accent)] fill-[var(--accent)]/10" />
-            <span>Recommendations</span>
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Recommendations</h1>
           <p className="text-sm text-zinc-400">
             {fallback
               ? 'We compiled this week\'s overall trending items to get you started!'
@@ -337,73 +334,38 @@ export default function RecommendationsPage() {
         </Card>
       ) : (
         /* Main Recommendations Grid */
-        <div className="space-y-8">
-          {/* Media Type Switch */}
-          <div className="flex justify-start">
-            <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] select-none">
-              {([
-                { id: 'all', label: 'All Recommendations' },
+        <div className="space-y-6">
+          {/* Filters */}
+          <div className="flex flex-col gap-3">
+            <FilterPills
+              options={[
+                { id: 'all', label: 'All' },
                 { id: 'movie', label: 'Movies' },
                 { id: 'show', label: 'TV Shows' },
-              ] as const).map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => {
-                    setActiveType(type.id)
-                    setActiveGenre('All')
-                    setDiscoverPageByFilter({})
-                    setHasMoreByFilter({})
-                    setVisibleCount(10)
-                  }}
-                  className={`relative px-4 py-2 rounded-sm font-bold text-xs transition-all duration-300 active:scale-95 whitespace-nowrap ${
-                    activeType === type.id
-                      ? 'text-white'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  {activeType === type.id && (
-                    <motion.div
-                      layoutId="activeTypeHighlight"
-                      className="absolute inset-0 bg-white/10 rounded-sm -z-10 shadow-md"
-                      transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-                    />
-                  )}
-                  <span>{type.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Genre Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
-            {topGenres.map((genre) => (
-              <button
-                key={genre}
-                onClick={() => {
-                  setActiveGenre(genre)
-                  setDiscoverPageByFilter((prev) => ({ ...prev, [`${activeType}:${genre}`]: 1 }))
-                  setHasMoreByFilter((prev) => {
-                    const next = { ...prev }
-                    delete next[`${activeType}:${genre}`]
-                    return next
-                  })
-                  setVisibleCount(10)
-                }}
-                className={`relative px-4 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
-                  activeGenre === genre
-                    ? 'text-white'
-                    : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-                }`}
-              >
-                {activeGenre === genre && (
-                  <motion.div
-                    layoutId="activeGenreTab"
-                    className="absolute inset-0 bg-[var(--accent)] rounded-sm -z-10 shadow-lg shadow-green-600/20"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span>{genre}</span>
-              </button>
-            ))}
+              ]}
+              active={activeType}
+              onSelect={(id) => {
+                setActiveType(id)
+                setActiveGenre('All')
+                setDiscoverPageByFilter({})
+                setHasMoreByFilter({})
+                setVisibleCount(10)
+              }}
+            />
+            <FilterPills
+              options={topGenres.map((genre) => ({ id: genre, label: genre }))}
+              active={activeGenre}
+              onSelect={(genre) => {
+                setActiveGenre(genre)
+                setDiscoverPageByFilter((prev) => ({ ...prev, [`${activeType}:${genre}`]: 1 }))
+                setHasMoreByFilter((prev) => {
+                  const next = { ...prev }
+                  delete next[`${activeType}:${genre}`]
+                  return next
+                })
+                setVisibleCount(10)
+              }}
+            />
           </div>
 
           {filteredItems.length === 0 ? (
@@ -416,111 +378,104 @@ export default function RecommendationsPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <AnimatePresence>
-                {visibleItems.map((item) => (
-                  <SelectableOverlay key={item.tmdb_id} item={item}>
-                  <motion.div
-                    layout="position"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                    onClick={() => setSelectedItem(item)}
-                    className="bg-[var(--glass-card)] hover:bg-[var(--glass-card-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-lg p-4 flex gap-4 relative overflow-hidden group select-none hover:shadow-[var(--glow-violet)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-                  >
-                    {/* Poster image */}
-                    {item.poster_url ? (
-                      <Image
-                        src={item.poster_url}
-                        alt={item.title}
-                        width={80}
-                        height={112}
-                        className="w-20 h-28 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/30 border border-[var(--border-subtle)] shrink-0"
-                      />
-                    ) : (
-                      <div className="w-20 h-28 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                        No Poster
-                      </div>
-                    )}
-
-                    {/* Metadata & Actions */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                      <div className="space-y-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
-                            {item.title}
-                          </h2>
-                          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
-                            {item.type === 'show' ? 'TV' : 'Movie'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-                          {item.release_year && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-                              <span>{item.release_year}</span>
-                            </span>
-                          )}
-                          {item.vote_average !== undefined && item.vote_average > 0 && (
-                            <span className="flex items-center gap-0.5 text-[var(--rating)] font-semibold">
-                              <Star className="w-3.5 h-3.5 fill-[var(--rating)] text-[var(--rating)]" />
-                              <span>{item.vote_average.toFixed(1)}</span>
-                            </span>
-                          )}
-                        </div>
-                        {item.seed_title && (
-                          <p className="text-[11px] text-zinc-500 line-clamp-1">
-                            Because you watched {item.seed_title}
-                          </p>
-                        )}
-                        <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
-                          {item.overview || 'No description available.'}
-                        </p>
-                      </div>
-
-                      {/* Actions Row */}
-                      <div className="flex flex-wrap gap-2 pt-3">
-                        <Button
-                          disabled={actioningId !== null}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleAddToWatchlist(item.tmdb_id, item.type)
-                          }}
-                          variant="ghost"
-                          size="sm"
-                          style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
-                        >
-                          {actioningId === item.tmdb_id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Plus className="w-3 h-3" />
-                          )}
-                          <span>Watchlist</span>
-                        </Button>
-                        
-                        <Button
-                          disabled={actioningId !== null}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleMarkAsWatchedFromCard(item.tmdb_id, item.type)
-                          }}
-                          variant="ghost"
-                          size="sm"
-                          style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
-                        >
-                          {actioningId === item.tmdb_id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Check className="w-3 h-3" />
-                          )}
-                          <span>Watched</span>
-                        </Button>
-                      </div>
+              {visibleItems.map((item) => (
+                <SelectableOverlay key={item.tmdb_id} item={item}>
+                <div
+                  onClick={() => setSelectedItem(item)}
+                  className="bg-[var(--glass-card)] hover:bg-[var(--glass-card-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-lg p-4 flex gap-4 relative overflow-hidden group select-none hover:shadow-[var(--glow-violet)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                >
+                  {/* Poster image */}
+                  {item.poster_url ? (
+                    <Image
+                      src={item.poster_url}
+                      alt={item.title}
+                      width={80}
+                      height={112}
+                      className="w-20 h-28 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/30 border border-[var(--border-subtle)] shrink-0"
+                    />
+                  ) : (
+                    <div className="w-20 h-28 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                      No Poster
                     </div>
-                  </motion.div>
-                  </SelectableOverlay>
-                ))}
-              </AnimatePresence>
+                  )}
+
+                  {/* Metadata & Actions */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                    <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
+                          {item.title}
+                        </h2>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
+                          {item.type === 'show' ? 'TV' : 'Movie'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-xs text-zinc-500">
+                        {item.release_year && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>{item.release_year}</span>
+                          </span>
+                        )}
+                        {item.vote_average !== undefined && item.vote_average > 0 && (
+                          <span className="flex items-center gap-0.5 text-[var(--rating)] font-semibold">
+                            <Star className="w-3.5 h-3.5 fill-[var(--rating)] text-[var(--rating)]" />
+                            <span>{item.vote_average.toFixed(1)}</span>
+                          </span>
+                        )}
+                      </div>
+                      {item.seed_title && (
+                        <p className="text-[11px] text-zinc-500 line-clamp-1">
+                          Because you watched {item.seed_title}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
+                        {item.overview || 'No description available.'}
+                      </p>
+                    </div>
+
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap gap-2 pt-3">
+                      <Button
+                        disabled={actioningId !== null}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleAddToWatchlist(item.tmdb_id, item.type)
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
+                      >
+                        {actioningId === item.tmdb_id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Plus className="w-3 h-3" />
+                        )}
+                        <span>Watchlist</span>
+                      </Button>
+                      
+                      <Button
+                        disabled={actioningId !== null}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleMarkAsWatchedFromCard(item.tmdb_id, item.type)
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
+                      >
+                        {actioningId === item.tmdb_id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Check className="w-3 h-3" />
+                        )}
+                        <span>Watched</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                </SelectableOverlay>
+              ))}
             </div>
           )}
 
