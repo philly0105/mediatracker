@@ -104,7 +104,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
           </Button>
         </div>
 
-        <button onClick={onClose}
+        <button onClick={onClose} aria-label="Close"
           className="absolute top-5 right-5 text-zinc-500 hover:text-white transition-colors">
           <X className="w-5 h-5" />
         </button>

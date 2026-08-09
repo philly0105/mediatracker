@@ -59,3 +59,23 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Keyboard focus: most controls either disable the UA outline or never had
+   a visible one. :focus-visible only fires for keyboard-driven focus, so
+   mouse clicks stay ring-free; !important beats the scattered
+   focus:outline-none utilities without touching each call site. */
+*:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

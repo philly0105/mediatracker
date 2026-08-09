@@ -479,6 +479,7 @@ function WatchlistSection({
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--rust-300)] hover:bg-[var(--rust-tint-bg)] transition-colors"
                                 title="Move to Must Watch"
+                                aria-label="Move to Must Watch"
                               ><Flame className="w-3.5 h-3.5" /></button>
                             )}
                             {priority !== 'want_to_watch' && (
@@ -486,6 +487,7 @@ function WatchlistSection({
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--amber-300)] hover:bg-[var(--amber-tint-bg)] transition-colors"
                                 title="Move to Want to Watch"
+                                aria-label="Move to Want to Watch"
                               ><Sparkles className="w-3.5 h-3.5" /></button>
                             )}
                             {priority !== 'someday' && (
@@ -493,12 +495,14 @@ function WatchlistSection({
                                 onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-300 hover:bg-white/10 transition-colors"
                                 title="Move to Someday"
+                                aria-label="Move to Someday"
                               ><Inbox className="w-3.5 h-3.5" /></button>
                             )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
                               className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--live)] hover:bg-[var(--rust-tint-bg)] transition-colors"
                               title="Remove"
+                              aria-label="Remove"
                             ><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         )}

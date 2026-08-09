@@ -10,9 +10,15 @@ interface Props {
 export default function RatingStars({ value, onChange, readOnly = false }: Props) {
   const [hover, setHover] = useState<number | null>(null)
   const display = hover ?? value ?? 0
+  const interactive = !readOnly && !!onChange
 
   return (
-    <div className="flex items-center gap-0.5" onMouseLeave={() => setHover(null)}>
+    <div
+      className="flex items-center gap-0.5"
+      onMouseLeave={() => setHover(null)}
+      role={interactive ? 'group' : 'img'}
+      aria-label={value ? `Rated ${value} out of 5` : 'Not rated'}
+    >
       {[1, 2, 3, 4, 5].map(star => {
         const full = display >= star
         const half = !full && display >= star - 0.5
@@ -25,18 +31,26 @@ export default function RatingStars({ value, onChange, readOnly = false }: Props
                 style={{ width: full ? '100%' : '50%', color: 'var(--amber-400)' }}
               >★</span>
             )}
-            <div
-              data-half={`${star - 0.5}`}
-              className="absolute left-0 top-0 w-1/2 h-full cursor-pointer"
-              onMouseEnter={() => !readOnly && setHover(star - 0.5)}
-              onClick={() => !readOnly && onChange?.(star - 0.5)}
-            />
-            <div
-              data-half={`${star}.0`}
-              className="absolute right-0 top-0 w-1/2 h-full cursor-pointer"
-              onMouseEnter={() => !readOnly && setHover(star)}
-              onClick={() => !readOnly && onChange?.(star)}
-            />
+            {interactive && (
+              <>
+                <button
+                  type="button"
+                  data-half={`${star - 0.5}`}
+                  aria-label={`Rate ${star - 0.5} stars`}
+                  className="absolute left-0 top-0 w-1/2 h-full cursor-pointer"
+                  onMouseEnter={() => setHover(star - 0.5)}
+                  onClick={() => onChange?.(star - 0.5)}
+                />
+                <button
+                  type="button"
+                  data-half={`${star}.0`}
+                  aria-label={`Rate ${star} star${star === 1 ? '' : 's'}`}
+                  className="absolute right-0 top-0 w-1/2 h-full cursor-pointer"
+                  onMouseEnter={() => setHover(star)}
+                  onClick={() => onChange?.(star)}
+                />
+              </>
+            )}
           </div>
         )
       })}

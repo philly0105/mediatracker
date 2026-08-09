@@ -197,6 +197,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
 
             <button
               onClick={clearSelection}
+              aria-label="Clear selection"
               className="p-2 rounded-sm hover:bg-[var(--live)]/20 text-zinc-400 hover:text-[var(--live)] transition-colors"
             >
               <X className="w-4 h-4" />

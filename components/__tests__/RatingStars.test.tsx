@@ -1,4 +1,4 @@
-import { render, fireEvent } from '@testing-library/react'
+import { render, fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import RatingStars from '@/components/RatingStars'
 
@@ -32,7 +32,20 @@ describe('RatingStars', () => {
   it('does not call onChange when readOnly', () => {
     const onChange = vi.fn()
     render(<RatingStars value={4} onChange={onChange} readOnly />)
-    fireEvent.click(document.querySelector('[data-half="1.0"]')!)
+    // Read-only renders no hit areas at all, so there is nothing to click.
+    expect(document.querySelectorAll('[data-half]')).toHaveLength(0)
     expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('hit areas are labeled buttons', () => {
+    render(<RatingStars value={null} onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Rate 0.5 stars' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Rate 5 stars' })).toBeInTheDocument()
+  })
+
+  it('read-only renders no interactive hit areas', () => {
+    render(<RatingStars value={3.5} readOnly />)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getByRole('img', { name: 'Rated 3.5 out of 5' })).toBeInTheDocument()
   })
 })

@@ -176,6 +176,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           </button>
           <Link
             href="/settings"
+            aria-label="Settings"
             className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
             style={{
               background: 'var(--zinc-800)',
@@ -183,7 +184,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             }}
           >
             {userEmail ? (
-              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(userEmail)}`} alt="User Avatar" className="w-full h-full object-cover" />
+              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(userEmail)}`} alt="" className="w-full h-full object-cover" />
             ) : (
               <User className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
             )}
@@ -219,6 +220,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>More</span>
                 <button
                   onClick={() => setMoreOpen(false)}
+                  aria-label="Close menu"
                   className="p-1 rounded-sm hover:text-white transition-colors"
                   style={{ color: 'var(--text-muted)' }}
                 >

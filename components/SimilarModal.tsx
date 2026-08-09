@@ -110,6 +110,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="p-1.5 rounded-sm text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
           >
             <X className="w-4 h-4" />

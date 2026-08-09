@@ -119,6 +119,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
         {/* Close Button — same treatment as MediaInfoModal's */}
         <button
           onClick={onClose}
+          aria-label="Close"
           className="absolute top-5 right-5 z-10 p-2 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
         >
           <X className="w-4 h-4" />
