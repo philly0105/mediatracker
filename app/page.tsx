@@ -1,11 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Calendar, Flame, ArrowRight, Sparkles, MonitorPlay } from 'lucide-react'
+import { Calendar, Flame, ArrowRight, MonitorPlay } from 'lucide-react'
 import DashboardRecentCards from '@/components/DashboardRecentCards'
 import { BentoGrid, BentoGridItem } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
-import { Eyebrow } from '@/components/ui/Eyebrow'
 import { StatTile } from '@/components/ui/StatTile'
 import DashboardSearchBar from '@/components/DashboardSearchBar'
 import DashboardUpcomingWidget from '@/components/DashboardUpcomingWidget'
@@ -123,19 +122,8 @@ export default async function DashboardPage() {
       <div className="absolute inset-0 bg-grid pointer-events-none opacity-[0.15] z-0 h-[500px]" />
       
       {/* Header with integrated Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-30 pl-2">
-        <div className="flex flex-col gap-2">
-          <Eyebrow style={{ marginBottom: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
-            Welcome back
-          </Eyebrow>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 pb-2">
-            Dashboard
-          </h1>
-          <p className="text-zinc-400 font-medium font-sans">
-            Your personal media collection and viewing analytics.
-          </p>
-        </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-30 pl-2">
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <div className="w-full md:w-auto md:min-w-[380px] flex-shrink-0">
           <DashboardSearchBar />
         </div>

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
 import { Outfit } from 'next/font/google'
 import './globals.css'
@@ -14,6 +14,10 @@ const outfit = Outfit({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'DorfMovies',
   description: 'Track your movies, TV shows, and watchlists.',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#030303',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
