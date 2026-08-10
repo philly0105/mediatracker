@@ -3,10 +3,10 @@ import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Search, CheckCircle2, Bookmark, Home, Library, ListTodo, Clapperboard, Sparkles, List, Layers, BarChart3, Calendar, Settings } from 'lucide-react'
-import type { TmdbSearchResult } from '@/types'
+import { Search, CheckCircle2, Bookmark, Home, Library, ListTodo, Clapperboard, Sparkles, List, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
+import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
-import { useTmdbSearch } from '@/lib/useTmdbSearch'
+import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
@@ -32,7 +32,8 @@ const QUICK_NAV = [
 ]
 
 export default function SearchOverlay({ onClose }: Props) {
-  const { query, setQuery, results, loading, clear } = useTmdbSearch()
+  const [mode, setMode] = useState<SearchMode>('title')
+  const { query, setQuery, results, loading, clear } = useTmdbSearch(mode)
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
   // The old dashboard dropdown refreshed the route after an action so Recently
   // Watched updated; the overlay now owns that responsibility.
@@ -57,19 +58,32 @@ export default function SearchOverlay({ onClose }: Props) {
     onClose()
   }
 
-  // Under two characters there is nothing to search — the list slot shows
-  // destinations instead, so the palette doubles as quick navigation.
-  const showQuickNav = query.trim().length < 2
+  // Under two characters there is nothing to search — in title mode the list
+  // slot shows destinations instead, so the palette doubles as quick navigation.
+  // People mode has no quick-nav; it shows a hint until there's a query.
+  const showQuickNav = mode === 'title' && query.trim().length < 2
 
   // Typing filters destinations too — prefix match keeps it to what the user
   // is plausibly steering at ("sta" → Stats) without drowning TMDB results.
-  const matchedPages = showQuickNav
-    ? []
-    : QUICK_NAV.filter((page) => page.name.toLowerCase().startsWith(query.trim().toLowerCase()))
+  // Only in title mode; a person query shouldn't surface page shortcuts.
+  const matchedPages = mode === 'title' && query.trim().length >= 2
+    ? QUICK_NAV.filter((page) => page.name.toLowerCase().startsWith(query.trim().toLowerCase()))
+    : []
+
+  // `results` is a union; the active mode determines which shape came back.
+  const titleResults = mode === 'title' ? (results as TmdbSearchResult[]) : []
+  const personResults = mode === 'person' ? (results as TmdbPersonResult[]) : []
 
   function navigateTo(href: string) {
     router.push(href)
     handleClose()
+  }
+
+  function switchMode(next: SearchMode) {
+    if (next === mode) return
+    setMode(next)
+    setActiveIndex(0)
+    inputRef.current?.focus()
   }
 
   // useModal moves focus to the panel container, but the search input is the
@@ -112,7 +126,13 @@ export default function SearchOverlay({ onClose }: Props) {
       if (itemCount === 0) return
       setActiveIndex((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
-      if (showQuickNav) {
+      if (mode === 'person') {
+        const p = personResults[activeIndex]
+        if (p) {
+          e.preventDefault()
+          navigateTo(`/person/${encodeURIComponent(p.name)}`)
+        }
+      } else if (showQuickNav) {
         const active = QUICK_NAV[activeIndex]
         if (active) {
           e.preventDefault()
@@ -126,7 +146,7 @@ export default function SearchOverlay({ onClose }: Props) {
             navigateTo(page.href)
           }
         } else {
-          const active = results[activeIndex - matchedPages.length]
+          const active = titleResults[activeIndex - matchedPages.length]
           if (active) {
             e.preventDefault()
             setSelected(active)
@@ -163,10 +183,28 @@ export default function SearchOverlay({ onClose }: Props) {
             value={query}
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search movies and TV shows…"
+            placeholder={mode === 'person' ? 'Search actors and directors…' : 'Search movies and TV shows…'}
             autoFocus
             className="flex-1 bg-transparent border-none outline-none text-base text-white placeholder:text-zinc-500"
           />
+        </div>
+
+        {/* Mode tabs — Titles and People are separate searches, not blended. */}
+        <div className="px-5 pt-3 flex gap-2" role="tablist" aria-label="Search type">
+          {([['title', 'Titles'], ['person', 'People']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => switchMode(value)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                mode === value ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Results list */}
@@ -213,13 +251,44 @@ export default function SearchOverlay({ onClose }: Props) {
               })}
             </>
           )}
+          {mode === 'person' && query.trim().length < 2 && (
+            <div className="py-8 text-sm text-zinc-600 text-center">Search for an actor or director by name.</div>
+          )}
           {query.trim().length >= 2 && loading && (
             <div className="py-8 text-sm text-zinc-600 text-center">Searching…</div>
           )}
           {query.trim().length >= 2 && !loading && results.length === 0 && matchedPages.length === 0 && (
             <div className="py-8 text-sm text-zinc-600 text-center">No matches for &ldquo;{query}&rdquo;.</div>
           )}
-          {results.map((r, i) => {
+          {personResults.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              data-index={i}
+              onMouseEnter={() => setActiveIndex(i)}
+              onClick={() => navigateTo(`/person/${encodeURIComponent(p.name)}`)}
+              className={`flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+            >
+              {p.profile_url ? (
+                <Image
+                  src={p.profile_url}
+                  alt=""
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-black border border-white/5 text-zinc-600">
+                  <User className="w-4 h-4" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                {p.known_for && <p className="text-xs text-zinc-500 truncate mt-0.5">{p.known_for}</p>}
+              </div>
+            </button>
+          ))}
+          {titleResults.map((r, i) => {
             const listIndex = i + matchedPages.length
             const watched = watchedIds.has(r.tmdb_id)
             const listed = watchlistIds.has(r.tmdb_id)

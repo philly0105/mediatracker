@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes } from '@/lib/tmdb'
+import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -51,6 +51,38 @@ describe('searchTmdb', () => {
     })
     const results = await searchTmdb('actor')
     expect(results).toHaveLength(0)
+  })
+})
+
+describe('searchTmdbPeople', () => {
+  it('maps profile URL and joins up to three known-for titles', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        results: [{
+          id: 287, name: 'Brad Pitt', profile_path: '/face.jpg',
+          known_for: [
+            { title: 'Fight Club' }, { name: 'True Detective' },
+            { title: 'Se7en' }, { title: 'Troy' },
+          ],
+        }],
+      }),
+    })
+    const results = await searchTmdbPeople('brad pitt')
+    expect(results[0]).toEqual({
+      id: 287, name: 'Brad Pitt',
+      profile_url: 'https://image.tmdb.org/t/p/w500/face.jpg',
+      known_for: 'Fight Club, True Detective, Se7en',
+    })
+  })
+
+  it('handles a missing profile and empty known_for', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ results: [{ id: 1, name: 'Nobody' }] }),
+    })
+    const results = await searchTmdbPeople('nobody')
+    expect(results[0]).toEqual({ id: 1, name: 'Nobody', profile_url: null, known_for: '' })
   })
 })
 

@@ -101,6 +101,13 @@ export interface TmdbSearchResult {
   vote_average?: number
 }
 
+export interface TmdbPersonResult {
+  id: number
+  name: string
+  profile_url: string | null
+  known_for: string
+}
+
 export interface TmdbCollectionSummary {
   id: number
   name: string

@@ -1,17 +1,26 @@
 'use client'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { TmdbSearchResult } from '@/types'
+import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
+
+export type SearchMode = 'title' | 'person'
 
 // Shared debounced TMDB search, extracted from DashboardSearchBar so the ⌘K
 // overlay gets identical request semantics without duplicating the wiring.
-// Owns the query, the debounce timer, and the in-flight request.
-export function useTmdbSearch() {
+// Owns the query, the debounce timer, and the in-flight request. `mode` picks
+// the endpoint: titles (movies/TV) or people (actors/directors).
+export function useTmdbSearch(mode: SearchMode = 'title') {
   const [query, setQueryState] = useState('')
-  const [results, setResults] = useState<TmdbSearchResult[]>([])
+  const [results, setResults] = useState<Array<TmdbSearchResult | TmdbPersonResult>>([])
   const [loading, setLoading] = useState(false)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // Read inside the debounced/async closures so a mode flip mid-query targets
+  // the right endpoint without recreating the callbacks.
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+  const queryRef = useRef(query)
+  queryRef.current = query
 
   // The search API fetch. A query below the length threshold clears out instead
   // of hitting the network.
@@ -29,9 +38,10 @@ export function useTmdbSearch() {
     const controller = new AbortController()
     abortRef.current = controller
 
+    const typeParam = modeRef.current === 'person' ? '&type=person' : ''
     setLoading(true)
     try {
-      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}`, {
+      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(q)}${typeParam}`, {
         signal: controller.signal,
       })
       if (res.ok) {
@@ -63,6 +73,16 @@ export function useTmdbSearch() {
     }
     debounceRef.current = setTimeout(() => search(value), 350)
   }, [search])
+
+  // Toggling Titles/People re-runs the current query against the new endpoint
+  // immediately (no debounce) so the list doesn't sit stale until the next
+  // keystroke. Clear first so wrong-shaped rows never render for a frame.
+  const didMount = useRef(false)
+  useEffect(() => {
+    if (!didMount.current) { didMount.current = true; return }
+    setResults([])
+    if (queryRef.current.trim().length >= 2) search(queryRef.current)
+  }, [mode, search])
 
   // Cancel any pending debounce/request on unmount.
   useEffect(() => {

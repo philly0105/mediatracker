@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { searchTmdb } from '@/lib/tmdb'
+import { searchTmdb, searchTmdbPeople } from '@/lib/tmdb'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await searchTmdb(q.trim())
+    const results = request.nextUrl.searchParams.get('type') === 'person'
+      ? await searchTmdbPeople(q.trim())
+      : await searchTmdb(q.trim())
     return NextResponse.json({ results })
   } catch (err) {
     console.error('TMDB search error:', err)

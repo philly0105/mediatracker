@@ -1,4 +1,4 @@
-import type { TmdbSearchResult, MediaType, TmdbCollectionDetails, TmdbCollectionPart, TmdbCollectionSummary } from '@/types'
+import type { TmdbSearchResult, TmdbPersonResult, MediaType, TmdbCollectionDetails, TmdbCollectionPart, TmdbCollectionSummary } from '@/types'
 
 const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
@@ -148,6 +148,33 @@ export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
       genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
       vote_average: r.vote_average,
     }))
+}
+
+// People search is its own overlay mode, kept out of /search/multi so an actor
+// query isn't diluted by every title they appear in. known_for gives the row a
+// subtitle to disambiguate same-named people.
+type TmdbPersonListItem = {
+  id: number
+  name: string
+  profile_path?: string | null
+  known_for?: Array<{ title?: string; name?: string }>
+}
+
+export async function searchTmdbPeople(query: string): Promise<TmdbPersonResult[]> {
+  const res = await fetch(apiUrl('/search/person', { query, include_adult: 'false' }), { next: { revalidate: CACHE_1H } })
+  if (!res.ok) throw new Error(`TMDB person search failed: ${res.status}`)
+  const data = await res.json()
+
+  return (data.results as TmdbPersonListItem[]).map((p): TmdbPersonResult => ({
+    id: p.id,
+    name: p.name,
+    profile_url: p.profile_path ? `${IMG}${p.profile_path}` : null,
+    known_for: (p.known_for ?? [])
+      .map((k) => k.title ?? k.name)
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', '),
+  }))
 }
 
 export interface TmdbWatchProvider {
