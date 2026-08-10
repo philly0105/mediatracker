@@ -107,6 +107,17 @@ export default function SearchOverlay({ onClose }: Props) {
     el?.scrollIntoView({ block: 'nearest' })
   }, [activeIndex])
 
+  // Warm the highlighted person's route before it's clicked. /person/[name] is a
+  // dynamic route behind the auth proxy (a getUser round trip per navigation);
+  // an un-prefetched push blocks on that round trip before loading.tsx can even
+  // show — the ~3s click freeze. Highlighting (hover or arrow keys both set
+  // activeIndex) prefetches it so the click is instant. Next dedupes prefetches.
+  useEffect(() => {
+    const p = personResults[activeIndex]
+    if (p) router.prefetch(`/person/${encodeURIComponent(p.name)}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, mode, results])
+
   // A fresh keystroke starts the highlight back at the top. Results only change
   // through a debounced search triggered from this handler, so resetting here
   // covers every new result set without an effect.
