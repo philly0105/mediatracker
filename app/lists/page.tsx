@@ -7,9 +7,14 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { ListPlus } from 'lucide-react'
 
 export default function ListsPage() {
-  const [lists, setLists] = useState<List[]>([])
+  // null until the first load resolves — otherwise the empty state flashes
+  // on every visit before the lists arrive.
+  const [lists, setLists] = useState<List[] | null>(null)
   const [name, setName] = useState('')
 
   async function loadLists() {
@@ -36,15 +41,27 @@ export default function ListsPage() {
 
   return (
     <div style={{ maxWidth: 672, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em', fontFamily: 'var(--font-sans)' }}>Lists</h1>
-      
+      <PageHeader
+        eyebrow="Curated by you"
+        title="Lists"
+        sub="Group titles however you like — themes, moods, marathons."
+      />
+
       <form onSubmit={createList} className="flex gap-2">
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="New list name..." />
         <Button type="submit">Create</Button>
       </form>
 
+      {lists !== null && lists.length === 0 && (
+        <EmptyState
+          icon={ListPlus}
+          title="No lists yet"
+          hint="Name one above to start collecting titles — a rewatch pile, a genre deep-dive, whatever you're planning."
+        />
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {lists.map(list => (
+        {(lists ?? []).map(list => (
           <Link key={list.id} href={`/lists/${list.id}`} className="block">
             <Card style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 'var(--radius-md)' }}>
               <span className="text-white font-medium">{list.name}</span>

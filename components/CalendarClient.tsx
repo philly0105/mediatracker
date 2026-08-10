@@ -2,12 +2,13 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar as CalendarIcon, Film, Tv, Clock, Bell, LayoutGrid } from 'lucide-react'
+import { Film, Tv, Clock, Bell, LayoutGrid } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult } from '@/types'
 import SelectableOverlay from '@/components/SelectableOverlay'
-import { Card } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 interface UpcomingRelease {
   tmdb_id: number
@@ -49,15 +50,11 @@ export default function CalendarClient({ releases }: Props) {
 
   return (
     <div className="space-y-10 pb-12">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-green-400 via-zinc-200 to-teal-500 bg-clip-text text-transparent flex items-center gap-2.5">
-          <CalendarIcon className="w-7 h-7 text-green-500 fill-green-500/10" />
-          <span>Upcoming Releases</span>
-        </h1>
-        <p className="text-sm text-zinc-400">
-          A 3-month timeline of upcoming movies and TV shows.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Next three months"
+        title="Upcoming Releases"
+        sub="Premieres and release dates for the movies and shows you follow."
+      />
 
       {/* Type filter */}
       <div className="flex bg-black/40 p-1.5 rounded-sm w-fit">
@@ -83,13 +80,15 @@ export default function CalendarClient({ releases }: Props) {
 
 
       {filtered.length === 0 ? (
-        <Card style={{ maxWidth: '448px', margin: '0 auto', textAlign: 'center', borderStyle: 'dashed' }} className="space-y-4">
-          <Clock className="w-10 h-10 text-green-500 mx-auto opacity-50" />
-          <h2 className="text-lg font-bold text-white">No Upcoming Releases</h2>
-          <p className="text-sm text-zinc-400 leading-relaxed">
-            Nothing scheduled in this category right now. Check back later!
-          </p>
-        </Card>
+        <EmptyState
+          icon={Clock}
+          title="Nothing scheduled here"
+          hint={filter === 'all'
+            ? 'Follow a few shows and their premieres and release dates will start appearing on this timeline.'
+            : 'Nothing in this category over the next three months. Try another filter, or check back later.'}
+          actionLabel={filter === 'all' ? 'Browse your library' : undefined}
+          actionHref={filter === 'all' ? '/library' : undefined}
+        />
       ) : (
         <div className="space-y-12 relative before:absolute before:inset-0 before:ml-[23px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
           {Object.entries(groupedReleases).map(([monthYear, items]) => (

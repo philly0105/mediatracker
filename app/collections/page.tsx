@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Layers } from 'lucide-react'
 import PopularCollectionsFeed from '@/components/PopularCollectionsFeed'
 import { PosterCard } from '@/components/ui/PosterCard'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default async function CollectionsPage() {
   const supabase = await createClient()
@@ -35,14 +36,11 @@ export default async function CollectionsPage() {
 
   return (
     <div className="space-y-12">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-          Franchises
-        </h1>
-        <p className="text-sm text-zinc-400">
-          Explore movie franchises and series.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Series & sagas"
+        title="Franchises"
+        sub="Explore movie franchises and series."
+      />
 
       {/* Your Franchises */}
       <section className="space-y-5">

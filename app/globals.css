@@ -1,44 +1,113 @@
 @import "../.agents/skills/dorfmovies-design/styles.css";
 @import "tailwindcss";
 
-body {
-  background: #030303;
-  color: #f4f4f5;
-  overflow-x: hidden;
-  background-image: radial-gradient(circle at 50% 0%, rgba(29, 29, 36, 1) 0%, rgba(3, 3, 3, 1) 50%);
-  background-attachment: fixed;
+/* Bridge the design-system ramp into Tailwind's own colour namespace.
+   Tailwind v4 ships its own `--color-zinc-*` (cold, oklch hue 286); the
+   design system defines a separate warm-stone `--zinc-*`. Nothing connected
+   them, so `text-zinc-400` rendered cold grey on a warm brown canvas across
+   ~340 call sites. `inline` makes the utilities emit the token itself, so
+   retheming the token file keeps flowing through.
+
+   The legacy hue aliases (violet -> pine, rose -> rust, orange -> amber) are
+   already defined in tokens/colors.css; pointing Tailwind at the same aliases
+   brings the remaining literal call sites on-brand without touching them. */
+@theme inline {
+  --color-zinc-100: var(--zinc-100);
+  --color-zinc-200: var(--zinc-200);
+  --color-zinc-300: var(--zinc-300);
+  --color-zinc-400: var(--zinc-400);
+  --color-zinc-500: var(--zinc-500);
+  --color-zinc-600: var(--zinc-600);
+  --color-zinc-700: var(--zinc-700);
+  --color-zinc-800: var(--zinc-800);
+  --color-zinc-900: var(--zinc-900);
+
+  --color-violet-300: var(--green-300);
+  --color-violet-400: var(--green-400);
+  --color-violet-500: var(--green-500);
+  --color-violet-600: var(--green-600);
+  --color-violet-700: var(--green-700);
+
+  --color-rose-400: var(--rust-400);
+  --color-rose-500: var(--rust-500);
+  --color-rose-600: var(--rust-600);
+
+  --color-orange-400: var(--amber-400);
+  --color-orange-500: var(--amber-400);
+  --color-orange-600: var(--amber-500);
+
+  --color-emerald-400: var(--teal-400);
+  --color-emerald-500: var(--teal-500);
+
+  --color-amber-300: var(--amber-300);
+  --color-amber-400: var(--amber-400);
+  --color-amber-500: var(--amber-500);
+
+  --color-green-300: var(--green-300);
+  --color-green-400: var(--green-400);
+  --color-green-500: var(--green-500);
+  --color-green-600: var(--green-600);
+
+  --color-teal-300: var(--teal-300);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
 }
 
-/* Background dots grid for Aceternity feel */
+/* The canvas lives here rather than on a `bg-[var(--…)]` utility in layout.tsx:
+   this rule is unlayered and would win over any Tailwind utility anyway, so
+   putting the real value here is the honest place for it. */
+body {
+  background-color: var(--surface-page);
+  background-image: var(--page-radial);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* Film grain — the only texture in the system. Fixed and non-interactive; the
+   app shell renders content at z-10, so this stays behind it. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--grain);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+}
+
+/* Faint dot grid behind the dashboard hero. Warm cream, not cold white. */
 .bg-grid {
   background-size: 40px 40px;
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+                    linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
   mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
 }
 
-/* Glassmorphism Styles */
+/* Surfaces are flat and opaque in this system — the "glass" names are legacy.
+   Emphasis reads as a thin pine hairline, never a coloured haze. */
 .glass-panel {
-  background: rgba(10, 10, 10, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--glass-panel);
+  border: 1px solid var(--border-subtle);
 }
 
 .glass-card {
-  background: rgba(20, 20, 20, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--glass-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-md);
+  transition: background var(--dur-base) var(--ease-out-expo),
+              border-color var(--dur-base) var(--ease-out-expo),
+              box-shadow var(--dur-base) var(--ease-out-expo),
+              transform var(--dur-base) var(--ease-out-expo);
 }
 
 .glass-card:hover {
-  background: rgba(30, 30, 35, 0.6);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 40px -10px rgba(139, 92, 246, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  transform: translateY(-4px) scale(1.01);
+  background: var(--glass-card-hover);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-xl), 0 0 0 1px var(--border-strong), var(--inset-hairline);
+  transform: var(--lift-hover);
 }
 
 /* Scrollbar customization */
@@ -52,12 +121,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-default);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--border-strong);
 }
 
 /* Keyboard focus: most controls either disable the UA outline or never had
@@ -77,5 +146,11 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* The system's hover affordance is a lift; with motion reduced, the border
+     and shadow still carry the state. */
+  .glass-card:hover {
+    transform: none;
   }
 }

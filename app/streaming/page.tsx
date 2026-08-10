@@ -9,7 +9,8 @@ import { useMediaActions } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { motion } from 'framer-motion'
-import { CheckCircle2, Bookmark, Clapperboard, EyeOff, Loader2, Star } from 'lucide-react'
+import { CheckCircle2, Bookmark, EyeOff, Loader2, Star } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 const PROVIDERS = [
   { id: '8', name: 'Netflix' },
@@ -147,16 +148,11 @@ function StreamingContent() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/40 flex items-center gap-2.5">
-          <Clapperboard className="w-7 h-7 text-[var(--accent)]" />
-          <span>Streaming</span>
-        </h1>
-        <p className="text-sm text-zinc-400">
-          Browse what&rsquo;s streaming now on your services.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Available now"
+        title="Streaming"
+        sub={<>Browse what&rsquo;s streaming now on your services.</>}
+      />
 
       {/* Provider pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">

@@ -15,13 +15,17 @@
   --bg-elevated: #201b13; /* modals / popovers */
   --bg-bar: #241f17;      /* bars / chips */
 
-  /* ---- Warm stone neutral ramp (text scale) ---- */
+  /* ---- Warm stone neutral ramp (text scale) ----
+     Low contrast is intentional, but 500 and 600 carry real body and meta
+     text, so they are held to WCAG AA (4.5) and the 3:1 UI minimum against
+     the card surface #1b1711 — 4.87 and 3.50 respectively. 700 and below are
+     border/disabled values and are never legible as text by design. */
   --zinc-100: #e9e2d3;
   --zinc-200: #dcd3c1;
   --zinc-300: #c8bda7;
   --zinc-400: #9d9079;
-  --zinc-500: #7a6f5b;
-  --zinc-600: #564e3f;
+  --zinc-500: #918470;
+  --zinc-600: #776d5b;
   --zinc-700: #3d362b;
   --zinc-800: #2a241b;
   --zinc-900: #1a160f;

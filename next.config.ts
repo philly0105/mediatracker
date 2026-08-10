@@ -12,6 +12,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Pin the workspace root. Without this, a stray lockfile in a parent
+  // directory makes Turbopack infer the wrong root, and the relative
+  // `@import` of the design system in globals.css resolves one level too
+  // high — every design token silently goes undefined.
+  turbopack: { root: __dirname },
   async headers() {
     return [
       {

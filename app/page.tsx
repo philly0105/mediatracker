@@ -6,6 +6,8 @@ import DashboardRecentCards from '@/components/DashboardRecentCards'
 import { BentoGrid, BentoGridItem } from '@/components/ui/BentoGrid'
 import { Card } from '@/components/ui/Card'
 import { StatTile } from '@/components/ui/StatTile'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 import DashboardSearchBar from '@/components/DashboardSearchBar'
 import DashboardUpcomingWidget from '@/components/DashboardUpcomingWidget'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '@/components/ContinueWatchingRow'
@@ -122,11 +124,17 @@ export default async function DashboardPage() {
       <div className="absolute inset-0 bg-grid pointer-events-none opacity-[0.15] z-0 h-[500px]" />
       
       {/* Header with integrated Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-30 pl-2">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <div className="w-full md:w-auto md:min-w-[380px] flex-shrink-0">
-          <DashboardSearchBar />
-        </div>
+      <div className="relative z-30">
+        <PageHeader
+          eyebrow="Welcome back"
+          title="Dashboard"
+          sub="Your personal media collection and viewing analytics."
+          action={
+            <div className="w-full sm:w-auto sm:min-w-[380px]">
+              <DashboardSearchBar />
+            </div>
+          }
+        />
       </div>
 
       {/* Bento Grid Stats */}
@@ -174,7 +182,7 @@ export default async function DashboardPage() {
       {/* Recently Watched */}
       <div className="relative z-10 pt-4">
         <div className="flex items-center justify-between mb-6 pl-2">
-          <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
+          <h2 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)] flex items-center gap-2">
             Recently Watched
           </h2>
           <Link
@@ -189,17 +197,15 @@ export default async function DashboardPage() {
         <DashboardRecentCards entries={recent ?? []} />
         
         {(recent ?? []).length === 0 && (
-          <Card style={{ padding: '48px', textAlign: 'center', borderStyle: 'dashed', marginTop: '16px' }}>
-            <MonitorPlay className="w-12 h-12 text-zinc-600 mx-auto mb-4 opacity-50" />
-            <p className="text-zinc-400 text-base font-medium font-sans">Nothing watched yet.</p>
-            <Link
-              href="/?search=1"
-              className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[var(--accent)] hover:text-[var(--accent)] transition-opacity hover:opacity-80 bg-[var(--accent)]/10 px-4 py-2 rounded-sm border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20"
-            >
-              <span>Start searching</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </Card>
+          <div className="mt-4">
+            <EmptyState
+              icon={MonitorPlay}
+              title="Nothing watched yet."
+              hint="Log your first film or show and your stats, streak and recommendations start building from here."
+              actionLabel="Start searching"
+              actionHref="/?search=1"
+            />
+          </div>
         )}
       </div>
 

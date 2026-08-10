@@ -32,7 +32,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body className={`${outfit.className} bg-[var(--surface-page)] text-zinc-100 min-h-screen relative antialiased bg-[var(--page-radial)] bg-fixed`}>
+      {/* Canvas, grain and base text colour live in globals.css — an unlayered
+          body rule outranks any Tailwind utility set here, so keeping both was
+          only ever a way for the two to disagree. */}
+      <body className={`${outfit.className} min-h-screen relative antialiased`}>
         {/* Ambient gradient orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
           <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[150px] opacity-20"
@@ -55,9 +58,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
                 user ? 'pt-20 md:pt-8 md:pl-72 pb-24 md:pb-8' : 'pb-8'
               }`}>
-                <MultiSelectProvider>
-                  {children}
-                </MultiSelectProvider>
+                {/* One shared measure for every route. Without it the bento
+                    grid and library run the full width of an ultrawide display. */}
+                <div className="mx-auto w-full max-w-[var(--content-max)]">
+                  <MultiSelectProvider>
+                    {children}
+                  </MultiSelectProvider>
+                </div>
               </main>
             </div>
           </ToastProvider>

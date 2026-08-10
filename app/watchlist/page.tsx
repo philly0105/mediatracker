@@ -14,6 +14,7 @@ import TonightPickModal from '@/components/TonightPickModal'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
 import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
@@ -98,18 +99,16 @@ function WatchlistContent() {
 
   return (
     <div className="space-y-8">
-      {/* Header & Filters */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between pt-2 pb-6 border-b border-[var(--border-subtle)]">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-            Watchlist
-          </h1>
-          <p className="text-sm text-zinc-400">
-            Prioritize movies and shows you want to watch next.
-          </p>
-        </div>
+      {/* Five controls are too wide to sit beside the title, so they get their
+          own row under it rather than being squeezed into the header's action slot. */}
+      <div>
+        <PageHeader
+          eyebrow="Up next"
+          title="Watchlist"
+          sub="Prioritize movies and shows you want to watch next."
+        />
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 pb-6 border-b border-[var(--border-subtle)]">
           <div className="min-w-[180px]">
             <Input
               icon={<Search className="w-4 h-4" />}

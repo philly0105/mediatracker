@@ -20,6 +20,7 @@ import { FilterPills } from '@/components/FilterPills'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ToastProvider'
 
 interface Recommendation {
@@ -270,31 +271,28 @@ export default function RecommendationsPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-bold tracking-tight">Recommendations</h1>
-          <p className="text-sm text-zinc-400">
-            {fallback
-              ? 'We compiled this week\'s overall trending items to get you started!'
-              : 'Personalized recommendations based on similar titles from your watch history.'}
-          </p>
-        </div>
-        <Button
-          onClick={() => loadRecommendations(true)}
-          disabled={loading || refreshing}
-          variant="ghost"
-          size="sm"
-          style={{ alignSelf: 'flex-start' }}
-        >
-          {refreshing ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          <span>{refreshing ? 'Refreshing' : 'Refresh'}</span>
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Picked for you"
+        title="Recommendations"
+        sub={fallback
+          ? 'We compiled this week\'s overall trending items to get you started!'
+          : 'Personalized recommendations based on similar titles from your watch history.'}
+        action={
+          <Button
+            onClick={() => loadRecommendations(true)}
+            disabled={loading || refreshing}
+            variant="ghost"
+            size="sm"
+          >
+            {refreshing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            <span>{refreshing ? 'Refreshing' : 'Refresh'}</span>
+          </Button>
+        }
+      />
 
       {loading ? (
         /* Shimmer loading layout */

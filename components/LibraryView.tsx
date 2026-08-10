@@ -5,7 +5,9 @@ import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { FilterPills } from '@/components/FilterPills'
-import { Search, RefreshCw, Loader2, List, LayoutGrid } from 'lucide-react'
+import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
 import {
@@ -195,21 +197,22 @@ export default function LibraryView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">Library</h1>
-          {!loading && (
-            <span className="text-zinc-500 text-sm mt-1">
-              {hasActiveFilters
-                ? `${filteredEntries.length} of ${entries.length} watched`
-                : `${entries.length} watched`}
-            </span>
+      {/* The filter bank is nine controls wide, so it gets its own row beneath
+          the title instead of competing with it for the header line. */}
+      <div>
+        <PageHeader
+          eyebrow="Everything watched"
+          title="Library"
+          sub={loading ? undefined : (
+            hasActiveFilters
+              ? `${filteredEntries.length} of ${entries.length} watched`
+              : `${entries.length} watched`
           )}
-        </div>
+        />
         {/* The type pills must survive an empty result set: filtering to a type
             with nothing in it would otherwise remove the only way back. */}
         {!loading && (entries.length > 0 || typeFilter !== 'all') && (
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <FilterPills
               options={[{ id: 'all', label: 'All' }, { id: 'movie', label: 'Movies' }, { id: 'show', label: 'Shows' }]}
               active={typeFilter}
@@ -326,16 +329,13 @@ export default function LibraryView() {
             </div>
           )}
           {entries.length === 0 && (
-            <p className="text-zinc-400">
-              No {typeFilter === 'movie' ? 'movies' : typeFilter === 'show' ? 'shows' : 'titles'} logged yet.{' '}
-              <button
-                type="button"
-                onClick={openSearchOverlay}
-                className="text-white underline underline-offset-2"
-              >
-                Search to add one.
-              </button>
-            </p>
+            <EmptyState
+              icon={Clapperboard}
+              title={`No ${typeFilter === 'movie' ? 'movies' : typeFilter === 'show' ? 'shows' : 'titles'} logged yet`}
+              hint="Everything you mark as watched lands here — films, shows and the episodes you tick off along the way."
+              actionLabel="Search to add one"
+              onAction={openSearchOverlay}
+            />
           )}
           {entries.length > 0 && filteredEntries.length === 0 && (
             <p className="text-zinc-400">

@@ -5,6 +5,7 @@ import PasswordChangeForm from '@/components/PasswordChangeForm'
 import ImportExportPanel from '@/components/ImportExportPanel'
 import { KeyRound, Share2, ArrowLeftRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
+import { PageHeader } from '@/components/ui/PageHeader'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -21,14 +22,11 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto md:mx-0">
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-          Settings
-        </h1>
-        <p className="text-sm text-zinc-400">
-          Manage your account, sharing preferences, and data.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Your account"
+        title="Settings"
+        sub="Manage your account, sharing preferences, and data."
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Account Section */}

@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import StatsCharts from '@/components/StatsCharts'
 import { computeGenreBreakdown, computeRatingDistribution, computeMonthlyActivity, computeTopDirectors, computeTopActors, computeTotalHours, type WatchedEpisode } from '@/lib/stats'
 import { StatTile } from '@/components/ui/StatTile'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { BarChart3 } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
 // PostgREST embedded resources come back as either an object or a single-element
@@ -38,6 +41,9 @@ export default async function StatsPage() {
 
   const totalHours = computeTotalHours(all, watchedEpisodes)
 
+  // Four zeros and a row of blank charts is a worse first run than saying so.
+  const hasData = all.length > 0 || watchedEpisodes.length > 0
+
   const statsData = {
     totals: {
       movies: movies.length,
@@ -54,16 +60,30 @@ export default async function StatsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-extrabold tracking-tight text-white bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-        Stats
-      </h1>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatTile label="Movies" value={statsData.totals.movies} />
-        <StatTile label="Shows" value={statsData.totals.shows} />
-        <StatTile label="Episodes" value={statsData.totals.episodes} />
-        <StatTile label="Hours" value={statsData.totals.hours} />
-      </div>
-      <StatsCharts data={statsData} />
+      <PageHeader
+        eyebrow="Your viewing"
+        title="Stats"
+        sub="How much you've watched, and what you keep coming back to."
+      />
+      {hasData ? (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <StatTile label="Movies" value={statsData.totals.movies} />
+            <StatTile label="Shows" value={statsData.totals.shows} />
+            <StatTile label="Episodes" value={statsData.totals.episodes} />
+            <StatTile label="Hours" value={statsData.totals.hours} />
+          </div>
+          <StatsCharts data={statsData} />
+        </>
+      ) : (
+        <EmptyState
+          icon={BarChart3}
+          title="Nothing to measure yet"
+          hint="Log a few films or shows and this page fills in — genres, ratings, hours watched and the directors you keep returning to."
+          actionLabel="Find something to watch"
+          actionHref="/?search=1"
+        />
+      )}
     </div>
   )
 }
