@@ -15,9 +15,12 @@ interface Props {
   tmdbId: number
   type: MediaType
   onClose: () => void
+  // Forwarded straight to the layered MediaInfoModal: a cast link two modals
+  // deep still has to collapse the whole stack, not just its own layer.
+  onNavigateAway?: () => void
 }
 
-export default function SimilarModal({ tmdbId, type, onClose }: Props) {
+export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: Props) {
   const [items, setItems] = useState<TmdbSearchResult[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -198,6 +201,7 @@ export default function SimilarModal({ tmdbId, type, onClose }: Props) {
         <MediaInfoModal
           item={selected}
           onClose={() => setSelected(null)}
+          onNavigateAway={onNavigateAway}
           onAddToWatchlist={async () => {
             await addToWatchlist(selected.tmdb_id, selected.type)
             setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))

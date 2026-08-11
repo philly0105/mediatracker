@@ -355,6 +355,10 @@ export default function SearchOverlay({ onClose }: Props) {
       <MediaInfoModal
         item={selected}
         onClose={() => setSelected(null)}
+        // Dismissing the modal by hand keeps the palette up so the search can
+        // continue, but following a link out of it should not — close the whole
+        // overlay, the same as picking a person result directly.
+        onNavigateAway={handleClose}
         onAddToWatchlist={async () => {
           await addToWatchlist(selected.tmdb_id, selected.type)
           setWatchlistIds((prev) => new Set(prev).add(selected.tmdb_id))

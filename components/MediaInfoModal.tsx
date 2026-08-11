@@ -47,6 +47,10 @@ interface Props {
   onUpdatePriority?: (priority: WatchlistPriority) => Promise<void>
   onRemoveFromWatchlist?: () => Promise<void>
   newTabLinks?: boolean
+  // Called instead of onClose when a link inside the modal navigates this tab
+  // away. Layered hosts (the search overlay) use it to tear down the whole
+  // stack rather than just this modal, which onClose alone would leave behind.
+  onNavigateAway?: () => void
 }
 
 interface FullDetails {
@@ -73,7 +77,8 @@ export default function MediaInfoModal({
   currentPriority,
   onUpdatePriority,
   onRemoveFromWatchlist,
-  newTabLinks = false
+  newTabLinks = false,
+  onNavigateAway
 }: Props) {
   const [mounted, setMounted] = useState(false)
   const [details, setDetails] = useState<FullDetails | null>(null)
@@ -86,6 +91,14 @@ export default function MediaInfoModal({
   const { toast } = useToast()
   const { containerRef } = useModal(onClose)
   const ratingRowRef = useRef<HTMLDivElement>(null)
+
+  // The parent owns whether this modal is open, so a link that routes the tab
+  // elsewhere has to say so — otherwise the modal stays layered over the page
+  // it just navigated to and has to be dismissed by hand. Wired to Link's
+  // onNavigate rather than onClick on purpose: onNavigate fires only for
+  // client-side navigation in this tab, so newTabLinks (and Cmd/Ctrl+click,
+  // which Next treats the same way) correctly leave the modal open.
+  const dismissOnNavigate = onNavigateAway ?? onClose
 
   useEffect(() => {
     setMounted(true)
@@ -405,7 +418,7 @@ export default function MediaInfoModal({
                 {details?.director && (
                   <span className="flex items-center gap-1.5">
                     <User className="w-4 h-4 text-zinc-500" />
-                    <span>Dir: <Link href={`/person/${encodeURIComponent(details.director)}`} {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })} className="hover:text-white hover:underline transition-colors">{details.director}</Link></span>
+                    <span>Dir: <Link href={`/person/${encodeURIComponent(details.director)}`} {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })} onNavigate={dismissOnNavigate} className="hover:text-white hover:underline transition-colors">{details.director}</Link></span>
                   </span>
                 )}
               </div>
@@ -559,6 +572,7 @@ export default function MediaInfoModal({
                         key={actor}
                         href={`/person/${encodeURIComponent(actor)}`}
                         {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
+                        onNavigate={dismissOnNavigate}
                         className="px-3 py-1 rounded-sm text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04] hover:bg-white/10 hover:text-white transition-colors"
                       >
                         {actor}
@@ -713,6 +727,7 @@ export default function MediaInfoModal({
             <Link
               href={`/show/${details.media_id}`}
               {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
+              onNavigate={dismissOnNavigate}
               className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm text-[var(--violet-300)] bg-[var(--violet-tint-bg)] border border-[var(--violet-tint-border)] hover:bg-violet-600 hover:border-violet-500 hover:text-white transition-colors"
             >
               <ListVideo className="w-4 h-4" />
@@ -732,7 +747,12 @@ export default function MediaInfoModal({
       </motion.div>
 
       {showSimilar && (
-        <SimilarModal tmdbId={item.tmdb_id} type={item.type} onClose={() => setShowSimilar(false)} />
+        <SimilarModal
+          tmdbId={item.tmdb_id}
+          type={item.type}
+          onClose={() => setShowSimilar(false)}
+          onNavigateAway={dismissOnNavigate}
+        />
       )}
     </div>,
     document.body
