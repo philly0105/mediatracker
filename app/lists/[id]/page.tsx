@@ -1,12 +1,20 @@
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import type { ListItem } from '@/types'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 export default async function ListDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data: list } = await supabase.from('lists').select('*').eq('id', id).single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: list } = await supabase
+    .from('lists')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
   if (!list) notFound()
 
   const { data: items } = await supabase

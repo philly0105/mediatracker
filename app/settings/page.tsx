@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: settings } = await supabase.from('user_settings').select('*').maybeSingle()
+  const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle()
 
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
