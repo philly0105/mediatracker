@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { badRequest } from '@/lib/validation'
 
 type ParsedBody = {
   season_id: string
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const parsed = parseEpisodes(body)
   if (!parsed) {
-    return NextResponse.json({ error: 'season_id and at least one episode required' }, { status: 400 })
+    return badRequest('season_id and at least one episode required')
   }
 
   const watchedAt = new Date().toISOString().split('T')[0]
@@ -74,7 +75,7 @@ export async function DELETE(request: NextRequest) {
   const body = await request.json()
   const parsed = parseEpisodes(body)
   if (!parsed) {
-    return NextResponse.json({ error: 'season_id and at least one episode required' }, { status: 400 })
+    return badRequest('season_id and at least one episode required')
   }
 
   const { error } = await supabase

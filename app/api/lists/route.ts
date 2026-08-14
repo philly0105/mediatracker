@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { badRequest } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { name } = await request.json()
-  if (!name?.trim()) return NextResponse.json({ error: 'Name required' }, { status: 400 })
+  if (typeof name !== 'string' || !name.trim()) return badRequest('Name required')
 
   const { data, error } = await supabase
     .from('lists')

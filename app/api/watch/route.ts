@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
+import { parseRating, parseMediaType, parseTmdbId, parseDate, badRequest } from '@/lib/validation'
 
 // GET: fetch watch entries (with media) for the authenticated user
 export async function GET(request: NextRequest) {
@@ -38,9 +39,23 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { tmdb_id, type, rating, review, watched_at, rewatch } = await request.json()
-  if (!tmdb_id || !type) return NextResponse.json({ error: 'Missing tmdb_id or type' }, { status: 400 })
+  const tmdbRes = parseTmdbId(tmdb_id)
+  if (!tmdbRes.ok) return badRequest(tmdbRes.error)
 
-  const { media } = await upsertMedia(supabase, tmdb_id, type)
+  const typeRes = parseMediaType(type)
+  if (!typeRes.ok) return badRequest(typeRes.error)
+
+  const ratingRes = parseRating(rating)
+  if (!ratingRes.ok) return badRequest(ratingRes.error)
+
+  let finalWatchedAt = new Date().toISOString().split('T')[0]
+  if (watched_at !== undefined && watched_at !== null) {
+    const dateRes = parseDate(watched_at)
+    if (!dateRes.ok) return badRequest(dateRes.error)
+    finalWatchedAt = dateRes.value
+  }
+
+  const { media } = await upsertMedia(supabase, tmdbRes.value, typeRes.value)
 
   if (!rewatch) {
     const { data: existing } = await supabase
@@ -58,9 +73,9 @@ export async function POST(request: NextRequest) {
     .insert({
       user_id: user.id,
       media_id: media.id,
-      rating: rating ?? null,
-      review: review ?? null,
-      watched_at: watched_at ?? new Date().toISOString().split('T')[0],
+      rating: ratingRes.value,
+      review: typeof review === 'string' ? review : null,
+      watched_at: finalWatchedAt,
       rewatch: rewatch ?? false,
     })
     .select()
@@ -77,11 +92,24 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, rating, review, watched_at } = await request.json()
+  if (!id || typeof id !== 'string') return badRequest('Invalid or missing id')
   
-  const updates: any = {}
-  if (rating !== undefined) updates.rating = rating ?? null
+  const updates: Record<string, unknown> = {}
+  if (rating !== undefined) {
+    const ratingRes = parseRating(rating)
+    if (!ratingRes.ok) return badRequest(ratingRes.error)
+    updates.rating = ratingRes.value
+  }
   if (review !== undefined) updates.review = review ?? null
-  if (watched_at !== undefined) updates.watched_at = watched_at ?? null
+  if (watched_at !== undefined) {
+    if (watched_at !== null) {
+      const dateRes = parseDate(watched_at)
+      if (!dateRes.ok) return badRequest(dateRes.error)
+      updates.watched_at = dateRes.value
+    } else {
+      updates.watched_at = null
+    }
+  }
 
   const { error } = await supabase
     .from('watch_entries')
@@ -100,6 +128,7 @@ export async function DELETE(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await request.json()
+  if (!id || typeof id !== 'string') return badRequest('Invalid or missing id')
   const { error } = await supabase
     .from('watch_entries')
     .delete()
