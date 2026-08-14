@@ -99,29 +99,41 @@ export default function ImportExportPanel() {
     setDone(false)
     setResults(rows.map(r => ({ title: r.title, state: 'pending' })))
 
-    for (let i = 0; i < rows.length; i++) {
-      try {
-        const res = await fetch('/api/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(mode === 'watchlist' ? { ...rows[i], status: 'watchlist' } : rows[i]),
-        })
-        const data = await res.json()
-        setResults(prev => prev.map((r, j) =>
-          j === i
-            ? res.ok
-              ? data.skipped
-                ? { ...r, state: 'skipped' }
-                : { ...r, state: 'success', matched: data.matched }
-              : { ...r, state: 'error', error: data.error }
-            : r
-        ))
-      } catch {
-        setResults(prev => prev.map((r, j) =>
-          j === i ? { ...r, state: 'error', error: 'Network error' } : r
-        ))
+    const CONCURRENCY = 5
+    let currentIndex = 0
+
+    async function worker() {
+      while (true) {
+        const i = currentIndex++
+        if (i >= rows.length) break
+
+        try {
+          const res = await fetch('/api/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mode === 'watchlist' ? { ...rows[i], status: 'watchlist' } : rows[i]),
+          })
+          const data = await res.json()
+          setResults(prev => prev.map((r, j) =>
+            j === i
+              ? res.ok
+                ? data.skipped
+                  ? { ...r, state: 'skipped' }
+                  : { ...r, state: 'success', matched: data.matched }
+                : { ...r, state: 'error', error: data.error }
+              : r
+          ))
+        } catch {
+          setResults(prev => prev.map((r, j) =>
+            j === i ? { ...r, state: 'error', error: 'Network error' } : r
+          ))
+        }
       }
     }
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, rows.length) }, () => worker())
+    await Promise.all(workers)
+
     setImporting(false)
     setDone(true)
   }, [rows, mode])
