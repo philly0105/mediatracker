@@ -43,34 +43,46 @@ export default async function DashboardPage() {
     { data: watchlistCounts },
     { data: thisYearEntries },
     upcomingReleases,
+    { data: recentProgressData },
   ] = await Promise.all([
     supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
     supabase.from('watchlist_items').select('priority').eq('user_id', user.id),
     supabase.from('watch_entries').select('id').eq('user_id', user.id).gte('watched_at', `${new Date().getFullYear()}-01-01`),
     fetchUpcomingReleases(),
+    supabase
+      .from('episode_progress')
+      .select('season_id, episode_number, seasons!inner(media_id)')
+      .eq('user_id', user.id)
+      .order('watched_at', { ascending: false })
+      .limit(100),
   ])
 
-  const { data: episodeProgressData } = await supabase
-    .from('episode_progress')
-    .select('season_id, episode_number, seasons!inner(media_id)')
-    .eq('user_id', user.id)
-    .order('watched_at', { ascending: false })
-
-  const episodeProgress = (episodeProgressData ?? []) as ProgressWithSeason[]
-  const mediaIds = Array.from(new Set(
-    episodeProgress
-      .map((progress) => joinedOne(progress.seasons)?.media_id)
-      .filter((mediaId): mediaId is string => Boolean(mediaId))
-  ))
+  const recentProgress = (recentProgressData ?? []) as ProgressWithSeason[]
+  const mediaIds: string[] = []
+  for (const progress of recentProgress) {
+    const mediaId = joinedOne(progress.seasons)?.media_id
+    if (mediaId && !mediaIds.includes(mediaId)) {
+      mediaIds.push(mediaId)
+      if (mediaIds.length >= 10) break
+    }
+  }
 
   let continueWatchingShows: ContinueWatchingShow[] = []
   if (mediaIds.length > 0) {
-    const { data: seasonsData } = await supabase
-      .from('seasons')
-      .select('id, media_id, season_number, episode_count, media!inner(id, title, poster_url)')
-      .in('media_id', mediaIds)
-      .order('season_number', { ascending: true })
+    const [{ data: seasonsData }, { data: fullProgressData }] = await Promise.all([
+      supabase
+        .from('seasons')
+        .select('id, media_id, season_number, episode_count, media!inner(id, title, poster_url)')
+        .in('media_id', mediaIds)
+        .order('season_number', { ascending: true }),
+      supabase
+        .from('episode_progress')
+        .select('season_id, episode_number, seasons!inner(media_id)')
+        .eq('user_id', user.id)
+        .in('seasons.media_id', mediaIds),
+    ])
 
+    const fullProgress = (fullProgressData ?? []) as ProgressWithSeason[]
     const seasonsByMediaId = new Map<string, ContinueWatchingShow['seasons']>()
     const mediaById = new Map<string, ContinueWatchingShow['media']>()
     for (const season of ((seasonsData ?? []) as SeasonWithMedia[])) {
@@ -88,7 +100,7 @@ export default async function DashboardPage() {
     }
 
     const watchedKeysByMediaId = new Map<string, Set<string>>()
-    for (const progress of episodeProgress) {
+    for (const progress of fullProgress) {
       const mediaId = joinedOne(progress.seasons)?.media_id
       if (!mediaId) continue
 
