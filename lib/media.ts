@@ -68,7 +68,7 @@ export async function upsertMedia(
 
   let { data: media, error } = await supabase
     .from('media')
-    .upsert({ ...mediaRow, ...optionalFields }, { onConflict: 'tmdb_id' })
+    .upsert({ ...mediaRow, ...optionalFields }, { onConflict: 'tmdb_id,type' })
     .select()
     .single()
 
@@ -76,7 +76,7 @@ export async function upsertMedia(
   if (error && (error.code === 'PGRST204' || error.code === '42703')) {
     ;({ data: media, error } = await supabase
       .from('media')
-      .upsert(mediaRow, { onConflict: 'tmdb_id' })
+      .upsert(mediaRow, { onConflict: 'tmdb_id,type' })
       .select()
       .single())
   }
