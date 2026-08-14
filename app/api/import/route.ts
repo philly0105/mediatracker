@@ -61,7 +61,9 @@ export async function POST(request: NextRequest) {
 
   if (status === 'watchlist') {
     const { error: wlErr } = await supabase.from('watchlist_items').upsert(
-      { user_id: user.id, media_id: media.id, priority: 'want_to_watch', added_at: parsedDateVal },
+      // added_at is when the row entered the watchlist, not the CSV's watched
+      // date — a watchlist import has no watch date to carry over.
+      { user_id: user.id, media_id: media.id, priority: 'want_to_watch', added_at: new Date().toISOString().split('T')[0] },
       { onConflict: 'user_id,media_id' }
     )
     if (wlErr) return NextResponse.json({ error: wlErr.message }, { status: 500 })

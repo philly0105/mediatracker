@@ -43,29 +43,22 @@ export default async function DashboardPage() {
     { data: watchlistCounts },
     { data: thisYearEntries },
     upcomingReleases,
-    { data: recentProgressData },
+    { data: recentShowIds },
   ] = await Promise.all([
     supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
     supabase.from('watchlist_items').select('priority').eq('user_id', user.id),
     supabase.from('watch_entries').select('id').eq('user_id', user.id).gte('watched_at', `${new Date().getFullYear()}-01-01`),
     fetchUpcomingReleases(),
-    supabase
-      .from('episode_progress')
-      .select('season_id, episode_number, seasons!inner(media_id)')
-      .eq('user_id', user.id)
-      .order('watched_at', { ascending: false })
-      .limit(100),
+    // Grouped in the database (migration 010) so this is the 10 genuinely most
+    // recent shows. Reducing raw progress rows to distinct media_ids in JS means
+    // either fetching the whole history or capping the row count — and a cap
+    // loses shows outright when one binge fills it.
+    supabase.rpc('recent_watching_media_ids', { max_shows: 10 }),
   ])
 
-  const recentProgress = (recentProgressData ?? []) as ProgressWithSeason[]
-  const mediaIds: string[] = []
-  for (const progress of recentProgress) {
-    const mediaId = joinedOne(progress.seasons)?.media_id
-    if (mediaId && !mediaIds.includes(mediaId)) {
-      mediaIds.push(mediaId)
-      if (mediaIds.length >= 10) break
-    }
-  }
+  const mediaIds = ((recentShowIds ?? []) as { media_id: string }[])
+    .map((row) => row.media_id)
+    .filter((mediaId): mediaId is string => Boolean(mediaId))
 
   let continueWatchingShows: ContinueWatchingShow[] = []
   if (mediaIds.length > 0) {
