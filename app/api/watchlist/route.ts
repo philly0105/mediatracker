@@ -41,8 +41,14 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
-  const limit = parseInt(searchParams.get('limit') ?? '24', 10)
+  const parsePositiveInt = (raw: string | null, fallback: number, max: number): number => {
+    const n = Number(raw)
+    if (!Number.isInteger(n) || n < 1) return fallback
+    return Math.min(n, max)
+  }
+
+  const page = parsePositiveInt(searchParams.get('page'), 1, 10_000)
+  const limit = parsePositiveInt(searchParams.get('limit'), 24, 100)
   const type = searchParams.get('type')
   const genre = searchParams.get('genre')
   const priority = searchParams.get('priority')
@@ -163,7 +169,7 @@ export async function DELETE(request: NextRequest) {
       .select('id')
       .eq('tmdb_id', tmdbRes.value)
       .eq('type', typeRes.value)
-      .single()
+      .maybeSingle()
 
     if (media) {
       const { error } = await supabase

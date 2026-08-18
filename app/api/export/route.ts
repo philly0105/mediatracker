@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 function csvField(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`
+  // Leading =, +, -, @, TAB and CR are treated as formula starts by Excel/Sheets/Numbers.
+  // Prefix with a tab so the cell renders safely as plain text.
+  const escaped = /^[=+\-@\t\r]/.test(value) ? `\t${value}` : value
+  if (/[",\n\r]/.test(escaped) || escaped !== value) {
+    return `"${escaped.replace(/"/g, '""')}"`
   }
-  return value
+  return escaped
 }
 
 export async function GET() {

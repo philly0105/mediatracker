@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import StatsCharts from '@/components/StatsCharts'
 import { computeGenreBreakdown, computeRatingDistribution, computeMonthlyActivity, computeTopDirectors, computeTopActors, computeTotalHours, type WatchedEpisode } from '@/lib/stats'
 import { StatTile } from '@/components/ui/StatTile'
@@ -21,11 +21,22 @@ type EpisodeProgressRuntimeRow = {
 }
 
 export default async function StatsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
-  const { data: entries } = await supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('watched_at')
-  const { data: epProgress } = await supabase.from('episode_progress').select('watched_at, seasons!inner(media!inner(runtime_mins))').eq('user_id', user.id)
+
+  const supabase = await createClient()
+
+  const [{ data: entries }, { data: epProgress }] = await Promise.all([
+    supabase
+      .from('watch_entries')
+      .select('id, rating, watched_at, rewatch, media(type, genres, director, cast_members, runtime_mins)')
+      .eq('user_id', user.id)
+      .order('watched_at'),
+    supabase
+      .from('episode_progress')
+      .select('watched_at, seasons!inner(media!inner(runtime_mins))')
+      .eq('user_id', user.id),
+  ])
 
   const all = (entries ?? []) as any[]
   const movies = all.filter(e => e.media?.type === 'movie')

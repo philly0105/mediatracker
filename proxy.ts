@@ -12,13 +12,13 @@ const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/callback',
 const SIGNED_OUT_ONLY = ['/login', '/signup', '/forgot-password']
 
 export async function proxy(request: NextRequest) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next()
+  }
+
+  let supabaseResponse = NextResponse.next({ request })
+
   try {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      return NextResponse.next()
-    }
-
-    let supabaseResponse = NextResponse.next({ request })
-
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -39,8 +39,14 @@ export async function proxy(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     const path = request.nextUrl.pathname
     const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'))
+    const isApi = path.startsWith('/api')
 
     if (!user && !isPublic) {
+      if (isApi) {
+        const unauthResponse = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        supabaseResponse.cookies.getAll().forEach(c => unauthResponse.cookies.set(c))
+        return unauthResponse
+      }
       const redirectToLogin = NextResponse.redirect(new URL('/login', request.url))
       supabaseResponse.cookies.getAll().forEach(c => redirectToLogin.cookies.set(c))
       return redirectToLogin
@@ -54,7 +60,19 @@ export async function proxy(request: NextRequest) {
 
     return supabaseResponse
   } catch {
-    return NextResponse.next()
+    const path = request.nextUrl.pathname
+    const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'))
+    if (!isPublic) {
+      if (path.startsWith('/api')) {
+        const unauthResponse = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        supabaseResponse.cookies.getAll().forEach(c => unauthResponse.cookies.set(c))
+        return unauthResponse
+      }
+      const redirectToLogin = NextResponse.redirect(new URL('/login', request.url))
+      supabaseResponse.cookies.getAll().forEach(c => redirectToLogin.cookies.set(c))
+      return redirectToLogin
+    }
+    return supabaseResponse
   }
 }
 

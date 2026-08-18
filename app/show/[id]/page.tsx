@@ -170,7 +170,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
       if (removed.length === 0) return
       setProgress(prev => prev.filter(p => !(p.season_id === seasonId && episodes.includes(p.episode_number))))
 
-      const key = `episodes-${seasonId}`
+      const key = `episodes-${seasonId}-${[...episodes].sort((a, b) => a - b).join(',')}`
       schedule(key, async () => {
         try {
           const res = await fetch('/api/episodes', {

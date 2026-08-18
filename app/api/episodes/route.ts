@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { badRequest } from '@/lib/validation'
 
+const MAX_EPISODES_PER_REQUEST = 500
+
 type ParsedBody = {
   season_id: string
   episodes: number[]
@@ -9,21 +11,28 @@ type ParsedBody = {
 }
 
 export function parseEpisodes(body: Record<string, unknown>): ParsedBody | null {
-  const season_id = body.season_id
-  if (typeof season_id !== 'string' || !season_id) return null
+  const season_id = typeof body.season_id === 'string' ? body.season_id.trim() : ''
+  if (!season_id) return null
+
+  const isEpisodeNo = (n: unknown): n is number =>
+    typeof n === 'number' && Number.isInteger(n) && n > 0 && n <= 10_000
 
   let episodes: number[] = []
   let batch = false
 
   if (Array.isArray(body.episodes)) {
-    episodes = body.episodes.filter((e): e is number => typeof e === 'number' && Number.isInteger(e) && e > 0)
+    if (body.episodes.length > MAX_EPISODES_PER_REQUEST) return null
+    episodes = body.episodes.filter(isEpisodeNo)
     batch = true
   } else if (typeof body.from === 'number' && typeof body.to === 'number') {
     const a = Math.min(body.from, body.to)
     const b = Math.max(body.from, body.to)
-    for (let e = a; e <= b; e++) episodes.push(e)
+    if (b - a + 1 > MAX_EPISODES_PER_REQUEST) return null
+    for (let e = a; e <= b; e++) {
+      if (isEpisodeNo(e)) episodes.push(e)
+    }
     batch = true
-  } else if (typeof body.episode_number === 'number') {
+  } else if (isEpisodeNo(body.episode_number)) {
     episodes = [body.episode_number]
   } else {
     return null

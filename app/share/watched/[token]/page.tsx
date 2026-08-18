@@ -11,14 +11,14 @@ export default async function SharedWatchedPage({ params }: { params: Promise<{ 
   // Zero rows = token matches nothing (404). A valid-but-empty share returns a
   // marker row with id null, which we filter out below.
   if (error || !rows || rows.length === 0) notFound()
-  const entries = rows.filter((r: any) => r.id)
+  const entries = rows.filter((r: any) => r.media)
 
   return (
     <div className="space-y-6 max-w-4xl">
       <h1 className="text-2xl font-bold">Watched</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {(entries ?? []).map((entry: any) => (
-          <div key={entry.id} className="bg-gray-900 rounded-xl p-3 flex gap-3">
+        {(entries ?? []).map((entry: any, idx: number) => (
+          <div key={`${entry.media?.id ?? 'entry'}-${entry.watched_at ?? ''}-${idx}`} className="bg-gray-900 rounded-xl p-3 flex gap-3">
             {entry.media?.poster_url && <Image src={entry.media.poster_url} alt={entry.media.title} width={56} height={84} className="w-14 h-auto rounded" />}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-white line-clamp-1">{entry.media?.title}</p>

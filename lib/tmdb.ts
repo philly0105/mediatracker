@@ -127,8 +127,21 @@ function apiUrl(path: string, params: Record<string, string> = {}) {
   return `${BASE}${path}?${qs}`
 }
 
+async function fetchTmdb(url: string, revalidateSeconds: number, timeoutMs = 8000): Promise<Response> {
+  try {
+    const signal = AbortSignal.timeout(timeoutMs)
+    return await fetch(url, {
+      signal,
+      cache: 'force-cache',
+      next: { revalidate: revalidateSeconds },
+    })
+  } catch {
+    return new Response(null, { status: 504, statusText: 'Gateway Timeout' })
+  }
+}
+
 export async function searchTmdb(query: string): Promise<TmdbSearchResult[]> {
-  const res = await fetch(apiUrl('/search/multi', { query, include_adult: 'false' }), { next: { revalidate: CACHE_1H } })
+  const res = await fetchTmdb(apiUrl('/search/multi', { query, include_adult: 'false' }), CACHE_1H)
   if (!res.ok) throw new Error(`TMDB search failed: ${res.status}`)
   const data = await res.json()
 
@@ -161,7 +174,7 @@ type TmdbPersonListItem = {
 }
 
 export async function searchTmdbPeople(query: string): Promise<TmdbPersonResult[]> {
-  const res = await fetch(apiUrl('/search/person', { query, include_adult: 'false' }), { next: { revalidate: CACHE_1H } })
+  const res = await fetchTmdb(apiUrl('/search/person', { query, include_adult: 'false' }), CACHE_1H)
   if (!res.ok) throw new Error(`TMDB person search failed: ${res.status}`)
   const data = await res.json()
 
@@ -248,7 +261,7 @@ export async function fetchTmdbDetails(
   // the heavy append_to_response payload (full credits, trailers, providers, external_ids).
   const params: Record<string, string> = {}
   if (append) params.append_to_response = 'credits,videos,watch/providers,external_ids'
-  const res = await fetch(apiUrl(endpoint, params), { next: { revalidate: CACHE_7D } })
+  const res = await fetchTmdb(apiUrl(endpoint, params), CACHE_7D)
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
 
@@ -362,16 +375,14 @@ export async function fetchTmdbSeasonEpisodes(
   tmdbId: number,
   seasonNumber: number
 ): Promise<TmdbSeasonEpisode[]> {
-  const res = await fetch(apiUrl(`/tv/${tmdbId}/season/${seasonNumber}`), {
-    next: { revalidate: CACHE_7D },
-  })
+  const res = await fetchTmdb(apiUrl(`/tv/${tmdbId}/season/${seasonNumber}`), CACHE_7D)
   if (!res.ok) throw new Error(`TMDB season failed: ${res.status}`)
   return mapSeasonEpisodes(await res.json())
 }
 
 export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, page = 1): Promise<TmdbSearchResult[]> {
   const endpoint = type === 'movie' ? `/movie/${tmdbId}/recommendations` : `/tv/${tmdbId}/recommendations`
-  const res = await fetch(apiUrl(endpoint, { page: String(page) }), { next: { revalidate: CACHE_1D } })
+  const res = await fetchTmdb(apiUrl(endpoint, { page: String(page) }), CACHE_1D)
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
@@ -392,7 +403,7 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, 
 }
 
 export async function fetchTmdbTrending(page = 1): Promise<TmdbSearchResult[]> {
-  const res = await fetch(apiUrl('/trending/all/week', { page: String(page) }), { next: { revalidate: CACHE_6H } })
+  const res = await fetchTmdb(apiUrl('/trending/all/week', { page: String(page) }), CACHE_6H)
   if (!res.ok) return []
   const data = await res.json()
   return (data.results ?? [])
@@ -438,7 +449,7 @@ export async function discoverStreaming(
   if (sort === 'rating') {
     params['vote_count.gte'] = '100'
   }
-  const res = await fetch(apiUrl(endpoint, params), { next: { revalidate: CACHE_6H } })
+  const res = await fetchTmdb(apiUrl(endpoint, params), CACHE_6H)
   if (!res.ok) return { results: [], total_pages: 0 }
   const data = await res.json()
   const results = (data.results ?? []).map((r: TmdbListItem): TmdbSearchResult => ({
@@ -468,11 +479,11 @@ export async function discoverByGenre(
   if (!genreId) return { results: [], total_pages: 0 }
 
   const endpoint = type === 'movie' ? '/discover/movie' : '/discover/tv'
-  const res = await fetch(apiUrl(endpoint, {
+  const res = await fetchTmdb(apiUrl(endpoint, {
     with_genres: String(genreId),
     sort_by: 'popularity.desc',
     page: String(page),
-  }), { next: { revalidate: CACHE_6H } })
+  }), CACHE_6H)
   if (!res.ok) return { results: [], total_pages: 0 }
   const data = await res.json()
   const results = (data.results ?? []).map((r: TmdbListItem): TmdbSearchResult => ({
@@ -494,7 +505,7 @@ export async function discoverByGenre(
 }
 
 export async function getCollectionDetails(id: number): Promise<TmdbCollectionDetails> {
-  const res = await fetch(apiUrl(`/collection/${id}`), { next: { revalidate: CACHE_7D } })
+  const res = await fetchTmdb(apiUrl(`/collection/${id}`), CACHE_7D)
   if (!res.ok) throw new Error(`TMDB collection failed: ${res.status}`)
   const d = await res.json()
 
@@ -520,19 +531,25 @@ export async function getCollectionDetails(id: number): Promise<TmdbCollectionDe
 }
 
 export async function getPopularCollections(page: number): Promise<TmdbCollectionSummary[]> {
-  const res = await fetch(apiUrl('/movie/popular', { page: String(page) }), { next: { revalidate: CACHE_6H } })
+  const res = await fetchTmdb(apiUrl('/movie/popular', { page: String(page) }), CACHE_6H)
   if (!res.ok) return []
   const data = await res.json()
   const movieIds: number[] = (data.results ?? []).map((m: TmdbListItem) => m.id)
 
-  // belongs_to_collection is not in list responses — fetch details in parallel
-  const details = await Promise.all(
-    movieIds.map(id =>
-      fetch(apiUrl(`/movie/${id}`), { next: { revalidate: CACHE_7D } })
-        .then(r => r.ok ? r.json() : null)
-        .catch(() => null)
+  // Chunk parallel detail fetches into batches of 5 to avoid unthrottled burst flooding
+  const details: any[] = []
+  const CHUNK_SIZE = 5
+  for (let i = 0; i < movieIds.length; i += CHUNK_SIZE) {
+    const chunk = movieIds.slice(i, i + CHUNK_SIZE)
+    const chunkDetails = await Promise.all(
+      chunk.map(id =>
+        fetchTmdb(apiUrl(`/movie/${id}`), CACHE_7D)
+          .then(r => (r.ok ? r.json() : null))
+          .catch(() => null)
+      )
     )
-  )
+    details.push(...chunkDetails)
+  }
 
   const seen = new Set<number>()
   const collections: TmdbCollectionSummary[] = []

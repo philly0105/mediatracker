@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { searchTmdb } from '@/lib/tmdb'
 import { upsertMedia } from '@/lib/media'
-import { parseRating, parseDate, parseMediaType, badRequest } from '@/lib/validation'
+import { parseRating, parseDate, parseMediaType, parseText, badRequest } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -10,7 +10,12 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { title, year, type, rating, date, review, status } = await request.json()
-  if (!title || typeof title !== 'string' || !title.trim()) return badRequest('Title is required')
+  const titleRes = parseText(title, 200, 'Title')
+  if (!titleRes.ok || !titleRes.value?.trim()) return badRequest('Title is required')
+
+  const cleanReview = typeof review === 'string' ? review.replace(/^\t/, '') : review
+  const reviewRes = parseText(cleanReview, 5000, 'Review')
+  if (!reviewRes.ok) return badRequest(reviewRes.error)
 
   if (type !== undefined && type !== null && type !== '') {
     const typeRes = parseMediaType(type)
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest) {
     parsedDateVal = dateRes.value
   }
 
-  const results = await searchTmdb(title.trim())
+  const results = await searchTmdb(titleRes.value.trim())
   if (results.length === 0) return NextResponse.json({ error: `"${title}" not found on TMDB` }, { status: 404 })
 
   // Prefer type match, then year match within those
@@ -61,9 +66,8 @@ export async function POST(request: NextRequest) {
 
   if (status === 'watchlist') {
     const { error: wlErr } = await supabase.from('watchlist_items').upsert(
-      // added_at is when the row entered the watchlist, not the CSV's watched
-      // date — a watchlist import has no watch date to carry over.
-      { user_id: user.id, media_id: media.id, priority: 'want_to_watch', added_at: new Date().toISOString().split('T')[0] },
+      // Default now() preserves microsecond ordering for watchlist default sort
+      { user_id: user.id, media_id: media.id, priority: 'want_to_watch' },
       { onConflict: 'user_id,media_id' }
     )
     if (wlErr) return NextResponse.json({ error: wlErr.message }, { status: 500 })
@@ -72,10 +76,15 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       media_id: media.id,
       rating: parsedRatingVal,
-      review: typeof review === 'string' ? review : null,
+      review: reviewRes.value,
       watched_at: parsedDateVal,
     })
-    if (weErr) return NextResponse.json({ error: weErr.message }, { status: 500 })
+    if (weErr) {
+      if (weErr.code === '23505') {
+        return NextResponse.json({ ok: true, matched: match.title, skipped: true })
+      }
+      return NextResponse.json({ error: weErr.message }, { status: 500 })
+    }
 
     // For shows, mark every episode as watched
     if (match.type === 'show' && seasons.length > 0) {

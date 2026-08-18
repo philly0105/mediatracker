@@ -79,6 +79,10 @@ export function parseDate(v: unknown): ValidationResult<string> {
     return { ok: false, error: 'Date is not a valid calendar day' }
   }
 
+  if (year < 1878 || year > new Date().getUTCFullYear() + 1) {
+    return { ok: false, error: 'Date is out of range' }
+  }
+
   return { ok: true, value: v }
 }
 
@@ -91,4 +95,32 @@ export function parsePriority(v: unknown): ValidationResult<WatchlistPriority> {
     return { ok: true, value: v }
   }
   return { ok: false, error: 'Priority must be one of: must_watch, want_to_watch, someday' }
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+/**
+ * Validates UUIDv4 or standard UUID format.
+ */
+export function parseUuid(v: unknown): ValidationResult<string> {
+  if (typeof v === 'string' && UUID_RE.test(v)) {
+    return { ok: true, value: v }
+  }
+  return { ok: false, error: 'Invalid UUID format' }
+}
+
+/**
+ * Validates bounded string text length to prevent memory exhaustion and storage bloat.
+ */
+export function parseText(v: unknown, maxLen = 5000, fieldName = 'Text'): ValidationResult<string | null> {
+  if (v === null || v === undefined) {
+    return { ok: true, value: null }
+  }
+  if (typeof v !== 'string') {
+    return { ok: false, error: `${fieldName} must be a string` }
+  }
+  if (v.length > maxLen) {
+    return { ok: false, error: `${fieldName} cannot exceed ${maxLen} characters` }
+  }
+  return { ok: true, value: v }
 }

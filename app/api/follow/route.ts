@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
+import { parseTmdbId, badRequest } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const tmdbId = new URL(request.url).searchParams.get('tmdb_id')
+  const rawTmdbId = new URL(request.url).searchParams.get('tmdb_id')
 
-  if (tmdbId) {
+  if (rawTmdbId) {
+    const tmdbRes = parseTmdbId(Number(rawTmdbId))
+    if (!tmdbRes.ok) return badRequest(tmdbRes.error)
     const { data: media } = await supabase
-      .from('media').select('id').eq('tmdb_id', Number(tmdbId)).eq('type', 'show').maybeSingle()
+      .from('media').select('id').eq('tmdb_id', tmdbRes.value).eq('type', 'show').maybeSingle()
     if (!media) return NextResponse.json({ isFollowed: false })
     const { data } = await supabase
       .from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).maybeSingle()
@@ -30,7 +33,10 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { tmdb_id } = await request.json()
-  const { media } = await upsertMedia(supabase, tmdb_id, 'show')
+  const tmdbRes = parseTmdbId(tmdb_id)
+  if (!tmdbRes.ok) return badRequest(tmdbRes.error)
+
+  const { media } = await upsertMedia(supabase, tmdbRes.value, 'show')
   const { error } = await supabase
     .from('followed_shows')
     .upsert({ user_id: user.id, media_id: media.id }, { onConflict: 'user_id,media_id' })
@@ -44,9 +50,13 @@ export async function DELETE(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { tmdb_id } = await request.json()
+  const tmdbRes = parseTmdbId(tmdb_id)
+  if (!tmdbRes.ok) return badRequest(tmdbRes.error)
+
   const { data: media } = await supabase
-    .from('media').select('id').eq('tmdb_id', Number(tmdb_id)).eq('type', 'show').maybeSingle()
+    .from('media').select('id').eq('tmdb_id', tmdbRes.value).eq('type', 'show').maybeSingle()
   if (!media) return NextResponse.json({ ok: true })
   await supabase.from('followed_shows').delete().eq('user_id', user.id).eq('media_id', media.id)
   return NextResponse.json({ ok: true })
 }
+

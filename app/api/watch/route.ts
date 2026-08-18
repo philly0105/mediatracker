@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
-import { parseRating, parseMediaType, parseTmdbId, parseDate, badRequest } from '@/lib/validation'
+import { parseRating, parseMediaType, parseTmdbId, parseDate, parseUuid, parseText, badRequest } from '@/lib/validation'
+
+const WATCH_SELECT = 'id, rating, review, watched_at, rewatch, created_at, media!inner(id, tmdb_id, type, title, overview, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
+const WATCH_SELECT_LEFT = 'id, rating, review, watched_at, rewatch, created_at, media(id, tmdb_id, type, title, overview, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
 
 // GET: fetch watch entries (with media) for the authenticated user
 export async function GET(request: NextRequest) {
@@ -19,7 +22,7 @@ export async function GET(request: NextRequest) {
   // media: null on the non-matches.
   let query = supabase
     .from('watch_entries')
-    .select(filterByType ? '*, media!inner(*)' : '*, media(*)')
+    .select(filterByType ? WATCH_SELECT : WATCH_SELECT_LEFT)
     .eq('user_id', user.id)
     .order('watched_at', { ascending: false })
 
@@ -48,6 +51,9 @@ export async function POST(request: NextRequest) {
   const ratingRes = parseRating(rating)
   if (!ratingRes.ok) return badRequest(ratingRes.error)
 
+  const reviewRes = parseText(review, 5000, 'Review')
+  if (!reviewRes.ok) return badRequest(reviewRes.error)
+
   let finalWatchedAt = new Date().toISOString().split('T')[0]
   if (watched_at !== undefined && watched_at !== null) {
     const dateRes = parseDate(watched_at)
@@ -55,9 +61,11 @@ export async function POST(request: NextRequest) {
     finalWatchedAt = dateRes.value
   }
 
+  const isRewatch = typeof rewatch === 'boolean' ? rewatch : false
+
   const { media } = await upsertMedia(supabase, tmdbRes.value, typeRes.value)
 
-  if (!rewatch) {
+  if (!isRewatch) {
     const { data: existing } = await supabase
       .from('watch_entries')
       .select('id')
@@ -74,14 +82,19 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       media_id: media.id,
       rating: ratingRes.value,
-      review: typeof review === 'string' ? review : null,
+      review: reviewRes.value,
       watched_at: finalWatchedAt,
-      rewatch: rewatch ?? false,
+      rewatch: isRewatch,
     })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'Already in your watch history' }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ entry: data }, { status: 201 })
 }
 
@@ -92,7 +105,8 @@ export async function PATCH(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, rating, review, watched_at } = await request.json()
-  if (!id || typeof id !== 'string') return badRequest('Invalid or missing id')
+  const idRes = parseUuid(id)
+  if (!idRes.ok) return badRequest(idRes.error)
   
   const updates: Record<string, unknown> = {}
   if (rating !== undefined) {
@@ -100,21 +114,24 @@ export async function PATCH(request: NextRequest) {
     if (!ratingRes.ok) return badRequest(ratingRes.error)
     updates.rating = ratingRes.value
   }
-  if (review !== undefined) updates.review = review ?? null
+  if (review !== undefined) {
+    const reviewRes = parseText(review, 5000, 'Review')
+    if (!reviewRes.ok) return badRequest(reviewRes.error)
+    updates.review = reviewRes.value
+  }
   if (watched_at !== undefined) {
-    if (watched_at !== null) {
-      const dateRes = parseDate(watched_at)
-      if (!dateRes.ok) return badRequest(dateRes.error)
-      updates.watched_at = dateRes.value
-    } else {
-      updates.watched_at = null
+    if (watched_at === null) {
+      return badRequest('watched_at cannot be null')
     }
+    const dateRes = parseDate(watched_at)
+    if (!dateRes.ok) return badRequest(dateRes.error)
+    updates.watched_at = dateRes.value
   }
 
   const { error } = await supabase
     .from('watch_entries')
     .update(updates)
-    .eq('id', id)
+    .eq('id', idRes.value)
     .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -128,13 +145,16 @@ export async function DELETE(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await request.json()
-  if (!id || typeof id !== 'string') return badRequest('Invalid or missing id')
+  const idRes = parseUuid(id)
+  if (!idRes.ok) return badRequest(idRes.error)
+
   const { error } = await supabase
     .from('watch_entries')
     .delete()
-    .eq('id', id)
+    .eq('id', idRes.value)
     .eq('user_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+

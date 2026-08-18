@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Calendar, Flame, ArrowRight, MonitorPlay } from 'lucide-react'
@@ -34,20 +34,26 @@ function joinedOne<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
+
+  const supabase = await createClient()
 
   const [
     { data: recent },
     { data: watchlistCounts },
-    { data: thisYearEntries },
+    { count: thisYearCount },
     upcomingReleases,
     { data: recentShowIds },
   ] = await Promise.all([
-    supabase.from('watch_entries').select('*, media(*)').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+    supabase
+      .from('watch_entries')
+      .select('id, rating, review, watched_at, rewatch, created_at, media!inner(id, tmdb_id, type, title, overview, poster_url, release_year, genres, vote_average)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5),
     supabase.from('watchlist_items').select('priority').eq('user_id', user.id),
-    supabase.from('watch_entries').select('id').eq('user_id', user.id).gte('watched_at', `${new Date().getFullYear()}-01-01`),
+    supabase.from('watch_entries').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('watched_at', `${new Date().getFullYear()}-01-01`),
     fetchUpcomingReleases(),
     // Grouped in the database (migration 010) so this is the 10 genuinely most
     // recent shows. Reducing raw progress rows to distinct media_ids in JS means
@@ -152,7 +158,7 @@ export default async function DashboardPage() {
               <StatTile
                 style={{ height: '100%' }}
                 label={`Year ${new Date().getFullYear()}`}
-                value={thisYearEntries?.length ?? 0}
+                value={thisYearCount ?? 0}
                 icon={<Calendar className="w-5 h-5 text-[var(--accent)]" />}
               />
             </Link>
@@ -199,7 +205,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <DashboardRecentCards entries={recent ?? []} />
+        <DashboardRecentCards entries={(recent ?? []) as unknown as import('@/types').WatchEntry[]} />
         
         {(recent ?? []).length === 0 && (
           <div className="mt-4">

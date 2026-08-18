@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { fetchTmdbDetails } from '@/lib/tmdb'
 import { NextResponse } from 'next/server'
+import { timingSafeEqual, createHash } from 'node:crypto'
 
 // Backfills media.vote_average for rows written before migration 004 added the
 // column. Until a row has it, MediaCard falls back to a per-card
@@ -15,12 +16,20 @@ const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 200
 const CONCURRENCY = 5
 
+function isValidAdminAuth(header: string | null, secret: string): boolean {
+  if (!header || !header.startsWith('Bearer ')) return false
+  const token = header.slice(7)
+  const a = createHash('sha256').update(token).digest()
+  const b = createHash('sha256').update(secret).digest()
+  return timingSafeEqual(a, b)
+}
+
 export async function POST(req: Request) {
   const adminSecret = process.env.ADMIN_SECRET
   if (!adminSecret) {
     return NextResponse.json({ error: 'Admin endpoints are disabled: ADMIN_SECRET is not set' }, { status: 503 })
   }
-  if (req.headers.get('Authorization') !== `Bearer ${adminSecret}`) {
+  if (!isValidAdminAuth(req.headers.get('Authorization'), adminSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
