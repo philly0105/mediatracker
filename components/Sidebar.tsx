@@ -8,7 +8,6 @@ import {
   Search,
   ListTodo,
   Library,
-  List,
   Layers,
   BarChart3,
   Settings,
@@ -42,7 +41,6 @@ const PRIMARY_NAV: NavEntry[] = [
 ]
 
 const MORE_NAV: NavEntry[] = [
-  { name: 'Lists', href: '/lists', icon: List },
   { name: 'Franchises', href: '/collections', icon: Layers },
   { name: 'Stats', href: '/stats', icon: BarChart3 },
 ]

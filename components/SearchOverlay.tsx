@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Search, CheckCircle2, Bookmark, Home, Library, ListTodo, Clapperboard, Sparkles, List, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
+import { Search, CheckCircle2, Bookmark, Home, Library, ListTodo, Clapperboard, Sparkles, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
 import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
 import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
@@ -24,7 +24,6 @@ const QUICK_NAV = [
   { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
   { name: 'Streaming', href: '/streaming', icon: Clapperboard },
   { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
-  { name: 'Lists', href: '/lists', icon: List },
   { name: 'Franchises', href: '/collections', icon: Layers },
   { name: 'Stats', href: '/stats', icon: BarChart3 },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
