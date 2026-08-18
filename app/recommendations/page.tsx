@@ -3,10 +3,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import {
   Sparkles,
-  Bookmark,
   Check,
-  Film,
-  Tv,
   Loader2,
   Calendar,
   AlertCircle,
@@ -49,6 +46,9 @@ export default function RecommendationsPage() {
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  // Each press advances the server's seed window, so Refresh returns different
+  // titles rather than the same set reordered.
+  const [seedCycle, setSeedCycle] = useState(0)
   const [discoverPageByFilter, setDiscoverPageByFilter] = useState<Record<string, number>>({})
   const [hasMoreByFilter, setHasMoreByFilter] = useState<Record<string, boolean>>({})
 
@@ -56,6 +56,10 @@ export default function RecommendationsPage() {
 
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'must_watch' })
 
+  // Refresh deliberately leaves the genre and type pills alone — resetting them
+  // made the button feel like a hard reset that returned you to the same place.
+  // `effectiveGenre` below covers the case where the new set no longer has the
+  // selected genre in it.
   const loadRecommendations = useCallback(async (refresh = false) => {
     try {
       if (refresh) {
@@ -64,20 +68,26 @@ export default function RecommendationsPage() {
         setLoading(true)
       }
       setError(null)
-      const res = await fetch(`/api/recommendations${refresh ? '?refresh=1' : ''}`)
+      const nextCycle = refresh ? seedCycle + 1 : 0
+      const params = new URLSearchParams()
+      if (refresh) {
+        params.set('refresh', '1')
+        params.set('cycle', String(nextCycle))
+      }
+      const query = params.toString()
+      const res = await fetch(`/api/recommendations${query ? `?${query}` : ''}`)
       if (!res.ok) throw new Error('Failed to load recommendations')
       const data = await res.json()
+      setSeedCycle(nextCycle)
       setItems(data.results ?? [])
       setFallback(data.fallback ?? false)
       setHasMore(data.hasMore ?? false)
       setDiscoverPageByFilter({})
       setHasMoreByFilter({})
       setVisibleCount(10)
-      setActiveGenre('All')
-      setActiveType('all')
       setSelectedItem(null)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load recommendations')
     } finally {
       if (refresh) {
         setRefreshing(false)
@@ -85,9 +95,12 @@ export default function RecommendationsPage() {
         setLoading(false)
       }
     }
-  }, [])
+  }, [seedCycle])
 
+  // Initial load. The rule fires on the call because the state updates happen
+  // inside it; fetching on mount is the point here, not an accident.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRecommendations()
   }, [loadRecommendations])
 
@@ -153,14 +166,19 @@ export default function RecommendationsPage() {
       .slice(0, 8),
   ]
 
+  // A refresh returns a different seed set, which may not contain the genre
+  // that is currently selected. Falling back to All beats rendering an empty
+  // page with a pill still lit for a genre that is no longer on offer.
+  const effectiveGenre = topGenres.includes(activeGenre) ? activeGenre : 'All'
+
   // 3. Filter by Genre
-  const filteredItems = activeGenre === 'All'
+  const filteredItems = effectiveGenre === 'All'
     ? typeFilteredItems
-    : typeFilteredItems.filter((item) => (item.genres ?? []).includes(activeGenre))
+    : typeFilteredItems.filter((item) => (item.genres ?? []).includes(effectiveGenre))
 
   const visibleItems = filteredItems.slice(0, visibleCount)
-  const filterKey = `${activeType}:${activeGenre}`
-  const canLoadMoreForFilter = activeGenre === 'All'
+  const filterKey = `${activeType}:${effectiveGenre}`
+  const canLoadMoreForFilter = effectiveGenre === 'All'
     ? hasMore
     : hasMoreByFilter[filterKey] ?? true
 
@@ -179,8 +197,8 @@ export default function RecommendationsPage() {
       const params = new URLSearchParams()
       const excludeIds = items.map((item) => item.tmdb_id).join(',')
       if (excludeIds) params.set('excludeIds', excludeIds)
-      if (activeGenre !== 'All') {
-        params.set('genre', activeGenre)
+      if (effectiveGenre !== 'All') {
+        params.set('genre', effectiveGenre)
         params.set('page', String(discoverPageByFilter[filterKey] ?? 1))
       }
       if (activeType !== 'all') params.set('type', activeType)
@@ -194,12 +212,12 @@ export default function RecommendationsPage() {
       )
       const newMatchingCount = newResults.filter((item) => {
         const typeMatches = activeType === 'all' || item.type === activeType
-        const genreMatches = activeGenre === 'All' || (item.genres ?? []).includes(activeGenre)
+        const genreMatches = effectiveGenre === 'All' || (item.genres ?? []).includes(effectiveGenre)
         return typeMatches && genreMatches
       }).length
 
       if (newResults.length === 0) {
-        if (activeGenre === 'All') {
+        if (effectiveGenre === 'All') {
           setHasMore(false)
         } else {
           setHasMoreByFilter((prev) => ({ ...prev, [filterKey]: false }))
@@ -219,7 +237,7 @@ export default function RecommendationsPage() {
         ]
       })
 
-      if (activeGenre === 'All') {
+      if (effectiveGenre === 'All') {
         setHasMore(data.hasMore ?? false)
       } else {
         setHasMoreByFilter((prev) => ({
@@ -234,7 +252,7 @@ export default function RecommendationsPage() {
       if (newMatchingCount > 0) setVisibleCount((prev) => prev + Math.max(10, newMatchingCount))
     } catch (err) {
       console.error(err)
-      if (activeGenre === 'All') {
+      if (effectiveGenre === 'All') {
         setHasMore(false)
       } else {
         setHasMoreByFilter((prev) => ({ ...prev, [filterKey]: false }))
@@ -243,7 +261,7 @@ export default function RecommendationsPage() {
       setLoadingMore(false)
     }
   }, [
-    activeGenre,
+    effectiveGenre,
     activeType,
     canLoadMoreForFilter,
     discoverPageByFilter,
@@ -352,7 +370,7 @@ export default function RecommendationsPage() {
             />
             <FilterPills
               options={topGenres.map((genre) => ({ id: genre, label: genre }))}
-              active={activeGenre}
+              active={effectiveGenre}
               onSelect={(genre) => {
                 setActiveGenre(genre)
                 setDiscoverPageByFilter((prev) => ({ ...prev, [`${activeType}:${genre}`]: 1 }))
@@ -371,7 +389,7 @@ export default function RecommendationsPage() {
               <Sparkles className="w-8 h-8 text-[var(--accent)] mx-auto opacity-50 animate-pulse" />
               <p className="text-sm font-bold text-white">Genre Cleared</p>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                No recommendations left in {activeGenre}. Try exploring other categories!
+                No recommendations left in {effectiveGenre}. Try exploring other categories!
               </p>
             </Card>
           ) : (

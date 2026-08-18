@@ -205,18 +205,18 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <DashboardRecentCards entries={(recent ?? []) as unknown as import('@/types').WatchEntry[]} />
-        
-        {(recent ?? []).length === 0 && (
-          <div className="mt-4">
-            <EmptyState
-              icon={MonitorPlay}
-              title="Nothing watched yet."
-              hint="Log your first film or show and your stats, streak and recommendations start building from here."
-              actionLabel="Start searching"
-              actionHref="/?search=1"
-            />
-          </div>
+        {/* One state, one component. These used to render together — harmless
+            only because an empty grid has no height. */}
+        {(recent ?? []).length === 0 ? (
+          <EmptyState
+            icon={MonitorPlay}
+            title="Nothing watched yet."
+            hint="Log your first film or show and your stats, streak and recommendations start building from here."
+            actionLabel="Start searching"
+            actionHref="/?search=1"
+          />
+        ) : (
+          <DashboardRecentCards entries={(recent ?? []) as unknown as import('@/types').WatchEntry[]} />
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, Re
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
+import { UNDO_TOAST_MS } from '@/lib/useDeferredAction'
 
 export type ToastTone = 'success' | 'error' | 'info'
 export type ToastAction = { label: string; onClick: () => void | Promise<void> }
@@ -81,7 +82,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toast = useCallback((message: string, options?: ToastOptions): string => {
     const id = makeToastId()
     const tone = options?.tone ?? 'info'
-    const durationMs = options?.durationMs ?? (options?.action ? 8000 : 5000)
+    // Actionable toasts default to the undo window rather than an independent
+    // constant — a toast that outlives the deferral shows a dead Undo button.
+    const durationMs = options?.durationMs ?? (options?.action ? UNDO_TOAST_MS : 5000)
     setToasts((prev) => [...prev, { id, message, tone, action: options?.action, durationMs }])
 
     timers.current.set(

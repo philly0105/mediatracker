@@ -68,7 +68,7 @@ export function PosterCard({
         ) : (
           <div style={{
             width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)' as any,
+            color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'],
             textAlign: 'center', padding: '16px',
             background: 'linear-gradient(150deg, var(--zinc-800), var(--bg-void))',
           }}>{title}</div>
@@ -80,7 +80,7 @@ export function PosterCard({
             opacity: hover ? 1 : 0, transition: 'opacity var(--dur-slow) var(--ease-standard)',
           }}>
             <span style={{
-              fontSize: 'var(--text-2xs)', fontWeight: 'var(--weight-bold)' as any, color: 'var(--white)',
+              fontSize: 'var(--text-2xs)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'], color: 'var(--white)',
               background: 'var(--glass-chip)', backdropFilter: 'blur(var(--blur-md))',
               padding: '5px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)',
             }}>{overlay}</span>
@@ -93,13 +93,13 @@ export function PosterCard({
         background: 'var(--bg-raised)',
       }}>
         <p style={{
-          margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' as any,
+          margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'],
           color: hover ? 'var(--accent)' : 'var(--text-primary)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           transition: 'color var(--dur-base) var(--ease-standard)',
         }}>{title}</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontWeight: 'var(--weight-medium)' as any }}>{year}</span>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'] }}>{year}</span>
           {rating != null && <RatingStars value={rating} readOnly />}
         </div>
       </div>

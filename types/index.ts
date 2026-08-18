@@ -66,23 +66,6 @@ export interface WatchlistItem {
   media?: Media
 }
 
-export interface List {
-  id: string
-  user_id: string
-  name: string
-  share_token: string | null
-  is_shared: boolean
-  created_at: string
-}
-
-export interface ListItem {
-  id: string
-  list_id: string
-  media_id: string
-  added_at: string
-  media?: Media
-}
-
 export interface UserSettings {
   user_id: string
   watched_share_token: string | null
@@ -131,4 +114,16 @@ export interface TmdbCollectionDetails {
   poster_url: string | null
   backdrop_url: string | null
   parts: TmdbCollectionPart[]
+}
+
+export interface SharedWatchedRow {
+  watched_at: string | null
+  rating: number | null
+  media: Media | null
+}
+
+export interface SharedWatchlistRow {
+  priority: WatchlistPriority | null
+  added_at: string | null
+  media: Media | null
 }

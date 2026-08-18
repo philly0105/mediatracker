@@ -6,16 +6,18 @@ import { useState } from 'react'
 import {
   Home,
   Search,
-  ListTodo,
   Library,
+  ListTodo,
+  Sparkles,
+  Clapperboard,
+  CalendarDays,
   Layers,
   BarChart3,
   Settings,
   User,
-  Sparkles,
-  Clapperboard,
   MoreHorizontal,
-  X
+  X,
+  type LucideIcon,
 } from 'lucide-react'
 import { NavItem } from './ui/NavItem'
 import { openSearchOverlay } from '@/lib/searchOverlayBus'
@@ -27,7 +29,7 @@ interface SidebarProps {
 type NavEntry = {
   name: string
   href: string
-  icon: React.ComponentType<any>
+  icon: LucideIcon
   action?: 'search-overlay'
 }
 
@@ -41,6 +43,7 @@ const PRIMARY_NAV: NavEntry[] = [
 ]
 
 const MORE_NAV: NavEntry[] = [
+  { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Franchises', href: '/collections', icon: Layers },
   { name: 'Stats', href: '/stats', icon: BarChart3 },
 ]
@@ -130,6 +133,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 border: `1px solid ${pathname === '/settings' ? 'var(--border-default)' : 'var(--border-faint)'}`,
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- external SVG avatar generated dynamically by DiceBear */}
               <img
                 src={'https://api.dicebear.com/7.x/notionists/svg?seed=' + encodeURIComponent(userEmail)}
                 alt=""
@@ -182,6 +186,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             }}
           >
             {userEmail ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- external SVG avatar generated dynamically by DiceBear */
               <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(userEmail)}`} alt="" className="w-full h-full object-cover" />
             ) : (
               <User className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
@@ -233,6 +238,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={isActive ? 'page' : undefined}
                       onClick={() => setMoreOpen(false)}
                       className="flex flex-col items-center gap-1.5 p-3 rounded-md text-[10px] font-medium transition-colors"
                       style={{
@@ -283,6 +289,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className="relative flex flex-col items-center gap-1 p-2 rounded-md text-[10px] font-medium transition-colors"
               style={{
                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',

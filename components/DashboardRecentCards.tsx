@@ -7,6 +7,7 @@ import { useMediaActions } from '@/lib/useMediaActions'
 import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
 import { PosterCard } from '@/components/ui/PosterCard'
+import { formatDateLabel } from '@/lib/formatDate'
 
 interface Props {
   entries: WatchEntry[]
@@ -33,7 +34,7 @@ export default function DashboardRecentCards({ entries }: Props) {
               year={entry.media?.release_year ?? undefined}
               posterUrl={entry.media?.poster_url}
               rating={entry.rating}
-              overlay={entry.watched_at}
+              overlay={formatDateLabel(entry.watched_at)}
               onClick={() => setSelected(toResult(entry))}
             />
           </SelectableOverlay>

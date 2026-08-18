@@ -537,7 +537,8 @@ export async function getPopularCollections(page: number): Promise<TmdbCollectio
   const movieIds: number[] = (data.results ?? []).map((m: TmdbListItem) => m.id)
 
   // Chunk parallel detail fetches into batches of 5 to avoid unthrottled burst flooding
-  const details: any[] = []
+  type MovieCollectionDetail = { belongs_to_collection?: { id: number; name: string; poster_path?: string | null; backdrop_path?: string | null } | null } | null
+  const details: MovieCollectionDetail[] = []
   const CHUNK_SIZE = 5
   for (let i = 0; i < movieIds.length; i += CHUNK_SIZE) {
     const chunk = movieIds.slice(i, i + CHUNK_SIZE)

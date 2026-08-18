@@ -1,4 +1,4 @@
-import type { WatchEntry } from '@/types'
+import type { MediaType, WatchEntry } from '@/types'
 
 // A single watched episode: its own watch date plus the runtime of its show.
 export interface WatchedEpisode {
@@ -104,4 +104,135 @@ export function computeTopActors(entries: WatchEntry[]): Array<{ name: string; c
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
+}
+
+// --- Date helpers -----------------------------------------------------------
+// All of these work on YYYY-MM-DD strings and construct local dates rather than
+// going through `new Date(str)`, which parses a bare date as UTC and shifts the
+// day west of Greenwich. Same reasoning as lib/formatDate.
+
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
+
+function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function isNextDay(earlier: string, later: string): boolean {
+  const [y, m, d] = earlier.split('-').map(Number)
+  const next = new Date(y, m - 1, d + 1)
+  return dayKey(next) === later
+}
+
+/**
+ * The user's own best-of list. Ratings are the one thing the app collects and
+ * never showed back. Deduplicated by title so a rewatch does not occupy two
+ * slots — the best rating given to a title wins.
+ */
+export function computeTopRated(
+  entries: WatchEntry[],
+  limit = 5
+): Array<{ title: string; type: MediaType; rating: number; watched_at: string }> {
+  const best = new Map<string, { title: string; type: MediaType; rating: number; watched_at: string }>()
+
+  for (const e of entries) {
+    if (e.rating == null || !e.media) continue
+    const key = `${e.media.type}-${e.media.title}`
+    const existing = best.get(key)
+    if (!existing || e.rating > existing.rating) {
+      best.set(key, {
+        title: e.media.title,
+        type: e.media.type,
+        rating: e.rating,
+        watched_at: e.watched_at,
+      })
+    }
+  }
+
+  return Array.from(best.values())
+    .sort((a, b) => b.rating - a.rating || b.watched_at.localeCompare(a.watched_at))
+    .slice(0, limit)
+}
+
+/** The `rewatch` column has been queried by the stats page and never used. */
+export function computeRewatchCount(entries: WatchEntry[]): number {
+  return entries.filter(e => e.rewatch).length
+}
+
+/**
+ * Consecutive days on which anything was watched — a movie entry or an episode.
+ *
+ * A day still in progress must not read as a broken streak, so a run ending
+ * today or yesterday still counts as current. Show `watch_entries` rows are
+ * included: unlike the runtime maths, a "day you watched something" is true
+ * whichever kind of row recorded it.
+ */
+export function computeStreaks(
+  entries: WatchEntry[],
+  episodes: WatchedEpisode[],
+  today = new Date()
+): { current: number; longest: number } {
+  const days = new Set<string>()
+  for (const e of entries) if (e.watched_at) days.add(e.watched_at.slice(0, 10))
+  for (const ep of episodes) if (ep.watched_at) days.add(ep.watched_at.slice(0, 10))
+  if (days.size === 0) return { current: 0, longest: 0 }
+
+  const sorted = Array.from(days).sort()
+
+  let longest = 1
+  let run = 1
+  for (let i = 1; i < sorted.length; i++) {
+    run = isNextDay(sorted[i - 1], sorted[i]) ? run + 1 : 1
+    if (run > longest) longest = run
+  }
+
+  const todayKey = dayKey(today)
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1)
+  const last = sorted[sorted.length - 1]
+
+  let current = 0
+  if (last === todayKey || last === dayKey(yesterday)) {
+    current = 1
+    for (let i = sorted.length - 1; i > 0; i--) {
+      if (!isNextDay(sorted[i - 1], sorted[i])) break
+      current++
+    }
+  }
+
+  return { current, longest }
+}
+
+/** Jan–Dec buckets for one calendar year, in the shape the activity chart takes. */
+export function computeYearlyActivity(
+  entries: WatchEntry[],
+  episodes: WatchedEpisode[],
+  year: number
+): Array<{ month: string; movies: number; episodes: number }> {
+  const result = Array.from({ length: 12 }, (_, i) => ({
+    month: `${year}-${pad(i + 1)}`,
+    movies: 0,
+    episodes: 0,
+  }))
+
+  for (const e of entries) {
+    if (e.media?.type !== 'movie') continue
+    const bucket = result.find(r => r.month === e.watched_at.slice(0, 7))
+    if (bucket) bucket.movies++
+  }
+
+  for (const ep of episodes) {
+    const bucket = result.find(r => r.month === ep.watched_at.slice(0, 7))
+    if (bucket) bucket.episodes++
+  }
+
+  return result
+}
+
+/** Every year with activity, newest first — the options for the year selector. */
+export function availableYears(entries: WatchEntry[], episodes: WatchedEpisode[]): number[] {
+  const years = new Set<number>()
+  for (const e of entries) if (e.watched_at) years.add(Number(e.watched_at.slice(0, 4)))
+  for (const ep of episodes) if (ep.watched_at) years.add(Number(ep.watched_at.slice(0, 4)))
+  return Array.from(years).filter(Number.isFinite).sort((a, b) => b - a)
 }

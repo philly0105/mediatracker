@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import EditEntryModal from './EditEntryModal'
@@ -11,10 +11,10 @@ import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
 import { MediaRow } from './ui/MediaRow'
 import { PosterCard } from './ui/PosterCard'
+import { useTmdbRating } from '@/lib/tmdbRatings'
 
 interface Props {
   entry: WatchEntry
-  hideWatchedDate?: boolean
   // 'row' renders the detailed MediaRow (default); 'poster' renders a
   // compact PosterCard for the library's grid view.
   view?: 'row' | 'poster'
@@ -26,31 +26,21 @@ interface Props {
   onUpdated?: () => void
 }
 
-export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated, view = 'row' }: Props) {
+export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }: Props) {
   const media = entry.media!
   const router = useRouter()
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [tmdbRating, setTmdbRating] = useState<number | null>(media.vote_average ?? null)
+  // Batched across every card on the page — see lib/tmdbRatings.
+  const tmdbRating = useTmdbRating(media.tmdb_id, media.type, media.vote_average ?? null)
 
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
-  useEffect(() => {
-    if (tmdbRating === null) {
-      fetch(`/api/tmdb/rating?tmdb_id=${media.tmdb_id}&type=${media.type}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.vote_average) setTmdbRating(d.vote_average)
-        })
-        .catch(() => {})
-    }
-  }, [media.tmdb_id, media.type, tmdbRating])
-
   const mediaAsResult = mediaToResult(media, { vote_average: tmdbRating })
 
-  async function handleRatingChange(newRating: number) {
+  async function handleRatingChange(newRating: number | null) {
     setRating(newRating)
     await fetch('/api/watch', {
       method: 'PATCH',
@@ -83,7 +73,7 @@ export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated
               nesting buttons is invalid HTML). Same hover-chip treatment as the
               watchlist cards: always visible on touch, hover-revealed on md+. */}
           <div
-            className="absolute top-2 right-2 z-10 flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-sm border border-[var(--border-subtle)] opacity-100 md:opacity-0 md:group-hover/poster:opacity-100 transition-opacity duration-200"
+            className="absolute top-2 right-2 z-10 flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-sm border border-[var(--border-subtle)] opacity-100 md:opacity-0 md:group-hover/poster:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -114,8 +104,8 @@ export default function MediaCard({ entry, hideWatchedDate, onDeleted, onUpdated
           rating={rating}
           onRate={handleRatingChange}
           review={entry.review}
-          watchedAt={!hideWatchedDate ? entry.watched_at : null}
-          tmdbRating={hideWatchedDate ? tmdbRating : null}
+          watchedAt={entry.watched_at}
+          tmdbRating={tmdbRating}
           onClick={() => { if (!showInfo) setShowInfo(true) }}
           actions={
             <div className="flex items-center gap-1 shrink-0">

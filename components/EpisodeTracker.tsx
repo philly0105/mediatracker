@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import type { Season, Episode, EpisodeProgress } from '@/types'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { formatAirDate, isUnaired } from '@/lib/formatDate'
 
 interface Props {
   seasons: Season[]
@@ -14,24 +16,6 @@ interface Props {
 const glassCard = {
   background: 'var(--glass-card)',
   border: '1px solid var(--border-subtle)',
-}
-
-// Explicit locale so the label is the same on the server, in the browser and in
-// tests. Parsed as local midnight rather than through Date(dateString), which
-// reads a bare YYYY-MM-DD as UTC and can render the day before.
-export function formatAirDate(airDate: string): string | null {
-  const [y, m, d] = airDate.split('-').map(Number)
-  if (!y || !m || !d) return null
-  const date = new Date(y, m - 1, d)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-export function isUnaired(airDate: string | null, today = new Date()): boolean {
-  if (!airDate) return false
-  const [y, m, d] = airDate.split('-').map(Number)
-  if (!y || !m || !d) return false
-  return new Date(y, m - 1, d).getTime() > today.getTime()
 }
 
 export default function EpisodeTracker({ seasons, progress, episodes, onProgressChange }: Props) {
@@ -117,7 +101,9 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                   </div>
                   <span className="text-xs text-zinc-400">{watchedCount}/{airedCount}</span>
                 </div>
-                <span className="text-zinc-500 text-xs">{isOpen ? '▲' : '▼'}</span>
+                {isOpen
+                  ? <ChevronUp className="w-4 h-4 text-zinc-500" aria-hidden="true" />
+                  : <ChevronDown className="w-4 h-4 text-zinc-500" aria-hidden="true" />}
               </div>
             </button>
             {isOpen && (

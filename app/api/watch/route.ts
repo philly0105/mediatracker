@@ -3,8 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
 import { parseRating, parseMediaType, parseTmdbId, parseDate, parseUuid, parseText, badRequest } from '@/lib/validation'
 
-const WATCH_SELECT = 'id, rating, review, watched_at, rewatch, created_at, media!inner(id, tmdb_id, type, title, overview, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
-const WATCH_SELECT_LEFT = 'id, rating, review, watched_at, rewatch, created_at, media(id, tmdb_id, type, title, overview, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
+// `overview` is deliberately absent: nothing in the library list renders it and
+// the client-side search does not read it (lib/matchesLibraryQuery uses title,
+// director, year, cast and genres), so it was several hundred bytes per row of
+// pure wire weight. MediaInfoModal now takes the synopsis from
+// /api/tmdb/details, which was already returning it unused.
+const WATCH_SELECT = 'id, rating, review, watched_at, rewatch, created_at, media!inner(id, tmdb_id, type, title, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
+const WATCH_SELECT_LEFT = 'id, rating, review, watched_at, rewatch, created_at, media(id, tmdb_id, type, title, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
 
 // GET: fetch watch entries (with media) for the authenticated user
 export async function GET(request: NextRequest) {

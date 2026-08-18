@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import EpisodeTracker, { formatAirDate, isUnaired } from '../EpisodeTracker'
+import EpisodeTracker from '../EpisodeTracker'
+import { formatAirDate, isUnaired } from '@/lib/formatDate'
 import type { Season, Episode, EpisodeProgress } from '@/types'
 
 const season: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 5 }

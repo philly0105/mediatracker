@@ -1,5 +1,5 @@
 'use client'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend, type PieLabelRenderProps } from 'recharts'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 
@@ -14,9 +14,16 @@ const tooltipStyle = {
 
 interface StatsData {
   totals: { movies: number; shows: number; episodes: number; hours: number }
+  rewatches: number
+  currentStreak: number
+  longestStreak: number
   genreBreakdown: Array<{ genre: string; count: number }>
   ratingDist: Array<{ rating: number; count: number }>
   monthlyActivity: Array<{ month: string; movies: number; episodes: number }>
+  activityLabel: string
+  years: number[]
+  selectedYear: number | null
+  topRated: Array<{ title: string; type: 'movie' | 'show'; rating: number; watched_at: string }>
   topDirectors: Array<{ name: string; count: number }>
   topActors: Array<{ name: string; count: number }>
 }
@@ -25,7 +32,42 @@ export default function StatsCharts({ data }: { data: StatsData }) {
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Monthly Activity</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <h2 className="text-lg font-semibold tracking-tight text-white">
+            Activity <span className="text-sm font-medium text-zinc-500">· {data.activityLabel}</span>
+          </h2>
+          {/* Plain links rather than a client toggle: the year is a server-side
+              query param, so this needs no JavaScript and stays bookmarkable. */}
+          {data.years.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Link
+                href="/stats"
+                aria-current={data.selectedYear === null ? 'page' : undefined}
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
+                  data.selectedYear === null
+                    ? 'bg-white/[0.08] text-white'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                Last 12 months
+              </Link>
+              {data.years.map((year) => (
+                <Link
+                  key={year}
+                  href={`/stats?year=${year}`}
+                  aria-current={data.selectedYear === year ? 'page' : undefined}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold tabular-nums transition-colors ${
+                    data.selectedYear === year
+                      ? 'bg-white/[0.08] text-white'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  {year}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data.monthlyActivity}>
             <XAxis dataKey="month" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -52,11 +94,11 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                 outerRadius={82}
                 stroke="#1b1711"
                 strokeWidth={1.5}
-                label={({ x, y, name, index, textAnchor }: any) => (
+                label={({ x, y, name, index, textAnchor }: PieLabelRenderProps) => (
                   <text
                     x={x}
                     y={y}
-                    fill={COLORS[index % COLORS.length]}
+                    fill={typeof index === 'number' ? COLORS[index % COLORS.length] : COLORS[0]}
                     textAnchor={textAnchor}
                     dominantBaseline="central"
                     fontSize={11.5}
@@ -83,11 +125,28 @@ export default function StatsCharts({ data }: { data: StatsData }) {
               <XAxis dataKey="rating" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="count" fill="#d3a85c" name="Films" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#d3a85c" name="Titles" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
       </div>
+
+      <Card>
+        <h2 className="text-lg font-semibold tracking-tight mb-4 text-white">Your Highest Rated</h2>
+        <div className="space-y-2.5">
+          {data.topRated.map((entry) => (
+            <div key={`${entry.type}-${entry.title}`} className="flex items-center justify-between gap-4">
+              <span className="text-zinc-200 text-sm truncate">{entry.title}</span>
+              <span className="text-[var(--amber-400)] text-sm font-semibold tabular-nums shrink-0">
+                ★ {entry.rating}
+              </span>
+            </div>
+          ))}
+          {data.topRated.length === 0 && (
+            <p className="text-zinc-500 text-sm">Rate something and your best-of list appears here.</p>
+          )}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[

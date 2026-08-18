@@ -1,9 +1,9 @@
 'use client'
 import Image from 'next/image'
 import { use, useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import EpisodeTracker, { formatAirDate, isUnaired } from '@/components/EpisodeTracker'
+import EpisodeTracker from '@/components/EpisodeTracker'
+import BackButton from '@/components/BackButton'
+import { formatAirDate, isUnaired } from '@/lib/formatDate'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import RatingStars from '@/components/RatingStars'
 import { Button } from '@/components/ui/Button'
@@ -17,7 +17,6 @@ import type { Media, Season, Episode, EpisodeProgress, WatchEntry } from '@/type
 
 export default function ShowDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const router = useRouter()
   const [media, setMedia] = useState<Media | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
   const [progress, setProgress] = useState<EpisodeProgress[]>([])
@@ -27,39 +26,29 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true)
   const [markingWatched, setMarkingWatched] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
-  const supabase = createClient()
   const { toast } = useToast()
   const { schedule, cancel } = useDeferredAction()
   const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
 
   useEffect(() => {
     async function load() {
-      // media, seasons and the watch entry are independent — only episode
-      // progress needs the season ids, so it is the one that has to wait. These
-      // used to run as four sequential round trips.
-      const [{ data: m }, { data: s }, { data: e }] = await Promise.all([
-        supabase.from('media').select('*').eq('id', id).maybeSingle(),
-        supabase.from('seasons').select('*').eq('media_id', id).order('season_number'),
-        supabase
-          .from('watch_entries')
-          .select('*')
-          .eq('media_id', id)
-          .order('watched_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ])
-
-      setMedia(m)
-      setSeasons(s ?? [])
-      setEntry(e)
-      setRating(e?.rating ?? null)
-
-      const seasonIds = (s ?? []).map((season: Season) => season.id)
-      if (seasonIds.length > 0) {
-        const { data: p } = await supabase.from('episode_progress').select('*').in('season_id', seasonIds)
-        setProgress(p ?? [])
+      try {
+        const res = await fetch(`/api/shows/${id}`)
+        if (!res.ok) {
+          setLoading(false)
+          return
+        }
+        const data = await res.json()
+        setMedia(data.media ?? null)
+        setSeasons(data.seasons ?? [])
+        setEntry(data.entry ?? null)
+        setRating(data.entry?.rating ?? null)
+        setProgress(data.progress ?? [])
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     load()
   }, [id])
@@ -81,16 +70,17 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   // and the details modal's mark-as-watched re-run this so the stars appear
   // without a reload, instead of each duplicating their own fetch.
   const refreshEntry = useCallback(async () => {
-    const { data: e } = await supabase
-      .from('watch_entries')
-      .select('*')
-      .eq('media_id', id)
-      .order('watched_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    setEntry(e)
-    setRating(e?.rating ?? null)
-  }, [id, supabase])
+    try {
+      const res = await fetch(`/api/shows/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setEntry(data.entry ?? null)
+        setRating(data.entry?.rating ?? null)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }, [id])
 
   // Tracking episodes never creates a watch_entries row, so the normal path —
   // start a show, watch episodes — left this page with no way to rate the show
@@ -116,7 +106,7 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
     }
   }, [media, toast, refreshEntry])
 
-  const handleRatingChange = useCallback(async (newRating: number) => {
+  const handleRatingChange = useCallback(async (newRating: number | null) => {
     if (!entry) return
     setRating(newRating)
     await fetch('/api/watch', {
@@ -195,7 +185,10 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
           action: {
             label: 'Undo',
             onClick: () => {
-              if (!cancel(key)) return
+              if (!cancel(key)) {
+                toast('Too late to undo — that change has already been saved.', { tone: 'info' })
+                return
+              }
               restoreEpisodes(removed)
             },
           },
@@ -248,10 +241,10 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <button onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm font-semibold text-zinc-400 hover:text-white transition-colors">
-        ← Back
-      </button>
+      {/* Show pages are the ones people deep-link into — from Continue Watching,
+          a shared link, a bookmark — so the history-length fallback matters most
+          here. router.back() on a fresh tab leaves the page. */}
+      <BackButton fallback="/library" />
       <div className="flex gap-4">
         {media.poster_url && <Image src={media.poster_url} alt={media.title} width={128} height={192} className="w-32 h-auto rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-lg" />}
         <div className="space-y-2">

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 
 interface NavItemProps {
-  icon: React.ComponentType<any>
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
   label: string
   active?: boolean
   onClick?: () => void
@@ -21,7 +21,7 @@ export function NavItem({ icon: Icon, label, active = false, onClick, href }: Na
     borderRadius: 'var(--radius-md)',
     fontFamily: 'var(--font-sans)',
     fontSize: 'var(--text-base)',
-    fontWeight: active ? ('var(--weight-semibold)' as any) : ('var(--weight-medium)' as any),
+    fontWeight: active ? ('var(--weight-semibold)' as React.CSSProperties['fontWeight']) : ('var(--weight-medium)' as React.CSSProperties['fontWeight']),
     color: active ? 'var(--text-primary)' : hover ? 'var(--zinc-300)' : 'var(--text-secondary)',
     background: active ? 'rgba(255,255,255,0.05)' : 'transparent',
     border: `1px solid ${active ? 'var(--border-default)' : 'transparent'}`,
@@ -57,7 +57,9 @@ export function NavItem({ icon: Icon, label, active = false, onClick, href }: Na
 
   // A nav entry that goes somewhere is a link; one that only does something
   // is a button. Both are focusable, unlike the old bare <a>.
+  // The active state is otherwise conveyed only by colour and weight, which a
+  // screen reader has no access to.
   return href
-    ? <Link href={href} {...shared}>{content}</Link>
-    : <button type="button" {...shared}>{content}</button>
+    ? <Link href={href} aria-current={active ? 'page' : undefined} {...shared}>{content}</Link>
+    : <button type="button" aria-current={active ? 'page' : undefined} {...shared}>{content}</button>
 }

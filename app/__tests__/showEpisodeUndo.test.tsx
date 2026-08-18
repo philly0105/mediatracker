@@ -33,32 +33,6 @@ const progressRows = [1, 2, 3, 4, 5].map((n) => ({
   watched_at: '2026-01-01',
 }))
 
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({
-    from: (table: string) => {
-      const result =
-        table === 'media'
-          ? { data: { id: 'm1', tmdb_id: 1396, type: 'show', title: 'Breaking Bad', overview: null, poster_url: null, genres: [], release_year: 2008, runtime_mins: 47, director: null, cast_members: [], collection_id: null, collection_name: null } }
-          : table === 'seasons'
-          ? { data: [{ id: SEASON_ID, media_id: 'm1', season_number: 1, episode_count: 5 }] }
-          : table === 'episode_progress'
-          ? { data: progressRows }
-          : { data: null }
-
-      // Chainable stub: every builder method returns itself, and awaiting the
-      // builder (or a terminal call) yields the canned result.
-      const builder: Record<string, unknown> = {}
-      const chain = new Proxy(builder, {
-        get(_t, prop) {
-          if (prop === 'then') return (res: (v: unknown) => void) => res(result)
-          return () => chain
-        },
-      })
-      return chain
-    },
-  }),
-}))
-
 const mockFetch = vi.fn()
 function deleteCalls() {
   return mockFetch.mock.calls.filter(([, init]) => init?.method === 'DELETE')
@@ -83,7 +57,27 @@ describe('episode tracker cascade undo', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mockFetch.mockReset()
-    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) })
+    mockFetch.mockImplementation(async (url: string | URL | Request) => {
+      const urlStr = String(url)
+      if (urlStr.includes('/api/shows/')) {
+        return {
+          ok: true,
+          json: async () => ({
+            media: { id: 'm1', tmdb_id: 1396, type: 'show', title: 'Breaking Bad', overview: null, poster_url: null, genres: [], release_year: 2008, runtime_mins: 47, director: null, cast_members: [], collection_id: null, collection_name: null },
+            seasons: [{ id: SEASON_ID, media_id: 'm1', season_number: 1, episode_count: 5 }],
+            entry: null,
+            progress: progressRows,
+          }),
+        }
+      }
+      if (urlStr.includes('/api/episodes/meta')) {
+        return {
+          ok: true,
+          json: async () => ({ episodes: [] }),
+        }
+      }
+      return { ok: true, json: async () => ({ ok: true }) }
+    })
     global.fetch = mockFetch
   })
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })

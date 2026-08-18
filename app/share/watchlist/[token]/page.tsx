@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import type { SharedWatchlistRow, Media, WatchlistPriority } from '@/types'
 
 const PRIORITY_LABELS = { must_watch: 'Must Watch', want_to_watch: 'Want to Watch', someday: 'Someday' }
 
@@ -12,20 +13,21 @@ export default async function SharedWatchlistPage({ params }: { params: Promise<
   // Zero rows = token matches nothing (404). A valid-but-empty share returns a
   // marker row with id null, which we filter out below.
   if (error || !rows || rows.length === 0) notFound()
-  const items = rows.filter((r: any) => r.id)
+  const typedRows = (rows ?? []) as unknown as SharedWatchlistRow[]
+  const items = typedRows.filter((r): r is SharedWatchlistRow & { media: Media; priority: WatchlistPriority } => Boolean(r.media && r.priority))
 
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-2xl font-bold">Watchlist</h1>
       {(['must_watch', 'want_to_watch', 'someday'] as const).map(priority => {
-        const group = (items ?? []).filter((i: any) => i.priority === priority)
+        const group = items.filter((i) => i.priority === priority)
         if (group.length === 0) return null
         return (
           <div key={priority}>
             <h2 className="text-lg font-semibold text-gray-300 mb-3">{PRIORITY_LABELS[priority]}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {group.map((item: any) => (
-                <div key={item.id} className="bg-gray-900 rounded-xl p-3 flex gap-3">
+              {group.map((item) => (
+                <div key={item.media.id} className="bg-gray-900 rounded-xl p-3 flex gap-3">
                   {item.media?.poster_url && <Image src={item.media.poster_url} alt={item.media.title} width={56} height={84} className="w-14 h-auto rounded" />}
                   <div>
                     <p className="font-medium text-white">{item.media?.title}</p>

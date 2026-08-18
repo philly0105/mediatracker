@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import RatingStars from '@/components/RatingStars'
 import { Badge } from './Badge'
 import { Calendar } from 'lucide-react'
+import { formatDateLabel } from '@/lib/formatDate'
 
 interface MediaRowProps {
   title: string
@@ -10,7 +11,7 @@ interface MediaRowProps {
   type?: 'movie' | 'show'
   posterUrl?: string | null
   rating?: number | null
-  onRate?: (rating: number) => void
+  onRate?: (rating: number | null) => void
   review?: string | null
   watchedAt?: string | null
   tmdbRating?: number | null
@@ -77,7 +78,7 @@ export function MediaRow({
         <div>
           <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '8px' }}>
             <p style={{
-              margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' as any, color: 'var(--text-primary)',
+              margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'], color: 'var(--text-primary)',
               lineHeight: 'var(--leading-snug)', overflow: 'hidden', display: '-webkit-box',
               WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             }}>{title}</p>
@@ -87,7 +88,7 @@ export function MediaRow({
             <Badge tone="neutral">{type === 'show' ? 'TV' : 'Movie'}</Badge>
             {year && <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{year}</span>}
             {tmdbRating != null && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)' as any, color: 'var(--amber-400)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'], color: 'var(--amber-400)' }}>
                 ★ {tmdbRating.toFixed(1)}
               </span>
             )}
@@ -108,7 +109,7 @@ export function MediaRow({
           )}
           {watchedAt && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-2xs)', color: 'var(--text-faint)' }}>
-              <Calendar style={{ width: 12, height: 12 }} /> Watched {watchedAt}
+              <Calendar style={{ width: 12, height: 12 }} /> Watched {formatDateLabel(watchedAt)}
             </span>
           )}
         </div>

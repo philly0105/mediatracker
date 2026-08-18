@@ -17,8 +17,9 @@ export default async function CollectionsPage() {
     .eq('user_id', user.id)
 
   const collectionMap = new Map<number, { id: number; name: string; poster_url: string | null; count: number }>()
-  for (const entry of (entries ?? [])) {
-    const media = (entry as any).media
+  type EntryWithMedia = { media: { collection_id: number | null; collection_name: string | null; poster_url: string | null } | null }
+  for (const entry of ((entries ?? []) as unknown as EntryWithMedia[])) {
+    const media = entry.media
     if (!media?.collection_id) continue
     const existing = collectionMap.get(media.collection_id)
     if (existing) {

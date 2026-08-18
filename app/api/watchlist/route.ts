@@ -71,11 +71,30 @@ export async function GET(request: NextRequest) {
   if (priority) {
     query = query.eq('priority', priority)
   }
-  // Free-text search on the embedded media title; the `!inner` join already in
-  // the select means a filter here excludes non-matching rows rather than just
-  // nulling out their media.
+  // Free-text search over title, director and year. This used to be title only,
+  // which meant two identically-styled search boxes — this one and the
+  // library's — behaved differently, and that is worse than one that is simply
+  // limited. The `!inner` join already in the select means a filter here
+  // excludes non-matching rows rather than just nulling out their media.
+  //
+  // Not at full parity with lib/matchesLibraryQuery: that also matches cast and
+  // genres, which are text[] and have no substring form in PostgREST (`cs`
+  // needs a whole, case-exact element). Reaching them properly wants a
+  // generated tsvector column rather than a wider `or`.
+  //
+  // `or` takes a comma-separated filter list, so a term containing a comma or a
+  // parenthesis would break out of the expression — hence the strip.
   if (q && q.trim()) {
-    query = query.ilike('media.title', `%${q.trim()}%`)
+    const term = q.trim().replace(/[,()"\\]/g, ' ').trim()
+    if (term) {
+      const year = /^\d{4}$/.test(term) ? term : null
+      const filters = [
+        `title.ilike.%${term}%`,
+        `director.ilike.%${term}%`,
+        ...(year ? [`release_year.eq.${year}`] : []),
+      ]
+      query = query.or(filters.join(','), { referencedTable: 'media' })
+    }
   }
 
   // Ordering the parent rows by an embedded to-one column uses PostgREST's

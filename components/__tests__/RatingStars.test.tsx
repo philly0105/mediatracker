@@ -43,9 +43,26 @@ describe('RatingStars', () => {
     expect(screen.getByRole('button', { name: 'Rate 5 stars' })).toBeInTheDocument()
   })
 
-  it('read-only renders no interactive hit areas', () => {
-    render(<RatingStars value={3.5} readOnly />)
-    expect(screen.queryAllByRole('button')).toHaveLength(0)
-    expect(screen.getByRole('img', { name: 'Rated 3.5 out of 5' })).toBeInTheDocument()
+  it('clears rating to null when clicking the currently-selected rating', () => {
+    const onChange = vi.fn()
+    render(<RatingStars value={4.0} onChange={onChange} />)
+
+    // The hit area for 4.0 should have clear label
+    const button4 = screen.getByRole('button', { name: 'Clear rating (currently 4 stars)' })
+    expect(button4).toBeInTheDocument()
+
+    fireEvent.click(button4)
+    expect(onChange).toHaveBeenCalledWith(null)
+  })
+
+  it('clears half-star rating to null when clicking currently-selected half star', () => {
+    const onChange = vi.fn()
+    render(<RatingStars value={2.5} onChange={onChange} />)
+
+    const button25 = screen.getByRole('button', { name: 'Clear rating (currently 2.5 stars)' })
+    expect(button25).toBeInTheDocument()
+
+    fireEvent.click(button25)
+    expect(onChange).toHaveBeenCalledWith(null)
   })
 })

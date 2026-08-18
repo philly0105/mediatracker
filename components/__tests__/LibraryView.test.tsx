@@ -108,7 +108,7 @@ describe('LibraryView', () => {
     })
 
     const many = Array.from({ length: 30 }, (_, i) => entry(String(i + 1), `Film ${i + 1}`))
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ entries: many }) })
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ entries: many }) })
 
     renderLibrary()
     await screen.findByText('Film 1')
@@ -130,7 +130,7 @@ describe('LibraryView', () => {
     })
 
     const many = Array.from({ length: 30 }, (_, i) => entry(String(i + 1), `Film ${i + 1}`))
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ entries: many }) })
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ entries: many }) })
 
     renderLibrary()
     await screen.findByText('Film 1')

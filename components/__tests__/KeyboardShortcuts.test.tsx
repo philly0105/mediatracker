@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
+import { ToastProvider } from '../ToastProvider'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { useModal } from '@/lib/useModal'
 
@@ -32,6 +33,16 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({ from: () => ({ select: async () => ({ data: [] }) }) }),
 }))
 
+// The overlay logs straight from a result row now, so it reports outcomes
+// through the toast context the way every other action surface does.
+function renderShortcuts() {
+  return render(
+    <ToastProvider>
+      <KeyboardShortcuts />
+    </ToastProvider>
+  )
+}
+
 function TestModal({ onClose }: { onClose: () => void }) {
   const { containerRef } = useModal(onClose)
   return (
@@ -53,13 +64,13 @@ describe('KeyboardShortcuts', () => {
   })
 
   it('opens the search overlay on Cmd/Ctrl+K', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   it('opens the search overlay on /', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: '/' })
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
@@ -91,7 +102,7 @@ describe('KeyboardShortcuts', () => {
   })
 
   it('closes the overlay on Escape', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', metaKey: true })
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -112,7 +123,7 @@ describe('KeyboardShortcuts', () => {
   })
 
   it('opens the search overlay via the window event and does not double-open', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
@@ -121,26 +132,26 @@ describe('KeyboardShortcuts', () => {
 
   it('opens the overlay and strips the ?search=1 param', () => {
     mockSearch = 'search=1'
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(replace).toHaveBeenCalledWith('/', { scroll: false })
   })
 
   it('does not open the overlay when the param is absent', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(replace).not.toHaveBeenCalled()
   })
 
   it('shows the Go to quick-nav heading and a Dashboard row when opened', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
     expect(screen.getByText('Go to')).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
   })
 
   it('navigates to /library on ArrowDown then Enter', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
     const input = screen.getByPlaceholderText('Search movies and TV shows…')
     fireEvent.keyDown(input, { key: 'ArrowDown' })
@@ -150,7 +161,7 @@ describe('KeyboardShortcuts', () => {
   })
 
   it('navigates to /watchlist when the Watchlist row is clicked', () => {
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
     fireEvent.click(screen.getByText('Watchlist'))
     expect(push).toHaveBeenCalledWith('/watchlist')
@@ -160,7 +171,7 @@ describe('KeyboardShortcuts', () => {
   it('shows a Pages group with a Stats row when typing sta and no "No matches" text', async () => {
     vi.useFakeTimers()
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) })
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
     const input = screen.getByPlaceholderText('Search movies and TV shows…')
     fireEvent.change(input, { target: { value: 'sta' } })
@@ -174,7 +185,7 @@ describe('KeyboardShortcuts', () => {
   it('navigates to /stats on Enter when sta is typed', async () => {
     vi.useFakeTimers()
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) })
-    render(<KeyboardShortcuts />)
+    renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
     const input = screen.getByPlaceholderText('Search movies and TV shows…')
     fireEvent.change(input, { target: { value: 'sta' } })
@@ -183,5 +194,170 @@ describe('KeyboardShortcuts', () => {
     expect(push).toHaveBeenCalledWith('/stats')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     vi.useRealTimers()
+  })
+
+  it('marks active title as watched on Cmd+Enter / Ctrl+Enter', async () => {
+    vi.useFakeTimers()
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/tmdb/search')) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: [
+              {
+                tmdb_id: 550,
+                type: 'movie',
+                title: 'Fight Club',
+                overview: 'A ticking-time-bomb insomniac...',
+                poster_url: '/fightclub.jpg',
+                release_year: 1999,
+              },
+            ],
+          }),
+        }
+      }
+      if (url.includes('/api/watch')) {
+        return {
+          ok: true,
+          json: async () => ({ success: true }),
+        }
+      }
+      return { ok: true, json: async () => ({}) }
+    })
+    global.fetch = mockFetch
+
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    const input = screen.getByPlaceholderText('Search movies and TV shows…')
+    fireEvent.change(input, { target: { value: 'Fight' } })
+    await act(async () => { vi.advanceTimersByTime(350) })
+
+    expect(screen.getByText('Fight Club')).toBeInTheDocument()
+
+    // Press Cmd+Enter (metaKey) on the search input
+    fireEvent.keyDown(input, { key: 'Enter', metaKey: true })
+    await act(async () => { vi.advanceTimersByTime(50) })
+
+    const watchPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watch') && opts?.method === 'POST')
+    expect(watchPost).toBeDefined()
+    expect(JSON.parse(watchPost![1].body)).toMatchObject({ tmdb_id: 550, type: 'movie' })
+    expect(screen.getByText('Logged Fight Club.')).toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
+  it('adds active title to watchlist on Shift+Enter', async () => {
+    vi.useFakeTimers()
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/tmdb/search')) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: [
+              {
+                tmdb_id: 680,
+                type: 'movie',
+                title: 'Pulp Fiction',
+                overview: 'The lives of two mob hitmen...',
+                poster_url: '/pulp.jpg',
+                release_year: 1994,
+              },
+            ],
+          }),
+        }
+      }
+      if (url.includes('/api/watchlist')) {
+        return {
+          ok: true,
+          json: async () => ({ success: true }),
+        }
+      }
+      return { ok: true, json: async () => ({}) }
+    })
+    global.fetch = mockFetch
+
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    const input = screen.getByPlaceholderText('Search movies and TV shows…')
+    fireEvent.change(input, { target: { value: 'Pulp' } })
+    await act(async () => { vi.advanceTimersByTime(350) })
+
+    expect(screen.getByText('Pulp Fiction')).toBeInTheDocument()
+
+    // Press Shift+Enter on the search input
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+    await act(async () => { vi.advanceTimersByTime(50) })
+
+    const watchlistPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watchlist') && opts?.method === 'POST')
+    expect(watchlistPost).toBeDefined()
+    expect(JSON.parse(watchlistPost![1].body)).toEqual({ tmdb_id: 680, type: 'movie', priority: 'want_to_watch' })
+    expect(screen.getByText('Added Pulp Fiction to your watchlist.')).toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
+  it('renders chips on result row and clicking mark watched chip triggers watch API', async () => {
+    vi.useFakeTimers()
+    const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/tmdb/search')) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: [
+              {
+                tmdb_id: 1399,
+                type: 'show',
+                title: 'Game of Thrones',
+                overview: 'Seven noble families...',
+                poster_url: '/got.jpg',
+                release_year: 2011,
+              },
+            ],
+          }),
+        }
+      }
+      if (url.includes('/api/watch')) {
+        return {
+          ok: true,
+          json: async () => ({ success: true }),
+        }
+      }
+      return { ok: true, json: async () => ({}) }
+    })
+    global.fetch = mockFetch
+
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+    const input = screen.getByPlaceholderText('Search movies and TV shows…')
+    fireEvent.change(input, { target: { value: 'Thrones' } })
+    await act(async () => { vi.advanceTimersByTime(350) })
+
+    const markButton = screen.getByTitle('Mark as watched')
+    expect(markButton).toBeInTheDocument()
+
+    fireEvent.click(markButton)
+    await act(async () => { vi.advanceTimersByTime(50) })
+
+    const watchPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watch') && opts?.method === 'POST')
+    expect(watchPost).toBeDefined()
+    expect(JSON.parse(watchPost![1].body)).toMatchObject({ tmdb_id: 1399, type: 'show' })
+    expect(screen.getByText('Logged Game of Thrones.')).toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
+  it('renders combobox and listbox accessibility roles', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
+
+    const input = screen.getByRole('combobox')
+    expect(input).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-autocomplete', 'list')
+    expect(input).toHaveAttribute('aria-controls', 'search-overlay-results')
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+
+    const options = screen.getAllByRole('option')
+    expect(options.length).toBeGreaterThan(0)
+    expect(options[0]).toHaveAttribute('aria-selected', 'true')
   })
 })

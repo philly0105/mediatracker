@@ -58,7 +58,8 @@ export default function PopularCollectionsFeed() {
   }, [collections])
 
   async function fetchBatch(batchNum: number, isLoadMore = false) {
-    isLoadMore ? setLoadingMore(true) : setLoading(true)
+    if (isLoadMore) setLoadingMore(true)
+    else setLoading(true)
     try {
       const res = await fetch(`/api/tmdb/popular-collections?batch=${batchNum}`)
       if (!res.ok) return
@@ -78,14 +79,20 @@ export default function PopularCollectionsFeed() {
         return next
       })
     } finally {
-      isLoadMore ? setLoadingMore(false) : setLoading(false)
+      if (isLoadMore) setLoadingMore(false)
+      else setLoading(false)
     }
   }
 
+  // First batch on mount, skipped when sessionStorage already restored one.
   useEffect(() => {
     if (collections.length === 0 && loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchBatch(1)
     }
+    // Mount-only on purpose: re-running on collections/loading would refetch
+    // every time a batch lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

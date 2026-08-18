@@ -15,7 +15,19 @@ import { useCallback, useEffect, useRef } from 'react'
 // commits rather than silently dropping it. A hard tab close inside the window
 // loses the write — the deletion just does not stick, which is the safe way for
 // this to fail.
-export function useDeferredAction(delayMs = 6000) {
+
+/** How long a deferred write waits before committing. */
+export const UNDO_WINDOW_MS = 6000
+
+/**
+ * How long an Undo toast stays on screen. Deliberately shorter than
+ * UNDO_WINDOW_MS: if the toast outlived the window there would be a stretch
+ * where Undo is visible, clickable, and already too late — which reads as a
+ * broken button rather than a missed deadline.
+ */
+export const UNDO_TOAST_MS = UNDO_WINDOW_MS - 500
+
+export function useDeferredAction(delayMs = UNDO_WINDOW_MS) {
   const pending = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>())
 
   const cancel = useCallback((key: string) => {

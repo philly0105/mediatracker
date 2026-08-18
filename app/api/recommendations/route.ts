@@ -9,6 +9,10 @@ type ScoredRecommendation = { item: RecommendationWithSeed; score: number; seedW
 
 const RESULT_LIMIT = 100
 const GENRE_TARGET_COUNT = 12
+/** Titles used to seed TMDB's recommendation lists. */
+const SEED_LIMIT = 15
+/** Rows pulled per seed tier so Refresh has somewhere new to rotate to. */
+const SEED_POOL = 60
 
 function parseExcludeIds(value: string | null) {
   return new Set(
@@ -26,6 +30,59 @@ function parseTypeFilter(value: string | null): TypeFilter {
 function parsePage(value: string | null) {
   const page = Number.parseInt(value ?? '1', 10)
   return Number.isFinite(page) && page > 0 ? page : 1
+}
+
+/** How many times Refresh has been pressed — rotates the seed window. */
+function parseCycle(value: string | null) {
+  const cycle = Number.parseInt(value ?? '0', 10)
+  return Number.isFinite(cycle) && cycle > 0 ? cycle : 0
+}
+
+export type SeedRow = { rating: number | null; media: { tmdb_id: number; type: MediaType; title: string } }
+
+/**
+ * Seeds cascade instead of falling off a cliff.
+ *
+ * Previously this was one query — `rating >= 4`, limit 15 — and anything else
+ * meant global trending plus "to get you started" copy. Someone with 250 logged
+ * titles who rates sparingly (or never) got the same page as a brand-new
+ * account. Each tier is tried in turn and the first non-empty one wins, so
+ * trending is reached only by a genuinely empty history.
+ *
+ * `offset` rotates the window within whichever tier matched, which is what
+ * makes Refresh return different titles rather than the same set reshuffled.
+ */
+export async function fetchSeeds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  offset: number
+): Promise<SeedRow[]> {
+  const base = () => supabase
+    .from('watch_entries')
+    .select('rating, media!inner(tmdb_id, type, title)')
+    .eq('user_id', userId)
+    .limit(SEED_POOL)
+
+  const tiers = [
+    // Loved it, most recent first.
+    () => base().gte('rating', 4).order('created_at', { ascending: false }),
+    // Rated anything at all — best-rated first.
+    () => base().not('rating', 'is', null).order('rating', { ascending: false }),
+    // Never rates. Recency is still signal.
+    () => base().order('created_at', { ascending: false }),
+  ]
+
+  for (const tier of tiers) {
+    const { data } = await tier()
+    const pool = (data ?? []) as unknown as SeedRow[]
+    if (pool.length === 0) continue
+    // Rotate rather than slice from `offset`, so a cycle past the end of a
+    // small pool wraps around instead of returning nothing.
+    const start = offset % pool.length
+    return [...pool.slice(start), ...pool.slice(0, start)].slice(0, SEED_LIMIT)
+  }
+
+  return []
 }
 
 function matchesGenreFilter(item: TmdbSearchResult, genre: string, type: TypeFilter) {
@@ -84,6 +141,7 @@ export async function GET(request: NextRequest) {
   const type = parseTypeFilter(searchParams.get('type'))
   const page = parsePage(searchParams.get('page'))
   const refresh = Boolean(searchParams.get('refresh'))
+  const cycle = parseCycle(searchParams.get('cycle'))
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -93,25 +151,21 @@ export async function GET(request: NextRequest) {
   const [
     { data: watchedList },
     { data: watchlistList },
-    { data: recentWatched },
+    recentWatched,
   ] = await Promise.all([
     supabase.from('watch_entries').select('media!inner(tmdb_id)').eq('user_id', user.id),
     supabase.from('watchlist_items').select('media!inner(tmdb_id)').eq('user_id', user.id),
-    supabase
-      .from('watch_entries')
-      .select('rating, media!inner(tmdb_id, type, title)')
-      .eq('user_id', user.id)
-      .gte('rating', 4)
-      .order('created_at', { ascending: false })
-      .limit(15),
+    fetchSeeds(supabase, user.id, cycle * SEED_LIMIT),
   ])
 
-  const watchedIds = new Set((watchedList ?? []).map((w: any) => w.media.tmdb_id))
-  const watchlistIds = new Set((watchlistList ?? []).map((w: any) => w.media.tmdb_id))
+  type JoinedMediaTmdbId = { media: { tmdb_id: number } }
+  const watchedIds = new Set(((watchedList ?? []) as unknown as JoinedMediaTmdbId[]).map((w) => w.media.tmdb_id))
+  const watchlistIds = new Set(((watchlistList ?? []) as unknown as JoinedMediaTmdbId[]).map((w) => w.media.tmdb_id))
   const excludedIds = new Set([...watchedIds, ...watchlistIds, ...excludeIds])
 
-  // Fallback: If user has watched nothing, return weekly trending items
-  if (!recentWatched || recentWatched.length === 0) {
+  // Fallback: only reached when the history is genuinely empty — every seed
+  // tier above came back with nothing.
+  if (recentWatched.length === 0) {
     const [trending1, trending2, trending3, trending4, trending5] = await Promise.all([
       fetchTmdbTrending(1),
       fetchTmdbTrending(2),
@@ -141,7 +195,7 @@ export async function GET(request: NextRequest) {
 
   // 2. Fetch TMDB recommendations in parallel for recently watched items
   const recommendationLists = await Promise.all(
-    recentWatched.map(async (entry: any) => {
+    recentWatched.map(async (entry) => {
       try {
         return await fetchTmdbRecommendations(entry.media.tmdb_id, entry.media.type)
       } catch (err) {
@@ -158,7 +212,7 @@ export async function GET(request: NextRequest) {
     // We can weight recommendations based on user rating if available (default weight 1.0)
     const rating = recentWatched[index]?.rating
     const weight = rating ? Number(rating) / 5.0 : 1.0
-    const seedTitle = (recentWatched[index] as any)?.media?.title
+    const seedTitle = recentWatched[index]?.media?.title
 
     list.forEach((item) => {
       // Exclude already watched or watchlisted items

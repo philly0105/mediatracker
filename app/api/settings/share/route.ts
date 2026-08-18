@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
   const field = type === 'watched' ? 'watched_share_token' : 'watchlist_share_token'
   const token = enabled ? crypto.randomUUID() : null
 
-  const { data, error } = await supabase
+  // .select().single() is kept so a failed upsert surfaces as an error rather
+  // than a silent no-op; the returned row itself is not needed.
+  const { error } = await supabase
     .from('user_settings')
     .upsert({ user_id: user.id, [field]: token }, { onConflict: 'user_id' })
     .select()

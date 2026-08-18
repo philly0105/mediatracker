@@ -1,6 +1,19 @@
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import StatsCharts from '@/components/StatsCharts'
-import { computeGenreBreakdown, computeRatingDistribution, computeMonthlyActivity, computeTopDirectors, computeTopActors, computeTotalHours, type WatchedEpisode } from '@/lib/stats'
+import {
+  computeGenreBreakdown,
+  computeRatingDistribution,
+  computeMonthlyActivity,
+  computeYearlyActivity,
+  computeTopDirectors,
+  computeTopActors,
+  computeTotalHours,
+  computeTopRated,
+  computeRewatchCount,
+  computeStreaks,
+  availableYears,
+  type WatchedEpisode,
+} from '@/lib/stats'
 import { StatTile } from '@/components/ui/StatTile'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -20,16 +33,22 @@ type EpisodeProgressRuntimeRow = {
   seasons: { media: RuntimeMedia } | { media: RuntimeMedia }[] | null
 }
 
-export default async function StatsPage() {
+export default async function StatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string }>
+}) {
   const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
+
+  const { year: rawYear } = await searchParams
 
   const supabase = await createClient()
 
   const [{ data: entries }, { data: epProgress }] = await Promise.all([
     supabase
       .from('watch_entries')
-      .select('id, rating, watched_at, rewatch, media(type, genres, director, cast_members, runtime_mins)')
+      .select('id, rating, watched_at, rewatch, media(type, title, genres, director, cast_members, runtime_mins)')
       .eq('user_id', user.id)
       .order('watched_at'),
     supabase
@@ -38,7 +57,7 @@ export default async function StatsPage() {
       .eq('user_id', user.id),
   ])
 
-  const all = (entries ?? []) as any[]
+  const all = (entries ?? []) as unknown as import('@/types').WatchEntry[]
   const movies = all.filter(e => e.media?.type === 'movie')
 
   // Each episode's runtime comes from its show's runtime_mins (per-episode length),
@@ -51,9 +70,17 @@ export default async function StatsPage() {
   })
 
   const totalHours = computeTotalHours(all, watchedEpisodes)
+  const streaks = computeStreaks(all, watchedEpisodes)
 
   // Four zeros and a row of blank charts is a worse first run than saying so.
   const hasData = all.length > 0 || watchedEpisodes.length > 0
+
+  // The activity chart used to be a hardcoded rolling 12 months. The year is
+  // mirrored in the URL the way every other filter in the app is, so a view is
+  // linkable — and validated against the years that actually have data, so a
+  // hand-edited param falls back to the rolling window rather than an empty chart.
+  const years = availableYears(all, watchedEpisodes)
+  const selectedYear = rawYear && years.includes(Number(rawYear)) ? Number(rawYear) : null
 
   const statsData = {
     totals: {
@@ -62,9 +89,18 @@ export default async function StatsPage() {
       episodes: watchedEpisodes.length,
       hours: Math.round(totalHours),
     },
+    rewatches: computeRewatchCount(all),
+    currentStreak: streaks.current,
+    longestStreak: streaks.longest,
     genreBreakdown: computeGenreBreakdown(all),
     ratingDist: computeRatingDistribution(all),
-    monthlyActivity: computeMonthlyActivity(all, watchedEpisodes, 12),
+    monthlyActivity: selectedYear
+      ? computeYearlyActivity(all, watchedEpisodes, selectedYear)
+      : computeMonthlyActivity(all, watchedEpisodes, 12),
+    activityLabel: selectedYear ? String(selectedYear) : 'Last 12 months',
+    years,
+    selectedYear,
+    topRated: computeTopRated(all),
     topDirectors: computeTopDirectors(movies),
     topActors: computeTopActors(all),
   }
@@ -83,6 +119,11 @@ export default async function StatsPage() {
             <StatTile label="Shows" value={statsData.totals.shows} />
             <StatTile label="Episodes" value={statsData.totals.episodes} />
             <StatTile label="Hours" value={statsData.totals.hours} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <StatTile label="Rewatches" value={statsData.rewatches} />
+            <StatTile label="Current streak" value={statsData.currentStreak} />
+            <StatTile label="Longest streak" value={statsData.longestStreak} />
           </div>
           <StatsCharts data={statsData} />
         </>

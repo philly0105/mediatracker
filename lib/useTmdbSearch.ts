@@ -16,11 +16,18 @@ export function useTmdbSearch(mode: SearchMode = 'title') {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   // Read inside the debounced/async closures so a mode flip mid-query targets
-  // the right endpoint without recreating the callbacks.
+  // the right endpoint without recreating the callbacks. Both used to be
+  // assigned during render, which React 19 flags: a ref write during render is
+  // not guaranteed to survive a discarded render pass. modeRef syncs in an
+  // effect declared above the mode-change effect (effects run in declaration
+  // order, so it is current by the time that one reads it); queryRef is written
+  // from the event handlers that own the value, which keeps it exact.
   const modeRef = useRef(mode)
-  modeRef.current = mode
   const queryRef = useRef(query)
-  queryRef.current = query
+
+  useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
 
   // The search API fetch. A query below the length threshold clears out instead
   // of hitting the network.
@@ -65,6 +72,7 @@ export function useTmdbSearch(mode: SearchMode = 'title') {
   // debounce collapses a burst of keystrokes into a single fetch.
   const setQuery = useCallback((value: string) => {
     setQueryState(value)
+    queryRef.current = value
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (value.trim().length < 2) {
       setResults([])
@@ -97,6 +105,7 @@ export function useTmdbSearch(mode: SearchMode = 'title') {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     abortRef.current?.abort()
     setQueryState('')
+    queryRef.current = ''
     setResults([])
     setLoading(false)
   }, [])

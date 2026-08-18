@@ -3,15 +3,17 @@ import Image from 'next/image'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, Film, Tv, ArrowRight, Loader2 } from 'lucide-react'
+import { Calendar, Film, Tv, ArrowRight } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { useMediaActions } from '@/lib/useMediaActions'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { formatDateLabel } from '@/lib/formatDate'
+import type { UpcomingRelease } from '@/lib/tmdb'
 
 interface Props {
-  releases: any[]
+  releases: UpcomingRelease[]
 }
 
 export default function DashboardUpcomingWidget({ releases }: Props) {
@@ -28,17 +30,6 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
 
   // Take the first 3 releases to fit the bento grid neatly
   const upcoming = releases.slice(0, 3)
-
-  function formatDate(dateStr: string) {
-    if (!dateStr) return ''
-    try {
-      const date = new Date(dateStr)
-      // Format as "MMM DD" (e.g. "Jun 24")
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    } catch {
-      return dateStr
-    }
-  }
 
   return (
     <div className="flex flex-col justify-between h-full p-6 relative group overflow-hidden">
@@ -106,7 +97,7 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
                       {item.title}
                     </span>
                     <span className="text-[11px] font-semibold text-zinc-400 block mt-0.5">
-                      {formatDate(item.full_release_date)} · {item.type === 'show' ? 'TV' : 'Movie'}
+                      {formatDateLabel(item.full_release_date)} · {item.type === 'show' ? 'TV' : 'Movie'}
                     </span>
                   </div>
                 </button>

@@ -36,7 +36,9 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
   const { toast } = useToast()
 
+  // Portals need a real document.body, absent during the server render.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 

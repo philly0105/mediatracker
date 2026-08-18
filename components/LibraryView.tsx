@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
 import { FilterPills } from '@/components/FilterPills'
 import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -96,6 +95,24 @@ export default function LibraryView() {
       .finally(() => setRefreshing(false))
   }, [fetchEntries])
 
+  // The list is fetched once into client state, so router.refresh() cannot
+  // reach it: an entry edited on a show page, in another tab, or on a phone
+  // would sit stale here until a manual reload. Refetching when the tab comes
+  // back to the foreground is what makes the Refresh button a fallback rather
+  // than something you have to remember to press.
+  useEffect(() => {
+    function refetchIfVisible() {
+      if (document.visibilityState !== 'visible') return
+      fetchEntries().then(setEntries).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', refetchIfVisible)
+    window.addEventListener('focus', refetchIfVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', refetchIfVisible)
+      window.removeEventListener('focus', refetchIfVisible)
+    }
+  }, [fetchEntries])
+
   // Deleting drops the row immediately and defers the write, so Undo just
   // cancels the pending request rather than trying to reconstruct the entry.
   const handleEntryDeleted = useCallback((entryId: string) => {
@@ -126,7 +143,10 @@ export default function LibraryView() {
       action: {
         label: 'Undo',
         onClick: () => {
-          if (!cancel(entryId)) return
+          if (!cancel(entryId)) {
+            toast('Too late to undo — that entry has already been removed.', { tone: 'info' })
+            return
+          }
           setEntries((prev) =>
             prev.some((entry) => entry.id === entryId) ? prev : [...prev, removed]
           )
@@ -269,19 +289,23 @@ export default function LibraryView() {
                 <LayoutGrid className="w-4 h-4" />
               </button>
             </div>
-            <Button
+            {/* Demoted to an icon now that the list refetches on focus — a
+                labelled "Refresh" in a filter row reads as an admission that
+                the page might be lying to you. */}
+            <button
+              type="button"
               onClick={handleRefresh}
               disabled={refreshing}
-              variant="ghost"
-              size="sm"
+              aria-label={refreshing ? 'Refreshing library' : 'Refresh library'}
+              title="Refresh"
+              className="p-1.5 rounded-sm text-zinc-500 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
             >
               {refreshing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              <span>{refreshing ? 'Refreshing' : 'Refresh'}</span>
-            </Button>
+            </button>
           </div>
         )}
       </div>
@@ -304,7 +328,6 @@ export default function LibraryView() {
                   key={entry.id}
                   entry={entry}
                   view="poster"
-                  hideWatchedDate={true}
                   onDeleted={handleEntryDeleted}
                   onUpdated={handleEntryUpdated}
                 />
@@ -316,7 +339,6 @@ export default function LibraryView() {
                 <MediaCard
                   key={entry.id}
                   entry={entry}
-                  hideWatchedDate={true}
                   onDeleted={handleEntryDeleted}
                   onUpdated={handleEntryUpdated}
                 />

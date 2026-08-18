@@ -54,12 +54,14 @@ export function Button({
     },
   }[variant]
 
+  // The hover handlers sit after {...rest} on purpose. They used to come first,
+  // so any caller passing onMouseEnter or onMouseLeave won the spread and
+  // silently killed hover styling on that button with no error — the version
+  // below composes instead, running both.
   return (
     <button
       type="button"
       onClick={disabled ? undefined : onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       disabled={disabled}
       style={{
         display: 'inline-flex',
@@ -79,6 +81,8 @@ export function Button({
         ...style,
       }}
       {...rest}
+      onMouseEnter={(e) => { setHover(true); rest.onMouseEnter?.(e) }}
+      onMouseLeave={(e) => { setHover(false); rest.onMouseLeave?.(e) }}
     >
       {children}
     </button>

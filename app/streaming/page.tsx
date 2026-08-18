@@ -22,6 +22,11 @@ const PROVIDERS = [
   { id: '386', name: 'Peacock' },
 ]
 
+/** How many unwatched posters a page should show before it stops pulling more. */
+const FILL_TARGET = 20
+/** Ceiling on hide-watched auto-advance, so an exhausted service still settles. */
+const MAX_AUTO_FILL_PAGES = 5
+
 type StreamingSort = 'popular' | 'rating' | 'latest'
 
 const SORT_OPTIONS: { id: StreamingSort; label: string }[] = [
@@ -119,6 +124,24 @@ function StreamingContent() {
     () => (hideWatched ? results.filter((item) => !watchedIds.has(item.tmdb_id)) : results),
     [hideWatched, results, watchedIds]
   )
+
+  // Hide-watched filters after the page arrives, so a TMDB page of 20 can
+  // collapse to two posters for someone whose library already covers most of
+  // Netflix's popular list. Treat the target as a fill level rather than a
+  // post-filter: keep pulling pages until there is a screenful of unwatched
+  // titles, capped so "watched literally everything" doesn't walk 500 pages.
+  const autoFillKey = `${provider}-${type}-${sortBy}-${hideWatched}`
+  const autoFill = useRef({ key: autoFillKey, used: 0 })
+
+  useEffect(() => {
+    if (autoFill.current.key !== autoFillKey) autoFill.current = { key: autoFillKey, used: 0 }
+    if (!hideWatched || loading || loadingMore) return
+    if (page >= totalPages) return
+    if (visibleResults.length >= FILL_TARGET) return
+    if (autoFill.current.used >= MAX_AUTO_FILL_PAGES) return
+    autoFill.current.used += 1
+    setPage((currentPage) => Math.min(currentPage + 1, totalPages))
+  }, [autoFillKey, hideWatched, loading, loadingMore, page, totalPages, visibleResults.length])
 
   function changeProvider(id: string) {
     if (id === provider) return
@@ -237,7 +260,9 @@ function StreamingContent() {
         <p className="text-zinc-400 py-8 text-center">
           {results.length === 0
             ? 'No titles found for this service.'
-            : 'No unwatched titles found on this page.'}
+            : page >= totalPages
+              ? 'You have watched everything on this service. Try another one.'
+              : 'Everything here is already in your library — turn off Hide watched to see it.'}
         </p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>

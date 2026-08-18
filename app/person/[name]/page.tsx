@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import type { TmdbSearchResult } from '@/types'
-import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv, Plus, Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv } from 'lucide-react'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { useMediaActions } from '@/lib/useMediaActions'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -39,8 +39,8 @@ export default function PersonPage() {
         setRecentMovies(data.recentMovies || [])
         setAllMovies(data.allMovies || [])
         setProfileUrl(data.profile_url || null)
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load person details')
       } finally {
         setLoading(false)
       }

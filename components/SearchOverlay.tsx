@@ -3,14 +3,15 @@ import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Search, CheckCircle2, Bookmark, Home, Library, ListTodo, Clapperboard, Sparkles, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
+import { Search, CheckCircle2, Bookmark, Check, Plus, Loader2, Home, Library, ListTodo, Clapperboard, Sparkles, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
 import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
 import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
 import { useLibraryIds } from '@/lib/useLibraryIds'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaActions, isAlreadyWatchedError } from '@/lib/useMediaActions'
 import MediaInfoModal from '@/components/MediaInfoModal'
 import { Badge } from '@/components/ui/Badge'
+import { useToast } from '@/components/ToastProvider'
 
 interface Props {
   onClose: () => void
@@ -44,6 +45,8 @@ export default function SearchOverlay({ onClose }: Props) {
 
   const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [actioningId, setActioningId] = useState<number | null>(null)
+  const { toast } = useToast()
 
   const { containerRef } = useModal(handleClose)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -73,9 +76,52 @@ export default function SearchOverlay({ onClose }: Props) {
   const titleResults = mode === 'title' ? (results as TmdbSearchResult[]) : []
   const personResults = mode === 'person' ? (results as TmdbPersonResult[]) : []
 
+  // Every row the arrow keys can reach, in render order. Also what
+  // aria-activedescendant indexes into.
+  const optionCount = showQuickNav ? QUICK_NAV.length : matchedPages.length + results.length
+  const optionId = (index: number) => `search-overlay-option-${index}`
+
   function navigateTo(href: string) {
     router.push(href)
     handleClose()
+  }
+
+  // Logging used to cost a modal and a network round-trip: click a row, wait on
+  // /api/tmdb/details, find the footer button, click, Escape twice. Everything
+  // these need is already in scope, so the palette can just do it.
+  async function logWatched(r: TmdbSearchResult) {
+    if (watchedIds.has(r.tmdb_id) || actioningId !== null) return
+    try {
+      setActioningId(r.tmdb_id)
+      await markWatched(r.tmdb_id, r.type)
+      setWatchedIds((prev) => new Set(prev).add(r.tmdb_id))
+      toast(`Logged ${r.title}.`, { tone: 'success' })
+    } catch (err) {
+      console.error(err)
+      toast(
+        isAlreadyWatchedError(err)
+          ? `${r.title} is already in your watch history.`
+          : err instanceof Error ? err.message : 'Could not log that.',
+        { tone: 'error' }
+      )
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  async function listForLater(r: TmdbSearchResult) {
+    if (watchlistIds.has(r.tmdb_id) || actioningId !== null) return
+    try {
+      setActioningId(r.tmdb_id)
+      await addToWatchlist(r.tmdb_id, r.type)
+      setWatchlistIds((prev) => new Set(prev).add(r.tmdb_id))
+      toast(`Added ${r.title} to your watchlist.`, { tone: 'success' })
+    } catch (err) {
+      console.error(err)
+      toast(err instanceof Error ? err.message : 'Could not add to your watchlist.', { tone: 'error' })
+    } finally {
+      setActioningId(null)
+    }
   }
 
   function switchMode(next: SearchMode) {
@@ -115,7 +161,7 @@ export default function SearchOverlay({ onClose }: Props) {
   }
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const itemCount = showQuickNav ? QUICK_NAV.length : matchedPages.length + results.length
+    const itemCount = optionCount
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (itemCount === 0) return
@@ -125,6 +171,22 @@ export default function SearchOverlay({ onClose }: Props) {
       if (itemCount === 0) return
       setActiveIndex((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
+      // Modified Enter logs the active title without opening anything. Only
+      // meaningful over a title result, so it falls through to plain Enter
+      // everywhere else.
+      const activeTitle = mode === 'title' && !showQuickNav
+        ? titleResults[activeIndex - matchedPages.length]
+        : undefined
+      if (activeTitle && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        logWatched(activeTitle)
+        return
+      }
+      if (activeTitle && e.shiftKey) {
+        e.preventDefault()
+        listForLater(activeTitle)
+        return
+      }
       if (mode === 'person') {
         const p = personResults[activeIndex]
         if (p) {
@@ -177,6 +239,9 @@ export default function SearchOverlay({ onClose }: Props) {
         {/* Input row */}
         <div className="px-5 py-4 flex items-center gap-3 border-b border-white/5">
           <Search className="w-5 h-5 text-zinc-500" />
+          {/* The arrow-key highlight used to be purely visual, so a screen
+              reader heard nothing as it moved. Focus stays on the input and
+              aria-activedescendant points at the highlighted row instead. */}
           <input
             ref={inputRef}
             value={query}
@@ -184,18 +249,26 @@ export default function SearchOverlay({ onClose }: Props) {
             onKeyDown={handleInputKeyDown}
             placeholder={mode === 'person' ? 'Search actors and directors…' : 'Search movies and TV shows…'}
             autoFocus
+            role="combobox"
+            aria-expanded={optionCount > 0}
+            aria-controls="search-overlay-results"
+            aria-autocomplete="list"
+            aria-activedescendant={optionCount > 0 ? optionId(activeIndex) : undefined}
             className="flex-1 bg-transparent border-none outline-none text-base text-white placeholder:text-zinc-500"
           />
         </div>
 
-        {/* Mode tabs — Titles and People are separate searches, not blended. */}
-        <div className="px-5 pt-3 flex gap-2" role="tablist" aria-label="Search type">
+        {/* Mode toggles — Titles and People are separate searches, not blended.
+            Declared as pressed buttons rather than tabs: the results region is a
+            listbox owned by the combobox above, not a tabpanel, so the tab
+            pattern was half-implemented and announced a relationship that did
+            not exist. */}
+        <div className="px-5 pt-3 flex gap-2" role="group" aria-label="Search type">
           {([['title', 'Titles'], ['person', 'People']] as const).map(([value, label]) => (
             <button
               key={value}
               type="button"
-              role="tab"
-              aria-selected={mode === value}
+              aria-pressed={mode === value}
               onClick={() => switchMode(value)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                 mode === value ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-300'
@@ -207,16 +280,24 @@ export default function SearchOverlay({ onClose }: Props) {
         </div>
 
         {/* Results list */}
-        <div ref={listRef} className="max-h-[min(420px,60vh)] overflow-y-auto p-2">
+        <div
+          ref={listRef}
+          id="search-overlay-results"
+          role="listbox"
+          aria-label={mode === 'person' ? 'People' : 'Titles and pages'}
+          className="max-h-[min(420px,60vh)] overflow-y-auto p-2"
+        >
           {showQuickNav && (
             <>
               <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Go to</div>
               {QUICK_NAV.map((item, i) => {
                 const Icon = item.icon
                 return (
-                  <button
+                  <div
                     key={item.href}
-                    type="button"
+                    id={optionId(i)}
+                    role="option"
+                    aria-selected={i === activeIndex}
                     data-index={i}
                     onMouseEnter={() => setActiveIndex(i)}
                     onClick={() => navigateTo(item.href)}
@@ -224,7 +305,7 @@ export default function SearchOverlay({ onClose }: Props) {
                   >
                     <Icon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                     <span className="text-sm text-zinc-300">{item.name}</span>
-                  </button>
+                  </div>
                 )
               })}
             </>
@@ -235,9 +316,11 @@ export default function SearchOverlay({ onClose }: Props) {
               {matchedPages.map((page, i) => {
                 const Icon = page.icon
                 return (
-                  <button
+                  <div
                     key={page.href}
-                    type="button"
+                    id={optionId(i)}
+                    role="option"
+                    aria-selected={i === activeIndex}
                     data-index={i}
                     onMouseEnter={() => setActiveIndex(i)}
                     onClick={() => navigateTo(page.href)}
@@ -245,7 +328,7 @@ export default function SearchOverlay({ onClose }: Props) {
                   >
                     <Icon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                     <span className="text-sm text-zinc-300">{page.name}</span>
-                  </button>
+                  </div>
                 )
               })}
             </>
@@ -260,9 +343,11 @@ export default function SearchOverlay({ onClose }: Props) {
             <div className="py-8 text-sm text-zinc-600 text-center">No matches for &ldquo;{query}&rdquo;.</div>
           )}
           {personResults.map((p, i) => (
-            <button
+            <div
               key={p.id}
-              type="button"
+              id={optionId(i)}
+              role="option"
+              aria-selected={i === activeIndex}
               data-index={i}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => navigateTo(`/person/${encodeURIComponent(p.name)}`)}
@@ -285,20 +370,22 @@ export default function SearchOverlay({ onClose }: Props) {
                 <p className="text-sm font-semibold text-white truncate">{p.name}</p>
                 {p.known_for && <p className="text-xs text-zinc-500 truncate mt-0.5">{p.known_for}</p>}
               </div>
-            </button>
+            </div>
           ))}
           {titleResults.map((r, i) => {
             const listIndex = i + matchedPages.length
             const watched = watchedIds.has(r.tmdb_id)
             const listed = watchlistIds.has(r.tmdb_id)
             return (
-              <button
+              <div
                 key={`${r.type}-${r.tmdb_id}`}
-                type="button"
+                id={optionId(listIndex)}
+                role="option"
+                aria-selected={listIndex === activeIndex}
                 data-index={listIndex}
                 onMouseEnter={() => setActiveIndex(listIndex)}
                 onClick={() => setSelected(r)}
-                className={`flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${listIndex === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                className={`group flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${listIndex === activeIndex ? 'bg-white/[0.06]' : ''}`}
               >
                 {r.poster_url ? (
                   <Image
@@ -329,15 +416,54 @@ export default function SearchOverlay({ onClose }: Props) {
                     )}
                   </div>
                 </div>
-              </button>
+
+                {/* Mouse-only shortcuts for the two things people come here to
+                    do. Hidden from assistive tech on purpose: interactive
+                    controls do not belong inside a listbox option, and keyboard
+                    users get the same two actions from ⌘↵ / ⇧↵, which the
+                    footer advertises. */}
+                <div
+                  aria-hidden="true"
+                  className={`flex items-center gap-1 shrink-0 pr-1 transition-opacity ${
+                    listIndex === activeIndex ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    disabled={watched || actioningId !== null}
+                    title={watched ? 'Already watched' : 'Mark as watched'}
+                    onClick={(e) => { e.stopPropagation(); logWatched(r) }}
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-[var(--accent)] hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    {actioningId === r.tmdb_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    disabled={listed || watched || actioningId !== null}
+                    title={listed ? 'Already on your watchlist' : 'Add to watchlist'}
+                    onClick={(e) => { e.stopPropagation(); listForLater(r) }}
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             )
           })}
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-2.5 border-t border-white/5 flex gap-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+        <div className="px-5 py-2.5 border-t border-white/5 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
           <span>↑↓ Navigate</span>
           <span>↵ Open</span>
+          {mode === 'title' && !showQuickNav && (
+            <>
+              <span>⌘↵ Watched</span>
+              <span>⇧↵ Watchlist</span>
+            </>
+          )}
           <span>Esc Close</span>
         </div>
       </motion.div>

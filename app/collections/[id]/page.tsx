@@ -1,8 +1,6 @@
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { getCollectionDetails } from '@/lib/tmdb'
 import CollectionMovieCard from '@/components/CollectionMovieCard'
 import BackButton from '@/components/BackButton'

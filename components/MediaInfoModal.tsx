@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
+import type { TmdbWatchProviders, TmdbWatchProvider } from '@/lib/tmdb'
 import SimilarModal from './SimilarModal'
 import RatingStars from './RatingStars'
 import { Button } from '@/components/ui/Button'
@@ -55,6 +56,7 @@ interface Props {
 
 interface FullDetails {
   imdb_id: string | null
+  overview: string | null
   media_id: string | null
   runtime_mins: number | null
   director: string | null
@@ -65,9 +67,17 @@ interface FullDetails {
   isFollowed: boolean
   watch_entry: { id: string; rating: number | null } | null
   trailer_url: string | null
-  watch_providers?: any
+  watch_providers?: TmdbWatchProviders | null
   vote_average?: number | null
 }
+
+// The most-opened surface in the app used to refetch on every single open,
+// even for a title dismissed thirty seconds ago — and /api/tmdb/details costs a
+// TMDB call plus three or four Supabase reads. Cached per session and keyed on
+// the title, so a second open paints immediately; the background revalidate
+// below is what keeps the user-specific bits (watch_entry, isWatchlisted,
+// isFollowed) from going stale.
+const detailsCache = new Map<string, FullDetails>()
 
 export default function MediaInfoModal({
   item,
@@ -80,17 +90,28 @@ export default function MediaInfoModal({
   newTabLinks = false,
   onNavigateAway
 }: Props) {
+  const cacheKey = `${item.type}-${item.tmdb_id}`
+  const cachedDetails = detailsCache.get(cacheKey) ?? null
+
   const [mounted, setMounted] = useState(false)
-  const [details, setDetails] = useState<FullDetails | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [details, setDetails] = useState<FullDetails | null>(cachedDetails)
+  // A cache hit has content to show, so it skips the shimmer entirely.
+  const [loading, setLoading] = useState(cachedDetails === null)
   const [actioning, setActioning] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [userRating, setUserRating] = useState<number | null>(null)
+  const [userRating, setUserRating] = useState<number | null>(cachedDetails?.watch_entry?.rating ?? null)
   const [showSimilar, setShowSimilar] = useState(false)
   const [ratingPulse, setRatingPulse] = useState(false)
   const { toast } = useToast()
   const { containerRef } = useModal(onClose)
   const ratingRowRef = useRef<HTMLDivElement>(null)
+
+  // Local optimistic edits have to reach the cache too, or reopening the modal
+  // would paint the pre-action state for one frame before the revalidate lands.
+  const applyDetails = useCallback((next: FullDetails) => {
+    detailsCache.set(`${item.type}-${item.tmdb_id}`, next)
+    setDetails(next)
+  }, [item.type, item.tmdb_id])
 
   // The parent owns whether this modal is open, so a link that routes the tab
   // elsewhere has to say so — otherwise the modal stays layered over the page
@@ -100,7 +121,11 @@ export default function MediaInfoModal({
   // which Next treats the same way) correctly leave the modal open.
   const dismissOnNavigate = onNavigateAway ?? onClose
 
+  // Portals need a real document.body, which does not exist during the server
+  // render — same mount gate as ToastProvider and MultiSelectProvider. The one
+  // cascading render on mount is the mechanism, not a mistake.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
   }, [])
 
@@ -124,6 +149,7 @@ export default function MediaInfoModal({
       const data = await res.json()
       const fresh: FullDetails = {
         imdb_id: data.imdb_id ?? null,
+        overview: data.overview ?? null,
         media_id: data.media_id ?? null,
         runtime_mins: data.runtime_mins ?? null,
         director: data.director ?? null,
@@ -137,32 +163,37 @@ export default function MediaInfoModal({
         watch_providers: data.watch_providers ?? null,
         vote_average: data.vote_average ?? null,
       }
-      setDetails(fresh)
+      applyDetails(fresh)
       setUserRating(data.watch_entry?.rating ?? null)
       return fresh
-    } catch (err: any) {
+    } catch (err: unknown) {
       // A failed refresh keeps the content already on screen; only the first
       // load has nothing better to show than the error state.
       if (refreshing) console.error(err)
-      else setError(err.message)
+      else setError(err instanceof Error ? err.message : 'Failed to load details')
       return null
     } finally {
       if (!refreshing) setLoading(false)
     }
-  }, [item.tmdb_id, item.type])
+  }, [item.tmdb_id, item.type, applyDetails])
 
   useEffect(() => {
     async function run() {
-      await loadDetails()
+      // Served from cache means content is already on screen — revalidate
+      // without dropping back to the shimmer.
+      await loadDetails(cachedDetails !== null)
     }
     run()
+    // cachedDetails is only read for its initial value; re-running on identity
+    // changes would refetch on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadDetails])
 
   async function handleWatchlistClick() {
     try {
       setActioning('watchlist')
       await onAddToWatchlist()
-      if (details) setDetails({ ...details, isWatchlisted: true })
+      if (details) applyDetails({ ...details, isWatchlisted: true })
       toast(`Added ${item.title} to your watchlist.`, { tone: 'success' })
       // Modal stays open after action
     } catch (err) {
@@ -177,7 +208,7 @@ export default function MediaInfoModal({
     try {
       setActioning('watched')
       await onMarkAsWatched(opts)
-      if (details) setDetails({ ...details, isWatched: true })
+      if (details) applyDetails({ ...details, isWatched: true })
       // The refetch is awaited so the fresh watch_entry (and its id, for Undo)
       // exists before the toast points the user at the rating row.
       const fresh = await loadDetails(true)
@@ -230,7 +261,7 @@ export default function MediaInfoModal({
     }
   }
 
-  async function handleRatingChange(newRating: number) {
+  async function handleRatingChange(newRating: number | null) {
     if (!details?.watch_entry) return
     const previous = userRating
     // Optimistic: the stars are their own feedback, so no success toast.
@@ -268,7 +299,7 @@ export default function MediaInfoModal({
     try {
       setActioning('remove')
       await onRemoveFromWatchlist()
-      if (details) setDetails({ ...details, isWatchlisted: false })
+      if (details) applyDetails({ ...details, isWatchlisted: false })
       toast(`Removed ${item.title} from your watchlist.`, { tone: 'success' })
       // Modal stays open after action
     } catch (err) {
@@ -292,7 +323,7 @@ export default function MediaInfoModal({
         body: JSON.stringify({ tmdb_id: item.tmdb_id }),
       })
       if (!res.ok) throw new Error(following ? 'Failed to unfollow' : 'Failed to follow')
-      setDetails({ ...details, isFollowed: !following })
+      applyDetails({ ...details, isFollowed: !following })
       toast(
         following ? `Unfollowed ${item.title}.` : `Following ${item.title}.`,
         { tone: 'success' }
@@ -556,7 +587,7 @@ export default function MediaInfoModal({
                   Overview
                 </h3>
                 <p className="text-sm text-zinc-300 leading-relaxed text-left">
-                  {item.overview || 'No description available.'}
+                  {details?.overview || item.overview || 'No description available.'}
                 </p>
               </div>
 
@@ -600,9 +631,13 @@ export default function MediaInfoModal({
                     <div className="space-y-1.5">
                       <span className="text-[10px] font-semibold text-zinc-400">Stream</span>
                       <div className="flex flex-wrap gap-2">
-                        {details.watch_providers.flatrate.map((p: any) => (
+                        {details.watch_providers.flatrate.map((p: TmdbWatchProvider) => (
                           <div key={p.provider_id} className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-white/10" title={p.provider_name}>
-                            {p.logo_path ? <img src={p.logo_path} alt={p.provider_name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-0.5">{p.provider_name}</div>}
+                            {p.logo_path ? (
+                              <Image src={p.logo_path} alt={p.provider_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-0.5">{p.provider_name}</div>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { WatchEntry, WatchlistItem } from '@/types'
 
 function csvField(value: string): string {
   // Leading =, +, -, @, TAB and CR are treated as formula starts by Excel/Sheets/Numbers.
@@ -21,9 +22,12 @@ export async function GET() {
     supabase.from('watchlist_items').select('*, media(*)').eq('user_id', user.id).order('added_at', { ascending: false }),
   ])
 
+  const typedEntries = (entries ?? []) as unknown as WatchEntry[]
+  const typedWatchlist = (watchlist ?? []) as unknown as WatchlistItem[]
+
   const rows = [
     'title,year,type,rating,date,review,status',
-    ...(entries ?? []).map((e: any) => [
+    ...typedEntries.map((e) => [
       csvField(e.media?.title ?? ''),
       e.media?.release_year ?? '',
       e.media?.type ?? '',
@@ -32,7 +36,7 @@ export async function GET() {
       csvField(e.review ?? ''),
       'watched',
     ].join(',')),
-    ...(watchlist ?? []).map((w: any) => [
+    ...typedWatchlist.map((w) => [
       csvField(w.media?.title ?? ''),
       w.media?.release_year ?? '',
       w.media?.type ?? '',

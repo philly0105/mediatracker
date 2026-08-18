@@ -220,7 +220,11 @@ function WatchlistSection({
   const { toast } = useToast()
   const { schedule, cancel } = useDeferredAction()
 
+  // A filter change invalidates the page window as well as the rows, so the
+  // reset and the refetch belong together. The cascading render is deliberate:
+  // the old rows must not stay on screen under the new filter.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setItems([])
     setPage(1)
     setHasMore(true)
@@ -282,7 +286,13 @@ function WatchlistSection({
   }, [loading, loadingMore, hasMore, page, items.length])
 
   // Actions
+  //
+  // From the card this used to be silent: the row vanished from the section you
+  // were looking at with no statement of where it went, and the target section
+  // is usually far enough down the page to be off-screen. The same action taken
+  // inside MediaInfoModal has always toasted.
   const handleUpdatePriority = async (itemId: string, newPriority: WatchlistPriority) => {
+    const moved = items.find(i => i.id === itemId)
     try {
       setActioningId(itemId)
       const res = await fetch('/api/watchlist', {
@@ -296,6 +306,33 @@ function WatchlistSection({
       setTotal(prev => prev - 1)
       if (selectedItem?.id === itemId) setSelectedItem(null)
       onPriorityChanged(newPriority)
+
+      toast(`Moved ${moved?.media?.title ?? 'item'} to ${PRIORITY_LABELS[newPriority]}.`, {
+        tone: 'success',
+        // The reverse is one more PATCH, so offering it costs nothing. Unlike
+        // removal this is a completed write, not a deferred one — Undo issues a
+        // second request rather than cancelling the first.
+        action: moved ? {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              const undo = await fetch('/api/watchlist', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: itemId, priority: moved.priority }),
+              })
+              if (!undo.ok) throw new Error('Failed to move back')
+              setItems(prev => (prev.some(i => i.id === itemId) ? prev : [...prev, moved]))
+              setTotal(prev => prev + 1)
+              // Refresh the section it briefly landed in so the row leaves it.
+              onPriorityChanged(newPriority)
+            } catch (err) {
+              console.error(err)
+              toast('Could not move that item back.', { tone: 'error' })
+            }
+          },
+        } : undefined,
+      })
     } catch (err) {
       console.error(err)
       toast('Could not move that item.', { tone: 'error' })
@@ -339,7 +376,10 @@ function WatchlistSection({
       action: {
         label: 'Undo',
         onClick: () => {
-          if (!cancel(itemId)) return
+          if (!cancel(itemId)) {
+            toast('Too late to undo — that item has already been removed.', { tone: 'info' })
+            return
+          }
           restore()
         },
       },
@@ -468,7 +508,7 @@ function WatchlistSection({
                       </div>
 
                       {/* Actions row on hover */}
-                      <div className="absolute top-3.5 right-3.5 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200" onClick={e => e.stopPropagation()}>
+                      <div className="absolute top-3.5 right-3.5 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200" onClick={e => e.stopPropagation()}>
                         {isActioning ? (
                           <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
                         ) : (
