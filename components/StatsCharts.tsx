@@ -41,17 +41,17 @@ export default function StatsCharts({ data }: { data: StatsData }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Genres</h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart margin={{ top: 25, right: 35, bottom: 25, left: 35 }}>
               <Pie
                 data={data.genreBreakdown.slice(0, 8)}
                 dataKey="count"
                 nameKey="genre"
                 cx="50%"
                 cy="50%"
-                outerRadius={65}
-                innerRadius={30}
-                paddingAngle={2}
+                outerRadius={82}
+                stroke="#1b1711"
+                strokeWidth={1.5}
                 label={({ x, y, name, index, textAnchor }: any) => (
                   <text
                     x={x}
@@ -59,7 +59,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                     fill={COLORS[index % COLORS.length]}
                     textAnchor={textAnchor}
                     dominantBaseline="central"
-                    fontSize={11}
+                    fontSize={11.5}
                     fontWeight={600}
                   >
                     {name}
@@ -78,8 +78,8 @@ export default function StatsCharts({ data }: { data: StatsData }) {
 
         <Card>
           <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Ratings</h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.ratingDist} margin={{ top: 10, right: 10, bottom: 10, left: -15 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={data.ratingDist} margin={{ top: 15, right: 10, bottom: 10, left: -15 }}>
               <XAxis dataKey="rating" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
