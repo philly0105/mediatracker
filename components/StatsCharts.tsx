@@ -41,12 +41,35 @@ export default function StatsCharts({ data }: { data: StatsData }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Genres</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={data.genreBreakdown.slice(0, 8)} dataKey="count" nameKey="genre"
-                cx="50%" cy="50%" outerRadius={80} label={({ genre }: any) => genre}
-                labelLine={{ stroke: 'rgba(255,255,255,0.2)' }}>
-                {data.genreBreakdown.slice(0, 8).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
+              <Pie
+                data={data.genreBreakdown.slice(0, 8)}
+                dataKey="count"
+                nameKey="genre"
+                cx="50%"
+                cy="50%"
+                outerRadius={65}
+                innerRadius={30}
+                paddingAngle={2}
+                label={({ x, y, name, index, textAnchor }: any) => (
+                  <text
+                    x={x}
+                    y={y}
+                    fill={COLORS[index % COLORS.length]}
+                    textAnchor={textAnchor}
+                    dominantBaseline="central"
+                    fontSize={11}
+                    fontWeight={600}
+                  >
+                    {name}
+                  </text>
+                )}
+                labelLine={{ stroke: 'rgba(255,255,255,0.25)', strokeWidth: 1 }}
+              >
+                {data.genreBreakdown.slice(0, 8).map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
               </Pie>
               <Tooltip contentStyle={tooltipStyle} />
             </PieChart>
@@ -55,8 +78,8 @@ export default function StatsCharts({ data }: { data: StatsData }) {
 
         <Card>
           <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Ratings</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={data.ratingDist}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={data.ratingDist} margin={{ top: 10, right: 10, bottom: 10, left: -15 }}>
               <XAxis dataKey="rating" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
