@@ -173,7 +173,7 @@ which I have not looked at in this session.
 
 | ID | Work |
 |----|------|
-| **F-24** | Consolidate the six different toggle treatments into one primitive; `<Kbd>` platform detection (⌘ vs Ctrl). — **DONE (session 2, partial):** `<Kbd>` shipped with platform detection. The toggle-primitive consolidation is still open.|
+| **F-24** | Consolidate the six different toggle treatments into one primitive; `<Kbd>` platform detection (⌘ vs Ctrl). — **DONE (session 2, partial):** `<Kbd>` shipped with platform detection. The toggle-primitive consolidation is **still open and deliberately deferred again in session 3** — the user chose to skip it until there is a local Supabase to see it in. It is the only open finding left.|
 | **F-27** | `Button`'s dead `icon`/`iconRight` props (currently `eslint-disable`d as unused); `NavItem` needs a `'use client'` audit now that it has no state; add a `tone` prop so call sites stop using `className="hover:!bg-rose-600 hover:!border-rose-500"` (≈6 sites in `MediaInfoModal.tsx`). — **DONE (session 2):** `tone` prop added; all five `hover:!` call sites migrated. The `icon`/`iconRight` deletion is held for F-47 approval.|
 | **F-29** | Remove the 26 `backdrop-blur` usages. Note `.btn-ghost` and `.input-field` in `globals.css` still carry `backdrop-filter: blur(var(--blur-md))` — I preserved the existing behaviour there rather than pre-empting this finding. — **DONE (session 2).** |
 | **F-31** | Move the design system out of `.agents/skills/dorfmovies-design/` into e.g. `app/styles/design-system/`, update the `@import` on line 1 of `app/globals.css`, drop the `turbopack.root` workaround in `next.config.ts`. The audit's roadmap says do this **first** in the design sprint. — **DONE (session 2).** |
@@ -183,10 +183,10 @@ which I have not looked at in this session.
 | **F-36** | Modal footer button hierarchy. — **DONE (session 2).** |
 | **F-37** | `AnimatePresence` around the 12 unwrapped `MediaInfoModal` call sites. — **DONE (session 2)**, via F-38. See 5.9. |
 | **F-38** | `MediaModalProvider` (removes the duplicated modal state from those 12 sites). — **DONE (session 2).** All 13 sites migrated; see 5.9. |
-| **F-39 (rest)** | `opengraph-image.tsx` routes for generated OG cards. |
+| **F-39 (rest)** | `opengraph-image.tsx` routes for generated OG cards. — **DONE (session 3).** See 6.2. |
 | **F-44** | Small list: show-page progress bar, person-page `BackButton`, `/import` client redirect, Continue Watching scroll affordances, ⌘K recents, `vh`→`dvh` in `SearchOverlay`, `?` help sheet. — **DONE (session 2).** All seven; see 5.11. |
-| **F-46** | Fill the test-coverage gaps the audit enumerates. |
-| **F-47** | Dead code — **all of these need the user's approval before deleting** (their AGENTS.md: "Ask before deleting or overwriting any file", "`trash` > `rm`"). |
+| **F-46** | Fill the test-coverage gaps the audit enumerates. — **DONE (session 3).** See 6.3. |
+| **F-47** | Dead code — **all of these need the user's approval before deleting** (their AGENTS.md: "Ask before deleting or overwriting any file", "`trash` > `rm`"). — **DONE (session 3)**, to the scope the user approved. See 6.1. |
 
 ### F-47 specifics (do not delete without asking)
 - `app/(app)/lists/` — route still exists though Lists was removed from the nav in `5ec2d6c`.
@@ -497,3 +497,194 @@ This is also why the F-24 toggle migration was left alone: it is a purely visual
 across six surfaces with framer `layoutId` transitions, icon-only buttons and a horizontally
 scrolling pill row. Tests cannot tell you it looks right. Whoever picks it up should have a
 working local Supabase first.
+
+---
+
+## 7. Session 3 — 2026-08-21
+
+Commits `15a0233` … `5cd35a2` landed sessions 1 and 2; this session starts from a clean
+`master` at `5cd35a2`. **F-24 is now the only open finding.**
+
+Full gate green at the end of every item below: `npx tsc --noEmit`, `npm run lint`,
+`npx vitest run`, `npm run build`. **Tests went 362 → 399 across 47 files.**
+
+### 7.1 F-47 — dead code, to the scope the user approved
+
+The user was asked per item. Approved: the starter assets, `Button`'s `icon`/`iconRight`,
+and the colour aliases. Declined: `app/(app)/lists/` and `supabase/migrations/012_drop_lists.sql`
+— **do not delete either.** `lists/page.tsx` is a live `redirect('/watchlist')` that catches
+old bookmarks, and 012 is a destructive unapplied migration that is the user's to run.
+
+- **Trashed** (`trash`, not `rm`): `public/{file,globe,next,vercel,window}.svg` and
+  `app/favicon.ico`. `app/icon.tsx` already serves the real mark. `public/icon-192.png`
+  and `icon-512.png` stay — `app/manifest.ts` still references them.
+- `components/ui/Button.tsx` — `icon` / `iconRight` and their two `eslint-disable` lines
+  are gone. Checked every `icon=` call site first: all are `EmptyState`, `Input`,
+  `BentoGrid` or `NavItem`, none is a `Button`.
+- **The colour aliases were not dead.** The audit called `--gold-*`, `--violet-*`,
+  `--orange-*`, `--rose-*` and `--emerald-*` legacy, but only `--gold-*` was unreferenced;
+  the other four were live at ~20 call sites. So they were *migrated*, then removed:
+
+  | Alias | Real ramp | Note |
+  | --- | --- | --- |
+  | `violet-300…700` | `green-300…700` | |
+  | `rose-400/500/600` | `rust-400/500/600` | |
+  | `orange-400` | `amber-400` | |
+  | `orange-500` | **`amber-400`** | not `amber-500` — the alias hopped a step |
+  | `orange-600` | `amber-500` | |
+  | `emerald-400/500` | `teal-400/500` | |
+
+  Files touched: `MediaInfoModal`, `MediaCard`, `SimilarModal`, `SelectableOverlay`,
+  `PasswordChangeForm`, `EditEntryModal`, `ImportExportPanel`, plus `.btn-accent` in
+  `globals.css` (which read `--violet-tint-bg` / `--violet-300`).
+  `@theme inline` lost the four alias sub-ramps and gained `--color-rust-300…600`, which
+  the migrated `text-rust-400` / `bg-rust-500` utilities need in order to emit at all.
+  The alias blocks are gone from **both** copies of `tokens/colors.css` (vendored and
+  skill) — `designSystemSync.test.ts` fails if you touch only one.
+
+  **The migration is value-preserving, and that was checked rather than assumed:** the
+  built CSS was read back and every migrated utility resolves to the same token the alias
+  pointed at (`.text-rust-400{color:var(--rust-400)}`, `.bg-amber-400\/5{…var(--amber-400)…}`,
+  and so on). In the browser: `--accent` `#7c9a6a`, `--rust-400` `#c4805f`,
+  `--violet-500` and `--rose-tint-bg` gone, and all three `.btn-tone-*` compute correctly.
+
+  One consequence worth knowing: **a stray `bg-violet-500` no longer renders pine, it
+  renders Tailwind's stock violet `#8d54ff`.** That is the intended outcome — off-brand
+  and obvious — but it is a change from the old silently-correct behaviour.
+
+### 7.2 F-47 follow-on — `@source not "../docs"`
+
+Session 2 flagged, under F-29, that the built CSS carried dead `backdrop-blur` utilities
+because Tailwind's source auto-detection walks to the repo root and scans `docs/`, turning
+class names quoted inside design documents into real CSS. Removing the hue aliases made it
+visible (`.bg-violet-500\/5{background-color:#8d54ff0d}` shipped in the bundle), so it was
+fixed here: one `@source not "../docs";` in `app/globals.css`.
+
+The handoff warned that doing this wrong silently drops utilities that *are* used, so it
+was verified by diffing the emitted selector set across a rebuild: **535 → 490 selectors,
+45 removed, 0 added**, and each of the 45 was grepped against `app/`, `components/`,
+`lib/` and `types/` to confirm nothing renders it. The only three hits were prose inside
+comments (`w-64` and `max-w-7xl` in `spacing.css`, `text-orange-400` in a new `globals.css`
+comment) — Tailwind does not scan CSS files as content, confirmed by the diff.
+
+Note the comment above the directive avoids writing `docs/**/*.md` literally: the `*/`
+inside that glob closes a CSS comment early and the build fails with
+`CssSyntaxError: Unknown word *.md`.
+
+### 7.3 F-39 (rest) — generated OG cards
+
+**New `lib/ogCard.tsx`** — one 1200×630 card renderer, plus `renderOgCard()`, shared by
+six routes. It hardcodes the palette as hex: Satori resolves no CSS variables and loads no
+stylesheet, so the tokens cannot come through. Keep it in step with `tokens/colors.css`.
+
+Routes added: `app/opengraph-image.tsx` (the app-wide default every route inherits),
+`(app)/show/[id]`, `(app)/person/[name]`, `(app)/collections/[id]`, and both
+`(public)/share/*`. `app/layout.tsx` also gained `twitter: { card: 'summary_large_image' }`
+— without it X renders the 1200×630 card as a small square thumbnail.
+
+**The trap, and the reason two files were edited to remove working code:** Next's own docs
+say file-based metadata overrides `generateMetadata`. **It does not, at least not for
+`openGraph.images` in 16.2.6.** Verified with a throwaway route: with `openGraph.images`
+set in config *and* an `opengraph-image.tsx` present in the same segment, the config URL
+won and the generated card was built, served and never referenced. So the poster URLs
+session 2 put in `show/[id]/layout.tsx` and `collections/[id]/page.tsx` had to come out, or
+the cards would have been dead on arrival. `app/__tests__/ogImages.test.ts` guards both
+halves of this (12 cases, both mutation-checked).
+
+Other decisions:
+
+- **The share cards deliberately do not read their token.** Those pages are `noindex`
+  precisely because the token is the only thing guarding them, and anything rendered into
+  an `og:image` gets cached and re-served by every unfurler that touches the URL. They get
+  a branded "Shared list / Watched" card instead of the list contents.
+- **`renderOgCard` retries without the poster if the poster fetch throws.** Satori fetches
+  `<img src>` inline, so one TMDB hiccup would 500 the route and leave the link with no
+  preview at all — worse than a preview with no poster.
+- **No custom font.** `app/icon.tsx` set the precedent; loading Outfit here would add a
+  network dependency to the build for a card that already reads on-brand.
+- The `<img>` carries a two-rule `eslint-disable`. `next/image` has no runtime inside
+  Satori, and alt text has nowhere to go once the tree is a PNG — the route's own `alt`
+  export is what social clients read.
+
+**Browser-verified:** the card renders correctly with and without a poster (screenshotted
+via a throwaway route pointed at a real TMDB poster), all five dynamic routes return
+`200 image/png`, and the root card's `og:` / `twitter:` tags are on `/login`. The
+collection and show cards fall back to the generic card locally because there is no TMDB
+key or Supabase credential — which exercised the fallback path, but means the *populated*
+versions of those two have not been seen.
+
+### 7.4 F-46 — the test-coverage gaps
+
+Three of the audit's five bullets were already closed by sessions 1–2: `useModal` has 7
+tests covering stacking, scroll-lock and focus-restore; `recommendationsRefresh.test.tsx`
+covers the refresh cycle; `selectAll.test.tsx` covers registration counting. The two real
+gaps were filled.
+
+**New `components/__tests__/SearchOverlay.test.tsx` — 17 cases.** The audit called the
+palette's index arithmetic "the fiddliest logic in the app", and nothing touched it. Three
+option groups share one arrow-key index space — `[recents…, QUICK_NAV…]` when the query is
+short, `[matchedPages…, results…]` once it is not — with the offsets spread across the
+Enter handler and three separate render loops. The tests pin the mapping from both ends:
+the index the keyboard is on, and the row `aria-activedescendant` names.
+
+Covered: quick-nav start and clamping, the recents offset, Enter-on-a-recent refilling the
+input rather than navigating, the matched-page offset, `⌘↵` falling through to navigation
+when the active row is a page (`titleResults[0 - 1]` is undefined), `⇧↵` adding to the
+watchlist, mode switching relabelling the listbox and resetting the highlight, person
+results indexing from zero, `aria-expanded="false"` with no activedescendant when there are
+no options, and the no-results nudge switching indexes.
+
+**New `components/__tests__/MultiSelectProvider.test.tsx` — 8 cases**, covering what
+`selectAll.test.tsx` does not: Escape clearing a selection, Escape deferring to an open
+modal, `selectAll` reading the live registry rather than a stale snapshot, and the pooled
+batch write — one request per item, the `DELETE /api/watchlist` that follows
+`POST /api/watch`, the partial-failure toast, and **the selection surviving a total
+failure so it can be retried**.
+
+All 25 new cases were mutation-checked — 13 separate mutations, each caught by the test it
+was meant to catch and by no more than the tests that genuinely depend on it. The full
+suite was also run three times to confirm no cross-file bleed.
+
+### 7.5 Bug — "Similar Movies" took down the whole app (F-38 regression, shipped in `15a0233`)
+
+The user hit the root error boundary on "View similar", and in "other random places".
+
+**Cause.** `MediaModalProvider` renders its stack as a *sibling* of its own children, so
+everything the stack owns sits at the provider's level in the tree. In `app/(app)/layout.tsx`
+that level was **outside** `MultiSelectProvider` — which was nested down inside `<main>`,
+wrapping only `{children}`. `MediaInfoModal` renders `SimilarModal`, `SimilarModal` calls
+`useMultiSelect()`, and that hook throws when no provider is above it. The throw escaped to
+`app/error.tsx`, which sits at the *root*, so it replaced the entire app shell.
+
+This is why it looked random: the entry point never mattered. Every path that reaches the
+Similar button — a card on any page, ⌘K, Continue Watching — went through the same
+provider-owned modal, so all of them broke and nothing else did.
+
+**Fix.** `MultiSelectProvider` is now the outer provider in `app/(app)/layout.tsx`. It
+renders only its children plus a portal to `document.body`, so moving it out of `<main>`
+changes no layout. This also restores the pre-F-38 behaviour where the `SelectableOverlay`
+cards inside `SimilarModal` register into the same selection as the page's cards — before
+F-38, `SimilarModal` was rendered inside each page's tree, inside that provider.
+
+**New `components/__tests__/similarModalProviders.test.tsx`** — 2 cases. One drives the
+real flow (open a media modal through the provider, click Similar, assert the dialog
+renders); the other is a source guard asserting `app/(app)/layout.tsx` opens
+`MultiSelectProvider` before `MediaModalProvider`. The behavioural one was written *first*
+and confirmed to reproduce the exact error — `useMultiSelect must be used within
+MultiSelectProvider` — with the fixture flipped to the app's then-current order.
+
+**Whoever adds a provider next:** the ordering rule is that anything the modal stack's
+subtree reaches for must be provided *above* `MediaModalProvider`, not inside it.
+`ToastProvider` (root layout) already satisfies this; those three — toast, multi-select,
+media-modal — are the only context hooks in the app that throw when unprovided. The
+`(public)` routes use none of them, checked.
+
+### 7.6 Still open
+
+**F-24 only.** The user chose again to defer the toggle consolidation until there is a
+local Supabase credential: it is six visual surfaces with framer `layoutId` transitions,
+and no test tells you it looks right. Section 6 still applies.
+
+`--glow-*` and `--orb-violet` / `--orb-orange` / `--orb-rose` also still carry names from
+a palette that no longer exists. Their *values* are correct; only the names mislead. Not
+part of F-47's stated scope, and renaming them is pure churn unless done alongside F-24.
