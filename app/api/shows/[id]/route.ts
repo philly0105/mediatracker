@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { Media, Season, EpisodeProgress, WatchEntry } from '@/types'
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
@@ -11,9 +11,7 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [{ data: media }, { data: seasons }, { data: entry }] = await Promise.all([
-    supabase.from('media').select('*').eq('id', id).maybeSingle(),
-    supabase.from('seasons').select('*').eq('media_id', id).order('season_number'),
+  const latestEntry = () =>
     supabase
       .from('watch_entries')
       .select('*')
@@ -21,7 +19,20 @@ export async function GET(
       .eq('media_id', id)
       .order('watched_at', { ascending: false })
       .limit(1)
-      .maybeSingle(),
+      .maybeSingle()
+
+  // The show page re-reads the entry after a rating or a mark-as-watched, and
+  // only ever uses `entry` from the result. Without this it pulled the media
+  // row, every season and every episode-progress row to read back one value.
+  if (request.nextUrl.searchParams.get('only') === 'entry') {
+    const { data: entry } = await latestEntry()
+    return NextResponse.json({ entry: (entry ?? null) as WatchEntry | null })
+  }
+
+  const [{ data: media }, { data: seasons }, { data: entry }] = await Promise.all([
+    supabase.from('media').select('*').eq('id', id).maybeSingle(),
+    supabase.from('seasons').select('*').eq('media_id', id).order('season_number'),
+    latestEntry(),
   ])
 
   if (!media) {

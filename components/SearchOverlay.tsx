@@ -234,7 +234,7 @@ export default function SearchOverlay({ onClose }: Props) {
     <>
     <div
       className="fixed inset-0 z-[45] flex items-start justify-center"
-      style={{ background: 'var(--scrim)', paddingTop: '12vh' }}
+      style={{ background: 'var(--scrim)', paddingTop: '12dvh' }}
       onClick={handleClose}
     >
       <motion.div
@@ -299,7 +299,7 @@ export default function SearchOverlay({ onClose }: Props) {
           id="search-overlay-results"
           role="listbox"
           aria-label={mode === 'person' ? 'People' : 'Titles and pages'}
-          className="max-h-[min(420px,60vh)] overflow-y-auto p-2"
+          className="max-h-[min(420px,60dvh)] overflow-y-auto p-2"
         >
           {showQuickNav && (
             <>

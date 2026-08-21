@@ -1,17 +1,18 @@
 'use client'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import type { TmdbSearchResult } from '@/types'
-import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv, SearchX } from 'lucide-react'
+import { ArrowLeft, User, AlertCircle, Star, Calendar, Film, Tv, SearchX, CheckCircle2, Bookmark } from 'lucide-react'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import BackButton from '@/components/BackButton'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useMediaModal } from '@/components/MediaModalProvider'
+import { useLibraryIds } from '@/lib/useLibraryIds'
 
 export default function PersonPage() {
   const params = useParams()
-  const router = useRouter()
   const rawName = params?.name as string
   const name = rawName ? decodeURIComponent(rawName) : ''
 
@@ -25,6 +26,9 @@ export default function PersonPage() {
   const [error, setError] = useState<string | null>(null)
 
   const { openMedia } = useMediaModal()
+  // The app already knows which of these credits are in the library; not saying
+  // so made the page feel disconnected from the rest of the product.
+  const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
   useEffect(() => {
     if (!name) return
@@ -66,7 +70,13 @@ export default function PersonPage() {
         {items.map((item) => (
           <SelectableOverlay key={`${item.tmdb_id}-${item.type}`} item={item}>
           <Card
-            onClick={() => openMedia(item, { priority: 'must_watch' })}
+            onClick={() => openMedia(item, {
+              priority: 'must_watch',
+              onChanged: (change) => {
+                if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(item.tmdb_id))
+                if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(item.tmdb_id))
+              },
+            })}
             aria-label={item.title}
             style={{ padding: '12px' }}
             className="flex gap-3 cursor-pointer group"
@@ -102,12 +112,23 @@ export default function PersonPage() {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 mt-2 text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">
+              <div className="flex items-center gap-2 mt-2 text-[9px] font-semibold text-zinc-500 uppercase tracking-wider">
                 {item.type === 'show' ? (
-                  <><Tv className="w-3 h-3 text-[var(--live)]" /><span>TV Show</span></>
+                  <span className="flex items-center gap-1.5"><Tv className="w-3 h-3 text-[var(--live)]" /><span>TV Show</span></span>
                 ) : (
-                  <><Film className="w-3 h-3 text-[var(--accent)]" /><span>Movie</span></>
+                  <span className="flex items-center gap-1.5"><Film className="w-3 h-3 text-[var(--accent)]" /><span>Movie</span></span>
                 )}
+                {/* Same chip treatment as the streaming grid, so "already seen"
+                    reads the same wherever TMDB results are listed. */}
+                {watchedIds.has(item.tmdb_id) ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] text-[var(--teal-300)] bg-black/40 border border-[var(--teal-tint-border)]">
+                    <CheckCircle2 className="w-3 h-3" /> Watched
+                  </span>
+                ) : watchlistIds.has(item.tmdb_id) ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] text-zinc-300 bg-black/40 border border-white/10">
+                    <Bookmark className="w-3 h-3" /> Watchlist
+                  </span>
+                ) : null}
               </div>
             </div>
           </Card>
@@ -123,19 +144,17 @@ export default function PersonPage() {
   return (
     <div className="space-y-10 pb-12">
       <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={() => {
-            if (viewMode === 'all') {
-              setViewMode('highlights')
-            } else {
-              router.back()
-            }
-          }}
-          className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+        {viewMode === 'all' ? (
+          <button
+            onClick={() => setViewMode('highlights')}
+            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to highlights</span>
+          </button>
+        ) : (
+          <BackButton />
+        )}
       </div>
 
       <Card className="flex flex-col md:flex-row items-center md:items-start gap-6 p-6">

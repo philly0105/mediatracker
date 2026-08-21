@@ -77,7 +77,9 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
   // without a reload, instead of each duplicating their own fetch.
   const refreshEntry = useCallback(async () => {
     try {
-      const res = await fetch(`/api/shows/${id}`)
+      // `only=entry` — this reads back one rating; the full payload also carries
+      // the media row, every season and every progress row.
+      const res = await fetch(`/api/shows/${id}?only=entry`)
       if (res.ok) {
         const data = await res.json()
         setEntry(data.entry ?? null)
@@ -264,13 +266,45 @@ export default function ShowDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex gap-4">
         {media.poster_url && <Image src={media.poster_url} alt={media.title} width={128} height={192} className="w-32 h-auto rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-lg" />}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-white">{media.title}</h1>
+          {/* Not PageHeader: this is a media hero, poster beside title, and that
+              component is a full-width page-title block. The type scale is
+              matched to it so the two do not drift. */}
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'var(--text-3xl)',
+              fontWeight: 'var(--weight-extrabold)' as React.CSSProperties['fontWeight'],
+              letterSpacing: 'var(--tracking-tight)',
+              lineHeight: 'var(--leading-tight)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {media.title}
+          </h1>
           <p className="text-zinc-400">{media.release_year} · TV Show</p>
           {total > 0 && (
-            <p className="text-sm text-zinc-400">
-              {watched}/{total} episodes
-              {hoursLeft > 0 && ` · ~${hoursLeft}h left`}
-            </p>
+            <div className="space-y-1.5 max-w-xs">
+              <p className="text-sm text-zinc-400">
+                {watched}/{total} episodes
+                {hoursLeft > 0 && ` · ~${hoursLeft}h left`}
+              </p>
+              {/* Same bar as EpisodeTracker and Continue Watching, which both
+                  showed progress here while this page had numbers only. */}
+              <div
+                className="h-1.5 overflow-hidden rounded-full bg-white/10"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={total}
+                aria-valuenow={watched}
+                aria-label={`${watched} of ${total} episodes watched`}
+              >
+                <div
+                  className="h-full rounded-full bg-[var(--teal-400)] transition-all duration-300"
+                  style={{ width: `${Math.round((watched / total) * 100)}%` }}
+                />
+              </div>
+            </div>
           )}
           {media.genres.length > 0 && (
             <div className="flex flex-wrap gap-1">
