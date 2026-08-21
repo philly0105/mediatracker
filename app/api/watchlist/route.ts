@@ -4,6 +4,9 @@ import { upsertMedia } from '@/lib/media'
 import { collectGenres } from '@/lib/libraryFilters'
 import { parsePriority, parseTmdbId, parseMediaType, badRequest } from '@/lib/validation'
 
+// The buckets the watchlist page renders, in the order it renders them.
+const GROUPED_PRIORITIES = ['must_watch', 'want_to_watch', 'someday'] as const
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -15,30 +18,39 @@ export async function GET(request: NextRequest) {
   // honouring the optional type filter so switching to "Movies Only" narrows
   // the genre list too. Just the genres column (media.genres is a text[]) —
   // flattening and dedupe happen in JS, no extra SQL needed at this scale.
-  if (searchParams.get('facets') === '1') {
-    const type = searchParams.get('type')
-    // !inner for the same reason the paged query below uses it: without it a
-    // filter on the embedded resource only nulls out media on non-matching rows
-    // instead of excluding them, so every watchlist row would come back. The
-    // genre list would still come out right — collectGenres skips nulls — but
-    // only by accident, and the query would read the whole watchlist to do it.
+  // The distinct genres across the user's watchlist rows, honouring the optional
+  // type filter so switching to "Movies Only" narrows the genre list too. Just
+  // the genres column (media.genres is a text[]) — flattening and dedupe happen
+  // in JS, no extra SQL needed at this scale.
+  //
+  // !inner for the same reason the paged query below uses it: without it a
+  // filter on the embedded resource only nulls out media on non-matching rows
+  // instead of excluding them, so every watchlist row would come back. The
+  // genre list would still come out right — collectGenres skips nulls — but
+  // only by accident, and the query would read the whole watchlist to do it.
+  async function fetchGenres(type: string | null) {
     let query = supabase
       .from('watchlist_items')
       .select('media!inner(genres)')
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
 
     if (type && type !== 'all') {
       query = query.eq('media.type', type)
     }
 
     const { data, error } = await query
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) throw new Error(error.message)
     // The generated types model the media relationship as an array, but the
     // runtime rows are a single object (as the rest of this route already uses).
-    return NextResponse.json(
-      { genres: collectGenres((data ?? []) as { media?: { genres?: string[] | null } | null }[]) },
-      { status: 200 }
-    )
+    return collectGenres((data ?? []) as { media?: { genres?: string[] | null } | null }[])
+  }
+
+  if (searchParams.get('facets') === '1') {
+    try {
+      return NextResponse.json({ genres: await fetchGenres(searchParams.get('type')) }, { status: 200 })
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+    }
   }
 
   const parsePositiveInt = (raw: string | null, fallback: number, max: number): number => {
@@ -57,20 +69,21 @@ export async function GET(request: NextRequest) {
   
   const offset = (page - 1) * limit
 
-  let query = supabase
-    .from('watchlist_items')
-    .select('*, media!inner(*)', { count: 'exact' })
-    .eq('user_id', user.id)
+  function buildListQuery(forPriority: string | null) {
+    let query = supabase
+      .from('watchlist_items')
+      .select('*, media!inner(*)', { count: 'exact' })
+      .eq('user_id', user!.id)
 
-  if (type && type !== 'all') {
-    query = query.eq('media.type', type)
-  }
-  if (genre && genre !== 'All') {
-    query = query.contains('media.genres', [genre])
-  }
-  if (priority) {
-    query = query.eq('priority', priority)
-  }
+    if (type && type !== 'all') {
+      query = query.eq('media.type', type)
+    }
+    if (genre && genre !== 'All') {
+      query = query.contains('media.genres', [genre])
+    }
+    if (forPriority) {
+      query = query.eq('priority', forPriority)
+    }
   // Free-text search over title, director and year. This used to be title only,
   // which meant two identically-styled search boxes — this one and the
   // library's — behaved differently, and that is worse than one that is simply
@@ -84,27 +97,59 @@ export async function GET(request: NextRequest) {
   //
   // `or` takes a comma-separated filter list, so a term containing a comma or a
   // parenthesis would break out of the expression — hence the strip.
-  if (q && q.trim()) {
-    const term = q.trim().replace(/[,()"\\]/g, ' ').trim()
-    if (term) {
-      const year = /^\d{4}$/.test(term) ? term : null
-      const filters = [
-        `title.ilike.%${term}%`,
-        `director.ilike.%${term}%`,
-        ...(year ? [`release_year.eq.${year}`] : []),
-      ]
-      query = query.or(filters.join(','), { referencedTable: 'media' })
+    if (q && q.trim()) {
+      const term = q.trim().replace(/[,()"\\]/g, ' ').trim()
+      if (term) {
+        const year = /^\d{4}$/.test(term) ? term : null
+        const filters = [
+          `title.ilike.%${term}%`,
+          `director.ilike.%${term}%`,
+          ...(year ? [`release_year.eq.${year}`] : []),
+        ]
+        query = query.or(filters.join(','), { referencedTable: 'media' })
+      }
+    }
+
+    // Ordering the parent rows by an embedded to-one column uses PostgREST's
+    // `media(title)` order syntax — postgrest-js passes the string through.
+    return sort === 'oldest' ? query.order('added_at', { ascending: true })
+      : sort === 'title' ? query.order('media(title)', { ascending: true })
+      : sort === 'year' ? query.order('media(release_year)', { ascending: false })
+      : query.order('added_at', { ascending: false })
+  }
+
+  // Grouped mode. The watchlist page renders all three priority buckets at
+  // once; asking for them one at a time meant four requests on load (three
+  // sections plus the facets call) and three independent infinite scrolls
+  // stacked vertically, so a large Must Watch bucket buried the other two.
+  // One request, four parallel queries, a page of each bucket plus its true
+  // total — the page renders a preview per bucket and expands on demand.
+  if (searchParams.get('group') === 'priority') {
+    try {
+      const [genres, ...groups] = await Promise.all([
+        fetchGenres(type),
+        ...GROUPED_PRIORITIES.map(async (p) => {
+          const { data, error, count } = await buildListQuery(p).range(offset, offset + limit - 1)
+          if (error) throw new Error(error.message)
+          return { priority: p, items: data ?? [], total: count ?? 0 }
+        }),
+      ])
+
+      return NextResponse.json(
+        {
+          groups: Object.fromEntries(groups.map((g) => [g.priority, { items: g.items, total: g.total }])),
+          genres,
+          page,
+          limit,
+        },
+        { status: 200 }
+      )
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 500 })
     }
   }
 
-  // Ordering the parent rows by an embedded to-one column uses PostgREST's
-  // `media(title)` order syntax — postgrest-js passes the string through.
-  const { data, error, count } = await (
-    sort === 'oldest' ? query.order('added_at', { ascending: true })
-    : sort === 'title' ? query.order('media(title)', { ascending: true })
-    : sort === 'year' ? query.order('media(release_year)', { ascending: false })
-    : query.order('added_at', { ascending: false })
-  ).range(offset, offset + limit - 1)
+  const { data, error, count } = await buildListQuery(priority).range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ items: data, total: count ?? 0, page, limit }, { status: 200 })

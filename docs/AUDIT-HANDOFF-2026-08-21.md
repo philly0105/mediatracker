@@ -177,7 +177,7 @@ which I have not looked at in this session.
 | **F-27** | `Button`'s dead `icon`/`iconRight` props (currently `eslint-disable`d as unused); `NavItem` needs a `'use client'` audit now that it has no state; add a `tone` prop so call sites stop using `className="hover:!bg-rose-600 hover:!border-rose-500"` (≈6 sites in `MediaInfoModal.tsx`). — **DONE (session 2):** `tone` prop added; all five `hover:!` call sites migrated. The `icon`/`iconRight` deletion is held for F-47 approval.|
 | **F-29** | Remove the 26 `backdrop-blur` usages. Note `.btn-ghost` and `.input-field` in `globals.css` still carry `backdrop-filter: blur(var(--blur-md))` — I preserved the existing behaviour there rather than pre-empting this finding. — **DONE (session 2).** |
 | **F-31** | Move the design system out of `.agents/skills/dorfmovies-design/` into e.g. `app/styles/design-system/`, update the `@import` on line 1 of `app/globals.css`, drop the `turbopack.root` workaround in `next.config.ts`. The audit's roadmap says do this **first** in the design sprint. — **DONE (session 2).** |
-| **F-32** | Watchlist three-section restructure. |
+| **F-32** | Watchlist three-section restructure. — **DONE (session 2).** See 5.10. |
 | **F-33** | "Clear filters" reset. — **DONE (session 2).** |
 | **F-34** | Migrate 7 hand-rolled empty states to the existing `EmptyState` component. — **DONE (session 2).** |
 | **F-36** | Modal footer button hierarchy. — **DONE (session 2).** |
@@ -391,6 +391,50 @@ Four existing test files (`showEpisodeUndo`, `recommendationsRefresh`, `Keyboard
 `LibraryView`) needed a `MediaModalProvider` wrapper, nested inside their `ToastProvider`.
 
 Gate: `tsc` / `lint` / `vitest` (42 files, 336 tests) / `build` all clean.
+
+### 5.10 F-32 — watchlist restructure
+
+Three problems, all fixed together.
+
+**Four requests on load became one.** `GET /api/watchlist` gained a `group=priority`
+mode that runs the three bucket queries and the genre-facet query in parallel server-side
+and returns `{ groups: { must_watch: { items, total }, … }, genres }`. The separate
+`facets=1` call the page used to make is gone from the page (the mode itself is kept —
+nothing else uses it, but it is the documented single-bucket entry point). The paged query
+builder was extracted to `buildListQuery(priority)` so both modes share it verbatim.
+
+**Three stacked infinite scrolls became per-bucket expanders.** Each section previews
+`PAGE_SIZE` (12) rows with a "Show all N" button, then "Load N more". The
+`IntersectionObserver` sentinels are gone. This is the actual fix for the finding: with
+200 items in Must Watch you no longer scroll through all of them before Want to Watch
+comes into view.
+
+**Undo restores position.** Both undo paths re-appended the row to the end of the array,
+so undoing a move or a removal dropped the card at the bottom of its bucket. `findItem`
+now returns the index alongside the row and `restoreToGroup` splices it back.
+
+All per-section state (items, total, page, expanded) moved up into `WatchlistContent`;
+`WatchlistSection` is presentational. The handlers moved with it.
+
+**Two things the tests caught, worth knowing:**
+
+- The load effect originally depended on `setFilter`. `useUrlFilters` derives `setFilter`'s
+  identity from the router's, so in any environment where `useRouter()` returns a fresh
+  object the effect re-ran on every render — fetch, render, fetch. It now reads both
+  `setFilter` and `genreFilter` through refs and depends only on `listParams`. (The
+  original code used a `genreFilterRef` for the same reason; I had dropped it.)
+- The restore index was first captured inside a `setGroups` updater. Those do not run
+  synchronously, so the index was not available when the Undo closure was built. It is now
+  read from the render snapshot.
+
+**Tests** — `app/__tests__/watchlistGroups.test.tsx`, 5 cases: one grouped request rather
+than four, preview-then-expand, no expander for a bucket that fits, and both undo-restores.
+Mutation-checked: re-appending on undo, removing the expander, and splitting the facets
+call back out each fail their test. Note the router mock must be a single stable object for
+the reason above.
+
+Gate: `tsc` / `lint` / `vitest` (43 files, 341 tests) / `build` all clean. Still not seen in
+a browser — see section 6.
 
 ---
 

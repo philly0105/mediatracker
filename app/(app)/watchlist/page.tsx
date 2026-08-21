@@ -1,9 +1,9 @@
 'use client'
 import Image from 'next/image'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useCallback, useState, useEffect, useRef, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices, Search, SearchX } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices, Search, SearchX, ChevronDown } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaActions } from '@/lib/useMediaActions'
@@ -27,17 +27,42 @@ const PRIORITY_LABELS = {
   want_to_watch: 'Want to Watch',
   someday: 'Someday',
 }
-const PRIORITY_ORDER: Array<keyof typeof PRIORITY_LABELS> = ['must_watch', 'want_to_watch', 'someday']
+const PRIORITY_ORDER: WatchlistPriority[] = ['must_watch', 'want_to_watch', 'someday']
+
+// How many rows a bucket shows before you ask for more. Small on purpose: three
+// buckets are on screen at once, and the point of the restructure is that a
+// long Must Watch list no longer buries the two under it.
+const PAGE_SIZE = 12
 
 // Filter state mirrored into the URL so a filtered view is bookmarkable and
 // survives reloads; params are omitted from the URL while at their default.
 const WATCHLIST_DEFAULTS = { type: 'all', genre: 'All', sort: 'added', q: '' }
 
+interface GroupState {
+  items: WatchlistItem[]
+  /** Rows matching the current filters, not rows loaded. */
+  total: number
+  /** Highest page fetched. Reset to 1 whenever the bucket is refetched. */
+  page: number
+  expanded: boolean
+  loadingMore: boolean
+}
+
+const EMPTY_GROUP: GroupState = { items: [], total: 0, page: 1, expanded: false, loadingMore: false }
+
+type Groups = Record<WatchlistPriority, GroupState>
+
+const EMPTY_GROUPS: Groups = {
+  must_watch: EMPTY_GROUP,
+  want_to_watch: EMPTY_GROUP,
+  someday: EMPTY_GROUP,
+}
+
 function WatchlistContent() {
   const [filters, setFilter, resetFilters] = useUrlFilters(WATCHLIST_DEFAULTS)
   // Re-validate the URL-supplied type so a malformed param in a shared link
   // falls back to the default instead of flowing into the API query. Genre is
-  // free-vocabulary: the facet effect below corrects unknown values.
+  // free-vocabulary: the facets returned with each load correct unknown values.
   const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
   const genreFilter = filters.genre
   // Free-text `q` and enumerated `sort` are read straight off the URL mirror;
@@ -49,59 +74,332 @@ function WatchlistContent() {
   // nothing, so it neither lights the chip nor gets cleared by it.
   const hasActiveFilters =
     typeFilter !== 'all' || genreFilter !== 'All' || searchQuery.trim() !== ''
-  const [availableGenres, setAvailableGenres] = useState<string[]>([])
-  const [showPick, setShowPick] = useState(false)
-  const [refreshSignals, setRefreshSignals] = useState<Record<WatchlistPriority, number>>({
-    must_watch: 0,
-    want_to_watch: 0,
-    someday: 0,
-  })
 
-  // Keep the latest genre handy for the facet effect below without re-running
-  // it on every genre change (the fetch is meant to key off the type only).
-  // Updated in an effect rather than during render so the ref write stays out
-  // of the render pass.
+  const [groups, setGroups] = useState<Groups>(EMPTY_GROUPS)
+  const [availableGenres, setAvailableGenres] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [actioningId, setActioningId] = useState<string | null>(null)
+  const [showPick, setShowPick] = useState(false)
+
+  const { markWatched } = useMediaActions()
+  const { openMedia, closeMedia } = useMediaModal()
+  const { toast } = useToast()
+  const { schedule, cancel } = useDeferredAction()
+
+  // The modal itself lives in MediaModalProvider; all this page needs to know is
+  // which row is currently showing, so the handlers below can dismiss it when
+  // that row leaves the list. A ref, not state — nothing renders from it.
+  const openItemIdRef = useRef<string | null>(null)
+
+  // The load effect corrects a stale genre, but must not *re-run* because of
+  // one: `setFilter`'s identity is tied to the router's, so depending on it
+  // directly turns every fetch into another render into another fetch. Both are
+  // read through refs, updated outside the render pass.
   const genreFilterRef = useRef(genreFilter)
+  const setFilterRef = useRef(setFilter)
   useEffect(() => {
     genreFilterRef.current = genreFilter
-  }, [genreFilter])
+    setFilterRef.current = setFilter
+  }, [genreFilter, setFilter])
 
-  // The genre dropdown is built from the genres actually in the user's watchlist
-  // rather than a fixed TMDB list (which mixed movie and TV vocabularies and
-  // offered dozens of empty options). Refetch when the type filter changes so
-  // "Movies Only" narrows the genre list too, and reset the selection if the
-  // current genre no longer exists — otherwise the user is stuck on a filter
-  // that matches nothing with no obvious cause.
+  // Every filter is a query param, so one builder covers the grouped load, the
+  // per-bucket "load more" and the post-move refresh.
+  const listParams = useCallback(
+    (priority: WatchlistPriority | null, page: number, limit: number) => {
+      const params = new URLSearchParams()
+      if (priority) params.set('priority', priority)
+      else params.set('group', 'priority')
+      params.set('page', String(page))
+      params.set('limit', String(limit))
+      if (typeFilter !== 'all') params.set('type', typeFilter)
+      if (genreFilter !== 'All') params.set('genre', genreFilter)
+      if (searchQuery.trim() !== '') params.set('q', searchQuery)
+      if (sortOrder !== 'added') params.set('sort', sortOrder)
+      return params.toString()
+    },
+    [typeFilter, genreFilter, searchQuery, sortOrder]
+  )
+
+  // One request for the whole page. This used to be four — three independent
+  // section fetches plus a separate facets call — each with its own pagination
+  // state and its own infinite-scroll sentinel, which is what made a 200-item
+  // Must Watch bucket hide the other two behind it (F-32).
   useEffect(() => {
     let active = true
-    const params = new URLSearchParams()
-    params.set('facets', '1')
-    if (typeFilter !== 'all') params.set('type', typeFilter)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true)
 
-    fetch(`/api/watchlist?${params.toString()}`)
-      .then((r) => r.json())
+    fetch(`/api/watchlist?${listParams(null, 1, PAGE_SIZE)}`)
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to load')
+        return r.json()
+      })
       .then((data) => {
         if (!active) return
+        setGroups(
+          Object.fromEntries(
+            PRIORITY_ORDER.map((p) => [
+              p,
+              { ...EMPTY_GROUP, items: data?.groups?.[p]?.items ?? [], total: data?.groups?.[p]?.total ?? 0 },
+            ])
+          ) as Groups
+        )
+
+        // The genre dropdown is built from the genres actually in the user's
+        // watchlist rather than a fixed TMDB list (which mixed movie and TV
+        // vocabularies and offered dozens of empty options). Reset the
+        // selection when the active genre no longer exists — otherwise the user
+        // is stuck on a filter that matches nothing with no obvious cause — and
+        // mirror the correction into the URL so the shared link matches what is
+        // actually shown.
         const genres = (Array.isArray(data?.genres) ? data.genres : []) as string[]
         setAvailableGenres(genres)
-        // Reset to All when the active genre disappears from this type's facet,
-        // and mirror the correction into the URL so the shared link matches
-        // what's actually shown.
         if (genreFilterRef.current !== 'All' && !genres.includes(genreFilterRef.current)) {
-          setFilter('genre', 'All')
+          setFilterRef.current('genre', 'All')
         }
       })
       .catch(() => {
-        if (active) setAvailableGenres([])
+        if (!active) return
+        setGroups(EMPTY_GROUPS)
+        setAvailableGenres([])
+      })
+      .finally(() => {
+        if (active) setLoading(false)
       })
 
     return () => {
       active = false
     }
-  }, [typeFilter, setFilter])
+  }, [listParams])
 
-  function handlePriorityChanged(toPriority: WatchlistPriority) {
-    setRefreshSignals(prev => ({ ...prev, [toPriority]: prev[toPriority] + 1 }))
+  function patchGroup(priority: WatchlistPriority, patch: Partial<GroupState>) {
+    setGroups((prev) => ({ ...prev, [priority]: { ...prev[priority], ...patch } }))
+  }
+
+  async function loadMore(priority: WatchlistPriority) {
+    const group = groups[priority]
+    if (group.loadingMore || group.items.length >= group.total) return
+
+    patchGroup(priority, { expanded: true, loadingMore: true })
+    try {
+      const res = await fetch(`/api/watchlist?${listParams(priority, group.page + 1, PAGE_SIZE)}`)
+      if (!res.ok) throw new Error('Failed to load')
+      const data = await res.json()
+      setGroups((prev) => {
+        const current = prev[priority]
+        // Rows can leave the bucket between pages (a move, a removal), so dedupe
+        // rather than trusting the offset to line up.
+        const seen = new Set(current.items.map((i) => i.id))
+        const merged = [...current.items, ...((data.items ?? []) as WatchlistItem[]).filter((i) => !seen.has(i.id))]
+        return { ...prev, [priority]: { ...current, items: merged, total: data.total ?? current.total, page: current.page + 1 } }
+      })
+    } catch (err) {
+      console.error(err)
+      toast('Could not load more items.', { tone: 'error' })
+    } finally {
+      patchGroup(priority, { loadingMore: false })
+    }
+  }
+
+  // Used after a row moves into a bucket. Resetting to the first page rather
+  // than re-fetching the whole loaded window keeps the page arithmetic honest;
+  // it is also exactly what the old per-section refresh signal did.
+  const refreshGroup = useCallback(
+    async (priority: WatchlistPriority) => {
+      try {
+        const res = await fetch(`/api/watchlist?${listParams(priority, 1, PAGE_SIZE)}`)
+        if (!res.ok) throw new Error('Failed to load')
+        const data = await res.json()
+        setGroups((prev) => ({
+          ...prev,
+          [priority]: { ...prev[priority], items: data.items ?? [], total: data.total ?? 0, page: 1 },
+        }))
+      } catch (err) {
+        console.error(err)
+      }
+    },
+    [listParams]
+  )
+
+  function removeFromGroup(priority: WatchlistPriority, itemId: string) {
+    setGroups((prev) => {
+      const group = prev[priority]
+      if (!group.items.some((i) => i.id === itemId)) return prev
+      return {
+        ...prev,
+        [priority]: {
+          ...group,
+          items: group.items.filter((i) => i.id !== itemId),
+          total: Math.max(0, group.total - 1),
+        },
+      }
+    })
+  }
+
+  // Undo used to re-append the row to the end of the array, so undoing a move or
+  // a removal dropped the card at the bottom of the bucket instead of back where
+  // it had been (F-32).
+  function restoreToGroup(priority: WatchlistPriority, item: WatchlistItem, index: number) {
+    setGroups((prev) => {
+      const group = prev[priority]
+      if (group.items.some((i) => i.id === item.id)) return prev
+      const items = [...group.items]
+      items.splice(index < 0 || index > items.length ? items.length : index, 0, item)
+      return { ...prev, [priority]: { ...group, items, total: group.total + 1 } }
+    })
+  }
+
+  // The index matters as much as the row: Undo restores to it. Read from the
+  // render snapshot rather than from inside a setGroups updater — those do not
+  // run synchronously, so an index captured there is not available yet.
+  function findItem(itemId: string): { item: WatchlistItem; priority: WatchlistPriority; index: number } | null {
+    for (const priority of PRIORITY_ORDER) {
+      const index = groups[priority].items.findIndex((i) => i.id === itemId)
+      if (index !== -1) return { item: groups[priority].items[index], priority, index }
+    }
+    return null
+  }
+
+  // Actions
+  //
+  // From the card this used to be silent: the row vanished from the section you
+  // were looking at with no statement of where it went, and the target section
+  // is usually far enough down the page to be off-screen. The same action taken
+  // inside MediaInfoModal has always toasted.
+  const handleUpdatePriority = async (itemId: string, newPriority: WatchlistPriority) => {
+    const found = findItem(itemId)
+    if (!found) return
+    const { item: moved, priority: fromPriority, index } = found
+
+    try {
+      setActioningId(itemId)
+      const res = await fetch('/api/watchlist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: itemId, priority: newPriority }),
+      })
+      if (!res.ok) throw new Error('Failed to update')
+
+      removeFromGroup(fromPriority, itemId)
+      closeIfOpen(itemId)
+      refreshGroup(newPriority)
+
+      toast(`Moved ${moved.media?.title ?? 'item'} to ${PRIORITY_LABELS[newPriority]}.`, {
+        tone: 'success',
+        // The reverse is one more PATCH, so offering it costs nothing. Unlike
+        // removal this is a completed write, not a deferred one — Undo issues a
+        // second request rather than cancelling the first.
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              const undo = await fetch('/api/watchlist', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: itemId, priority: fromPriority }),
+              })
+              if (!undo.ok) throw new Error('Failed to move back')
+              restoreToGroup(fromPriority, moved, index)
+              // Refresh the bucket it briefly landed in so the row leaves it.
+              refreshGroup(newPriority)
+            } catch (err) {
+              console.error(err)
+              toast('Could not move that item back.', { tone: 'error' })
+            }
+          },
+        },
+      })
+    } catch (err) {
+      console.error(err)
+      toast('Could not move that item.', { tone: 'error' })
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  // Removal used to fire instantly with no prompt and no way back. Drop the
+  // card now, defer the write, and let Undo cancel it.
+  const handleRemove = async (itemId: string) => {
+    const found = findItem(itemId)
+    if (!found) return
+    const { item: removed, priority, index } = found
+
+    removeFromGroup(priority, itemId)
+    closeIfOpen(itemId)
+
+    schedule(itemId, async () => {
+      try {
+        const res = await fetch('/api/watchlist', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: itemId }),
+        })
+        if (!res.ok) throw new Error('Failed to remove item')
+      } catch (err) {
+        console.error(err)
+        restoreToGroup(priority, removed, index)
+        toast('Could not remove that item.', { tone: 'error' })
+      }
+    })
+
+    toast(`Removed ${removed.media?.title ?? 'item'} from your watchlist.`, {
+      tone: 'success',
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!cancel(itemId)) {
+            toast('Too late to undo — that item has already been removed.', { tone: 'info' })
+            return
+          }
+          restoreToGroup(priority, removed, index)
+        },
+      },
+    })
+  }
+
+  const handleMarkAsWatched = async (item: WatchlistItem, opts?: { rewatch?: boolean }) => {
+    if (!item.media) return
+    try {
+      setActioningId(item.id)
+      await markWatched(item.media.tmdb_id, item.media.type, opts)
+      await fetch('/api/watchlist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id }),
+      })
+      removeFromGroup(item.priority, item.id)
+      closeIfOpen(item.id)
+    } catch (err) {
+      // Rethrow rather than reporting here. This is only ever reached through
+      // MediaInfoModal, which owns the messaging — including turning a 409 into
+      // a "log a rewatch" offer. Swallowing here would make the modal believe
+      // the write succeeded, so it would show a success toast on top of an
+      // error one and never offer the rewatch.
+      console.error(err)
+      throw err
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  function closeIfOpen(itemId: string) {
+    if (openItemIdRef.current === itemId) closeMedia()
+  }
+
+  // "Add to Watchlist" is a no-op here — it is already on one. Everything else
+  // is bespoke: removal deletes by watchlist row id, and marking watched has to
+  // delete the row as well as log the watch.
+  function openDetails(item: WatchlistItem) {
+    if (!item.media) return
+    openItemIdRef.current = item.id
+    openMedia(mediaToResult(item.media), {
+      onClosed: () => { if (openItemIdRef.current === item.id) openItemIdRef.current = null },
+      onAddToWatchlist: async () => {},
+      onMarkAsWatched: async (opts) => handleMarkAsWatched(item, opts),
+      currentPriority: item.priority,
+      onUpdatePriority: async (newPriority) => handleUpdatePriority(item.id, newPriority),
+      onRemoveFromWatchlist: async () => handleRemove(item.id),
+    })
   }
 
   return (
@@ -170,16 +468,19 @@ function WatchlistContent() {
       </div>
 
       <div className="space-y-12 pb-12">
-        {PRIORITY_ORDER.map(priority => (
+        {PRIORITY_ORDER.map((priority) => (
           <WatchlistSection
             key={priority}
             priority={priority}
+            group={groups[priority]}
+            loading={loading}
             typeFilter={typeFilter}
             genreFilter={genreFilter}
-            searchQuery={searchQuery}
-            sortOrder={sortOrder}
-            refreshSignal={refreshSignals[priority]}
-            onPriorityChanged={handlePriorityChanged}
+            actioningId={actioningId}
+            onExpand={() => loadMore(priority)}
+            onOpen={openDetails}
+            onUpdatePriority={handleUpdatePriority}
+            onRemove={handleRemove}
           />
         ))}
       </div>
@@ -200,257 +501,31 @@ function WatchlistContent() {
 
 function WatchlistSection({
   priority,
+  group,
+  loading,
   typeFilter,
   genreFilter,
-  searchQuery,
-  sortOrder,
-  refreshSignal,
-  onPriorityChanged,
+  actioningId,
+  onExpand,
+  onOpen,
+  onUpdatePriority,
+  onRemove,
 }: {
-  priority: WatchlistPriority;
-  typeFilter: 'all' | 'movie' | 'show';
-  genreFilter: string;
-  searchQuery: string;
-  sortOrder: string;
-  refreshSignal: number;
-  onPriorityChanged: (toPriority: WatchlistPriority) => void;
+  priority: WatchlistPriority
+  group: GroupState
+  loading: boolean
+  typeFilter: 'all' | 'movie' | 'show'
+  genreFilter: string
+  actioningId: string | null
+  onExpand: () => void
+  onOpen: (item: WatchlistItem) => void
+  onUpdatePriority: (itemId: string, priority: WatchlistPriority) => void
+  onRemove: (itemId: string) => void
 }) {
-  const [items, setItems] = useState<WatchlistItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  
-  const [actioningId, setActioningId] = useState<string | null>(null)
-
-  // The modal itself lives in MediaModalProvider; all this page needs to know is
-  // which row is currently showing, so the handlers below can dismiss it when
-  // that row leaves the list. A ref, not state — nothing renders from it.
-  const openItemIdRef = useRef<string | null>(null)
-
-  const sentinelRef = useRef<HTMLDivElement>(null)
   const config = PRIORITY_CONFIG[priority]
   const Icon = config.icon
-
-  // Only markWatched is shared. Removal here deletes by watchlist row id, not by
-  // tmdb_id/type like the hook's removeFromWatchlist, so it stays inline.
-  const { markWatched } = useMediaActions()
-  const { openMedia, closeMedia } = useMediaModal()
-  const { toast } = useToast()
-  const { schedule, cancel } = useDeferredAction()
-
-  // A filter change invalidates the page window as well as the rows, so the
-  // reset and the refetch belong together. The cascading render is deliberate:
-  // the old rows must not stay on screen under the new filter.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setItems([])
-    setPage(1)
-    setHasMore(true)
-    fetchPage(1, true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priority, typeFilter, genreFilter, searchQuery, sortOrder, refreshSignal])
-
-  async function fetchPage(targetPage: number, isInitial = false) {
-    if (isInitial) setLoading(true)
-    else setLoadingMore(true)
-
-    try {
-      const params = new URLSearchParams()
-      params.set('priority', priority)
-      params.set('page', targetPage.toString())
-      params.set('limit', '24')
-      if (typeFilter !== 'all') params.set('type', typeFilter)
-      if (genreFilter !== 'All') params.set('genre', genreFilter)
-      if (searchQuery.trim() !== '') params.set('q', searchQuery)
-      if (sortOrder !== 'added') params.set('sort', sortOrder)
-
-      const res = await fetch(`/api/watchlist?${params.toString()}`)
-      if (!res.ok) throw new Error('Failed to load')
-      const data = await res.json()
-
-      if (isInitial) {
-        setItems(data.items || [])
-      } else {
-        setItems(prev => [...prev, ...(data.items || [])])
-      }
-      
-      setTotal(data.total)
-      setHasMore(data.items.length === 24)
-    } catch (err) {
-      console.error(err)
-      setHasMore(false)
-    } finally {
-      if (isInitial) setLoading(false)
-      else setLoadingMore(false)
-    }
-  }
-
-  // Infinite Scroll Observer
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel || loading || !hasMore || items.length === 0) return
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !loadingMore) {
-        const nextPage = page + 1
-        setPage(nextPage)
-        fetchPage(nextPage)
-      }
-    }, { rootMargin: '200px' })
-
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, loadingMore, hasMore, page, items.length])
-
-  // Actions
-  //
-  // From the card this used to be silent: the row vanished from the section you
-  // were looking at with no statement of where it went, and the target section
-  // is usually far enough down the page to be off-screen. The same action taken
-  // inside MediaInfoModal has always toasted.
-  const handleUpdatePriority = async (itemId: string, newPriority: WatchlistPriority) => {
-    const moved = items.find(i => i.id === itemId)
-    try {
-      setActioningId(itemId)
-      const res = await fetch('/api/watchlist', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: itemId, priority: newPriority }),
-      })
-      if (!res.ok) throw new Error('Failed to update')
-      
-      setItems(prev => prev.filter(i => i.id !== itemId))
-      setTotal(prev => prev - 1)
-      closeIfOpen(itemId)
-      onPriorityChanged(newPriority)
-
-      toast(`Moved ${moved?.media?.title ?? 'item'} to ${PRIORITY_LABELS[newPriority]}.`, {
-        tone: 'success',
-        // The reverse is one more PATCH, so offering it costs nothing. Unlike
-        // removal this is a completed write, not a deferred one — Undo issues a
-        // second request rather than cancelling the first.
-        action: moved ? {
-          label: 'Undo',
-          onClick: async () => {
-            try {
-              const undo = await fetch('/api/watchlist', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: itemId, priority: moved.priority }),
-              })
-              if (!undo.ok) throw new Error('Failed to move back')
-              setItems(prev => (prev.some(i => i.id === itemId) ? prev : [...prev, moved]))
-              setTotal(prev => prev + 1)
-              // Refresh the section it briefly landed in so the row leaves it.
-              onPriorityChanged(newPriority)
-            } catch (err) {
-              console.error(err)
-              toast('Could not move that item back.', { tone: 'error' })
-            }
-          },
-        } : undefined,
-      })
-    } catch (err) {
-      console.error(err)
-      toast('Could not move that item.', { tone: 'error' })
-    } finally {
-      setActioningId(null)
-    }
-  }
-
-  // Removal used to fire instantly with no prompt and no way back. Drop the
-  // card now, defer the write, and let Undo cancel it.
-  const handleRemove = async (itemId: string) => {
-    const removed = items.find(i => i.id === itemId)
-    if (!removed) return
-
-    const restore = () => {
-      setItems(prev => (prev.some(i => i.id === itemId) ? prev : [...prev, removed]))
-      setTotal(prev => prev + 1)
-    }
-
-    setItems(prev => prev.filter(i => i.id !== itemId))
-    setTotal(prev => prev - 1)
-    closeIfOpen(itemId)
-
-    schedule(itemId, async () => {
-      try {
-        const res = await fetch('/api/watchlist', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: itemId }),
-        })
-        if (!res.ok) throw new Error('Failed to remove item')
-      } catch (err) {
-        console.error(err)
-        restore()
-        toast('Could not remove that item.', { tone: 'error' })
-      }
-    })
-
-    toast(`Removed ${removed.media?.title ?? 'item'} from your watchlist.`, {
-      tone: 'success',
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          if (!cancel(itemId)) {
-            toast('Too late to undo — that item has already been removed.', { tone: 'info' })
-            return
-          }
-          restore()
-        },
-      },
-    })
-  }
-
-  const handleMarkAsWatched = async (item: WatchlistItem, opts?: { rewatch?: boolean }) => {
-    if (!item.media) return
-    try {
-      setActioningId(item.id)
-      await markWatched(item.media.tmdb_id, item.media.type, opts)
-      await fetch('/api/watchlist', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id }),
-      })
-      setItems(prev => prev.filter(i => i.id !== item.id))
-      setTotal(prev => prev - 1)
-      closeIfOpen(item.id)
-    } catch (err) {
-      // Rethrow rather than reporting here. This is only ever reached through
-      // MediaInfoModal, which owns the messaging — including turning a 409 into
-      // a "log a rewatch" offer. Swallowing here would make the modal believe
-      // the write succeeded, so it would show a success toast on top of an
-      // error one and never offer the rewatch.
-      console.error(err)
-      throw err
-    } finally {
-      setActioningId(null)
-    }
-  }
-
-  function closeIfOpen(itemId: string) {
-    if (openItemIdRef.current === itemId) closeMedia()
-  }
-
-  // "Add to Watchlist" is a no-op here — it is already on one. Everything else
-  // is bespoke: removal deletes by watchlist row id, and marking watched has to
-  // delete the row as well as log the watch.
-  function openDetails(item: WatchlistItem) {
-    if (!item.media) return
-    openItemIdRef.current = item.id
-    openMedia(mediaToResult(item.media), {
-      onClosed: () => { if (openItemIdRef.current === item.id) openItemIdRef.current = null },
-      onAddToWatchlist: async () => {},
-      onMarkAsWatched: async (opts) => handleMarkAsWatched(item, opts),
-      currentPriority: item.priority,
-      onUpdatePriority: async (newPriority) => handleUpdatePriority(item.id, newPriority),
-      onRemoveFromWatchlist: async () => handleRemove(item.id),
-    })
-  }
+  const { items, total, expanded, loadingMore } = group
+  const remaining = total - items.length
 
   // Hide an empty section only when it's unfiltered and not the Must Watch bucket
   // (which is always kept visible so the "No matching items." empty state can show).
@@ -514,7 +589,7 @@ function WatchlistSection({
                     style={{ height: '100%' }}
                   >
                     <Card
-                      onClick={() => openDetails(item)}
+                      onClick={() => onOpen(item)}
                       aria-label={item.media?.title}
                       style={{ padding: '14px', display: 'flex', gap: '16px', position: 'relative', height: '100%', userSelect: 'none' }}
                       className="group cursor-pointer"
@@ -559,7 +634,7 @@ function WatchlistSection({
                           <div className="flex gap-1.5 bg-black/60 p-1 rounded-sm border border-[var(--border-subtle)]">
                             {priority !== 'must_watch' && (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'must_watch') }}
+                                onClick={(e) => { e.stopPropagation(); onUpdatePriority(item.id, 'must_watch') }}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--rust-300)] hover:bg-[var(--rust-tint-bg)] transition-colors"
                                 title="Move to Must Watch"
                                 aria-label="Move to Must Watch"
@@ -567,7 +642,7 @@ function WatchlistSection({
                             )}
                             {priority !== 'want_to_watch' && (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'want_to_watch') }}
+                                onClick={(e) => { e.stopPropagation(); onUpdatePriority(item.id, 'want_to_watch') }}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--amber-300)] hover:bg-[var(--amber-tint-bg)] transition-colors"
                                 title="Move to Want to Watch"
                                 aria-label="Move to Want to Watch"
@@ -575,14 +650,14 @@ function WatchlistSection({
                             )}
                             {priority !== 'someday' && (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleUpdatePriority(item.id, 'someday') }}
+                                onClick={(e) => { e.stopPropagation(); onUpdatePriority(item.id, 'someday') }}
                                 className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-300 hover:bg-white/10 transition-colors"
                                 title="Move to Someday"
                                 aria-label="Move to Someday"
                               ><Inbox className="w-3.5 h-3.5" /></button>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleRemove(item.id) }}
+                              onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
                               className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--live)] hover:bg-[var(--rust-tint-bg)] transition-colors"
                               title="Remove"
                               aria-label="Remove"
@@ -597,10 +672,22 @@ function WatchlistSection({
               })}
             </AnimatePresence>
           </motion.div>
-          
-          {hasMore && (
-            <div ref={sentinelRef} className="h-20 flex items-center justify-center">
-              {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />}
+
+          {/* An explicit expander, not a sentinel. Three infinite scrolls stacked
+              vertically meant scrolling through all of Must Watch before Want to
+              Watch came into view. */}
+          {remaining > 0 && (
+            <div className="flex justify-center pt-1">
+              <Button variant="ghost" size="sm" onClick={onExpand} disabled={loadingMore}>
+                {loadingMore ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+                <span>
+                  {expanded ? `Load ${Math.min(remaining, PAGE_SIZE)} more` : `Show all ${total}`}
+                </span>
+              </Button>
             </div>
           )}
         </>
