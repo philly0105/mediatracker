@@ -52,7 +52,7 @@ export default function PasswordChangeForm() {
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-sm font-medium">
+        <div className="flex items-center gap-2 p-3 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-xl text-sm font-medium">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Password updated successfully.</span>
         </div>
@@ -66,7 +66,7 @@ export default function PasswordChangeForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
+            className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors"
             placeholder="••••••••"
             required
           />
@@ -78,7 +78,7 @@ export default function PasswordChangeForm() {
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
+            className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors"
             placeholder="••••••••"
             required
           />

@@ -41,7 +41,7 @@ export default function SelectableOverlay({ item, children }: { item: TmdbSearch
         }}
         className={`absolute top-2 left-2 z-20 p-1.5 rounded-lg transition-all duration-200 ${
           isSelected 
-            ? 'bg-violet-600 shadow-lg shadow-violet-500/20 opacity-100 scale-100' 
+            ? 'bg-green-600 shadow-lg shadow-green-500/20 opacity-100 scale-100' 
             : isSelectMode
             ? 'bg-black/40 border border-white/10 opacity-100 scale-100 hover:bg-black/60'
             : 'bg-black/40 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 hover:bg-black/60'

@@ -93,7 +93,7 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-rust-400 hover:bg-rust-500/10 transition-all"
               title="Delete entry"
               aria-label="Delete entry"
             >
@@ -126,7 +126,7 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-rust-400 hover:bg-rust-500/10 transition-all"
                 title="Delete entry"
                 aria-label="Delete entry"
               >

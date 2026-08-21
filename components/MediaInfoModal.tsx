@@ -384,7 +384,7 @@ export default function MediaInfoModal({
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         style={{ background: 'var(--surface-modal)' }}
-        className="glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[calc(100dvh-2rem)] md:max-h-[90vh] flex flex-col shadow-2xl shadow-violet-500/[0.05]"
+        className="glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[calc(100dvh-2rem)] md:max-h-[90vh] flex flex-col shadow-2xl shadow-green-500/[0.05]"
       >
         {/* Close Button */}
         <button
@@ -538,8 +538,8 @@ export default function MediaInfoModal({
               </h3>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: 'must_watch' as WatchlistPriority, label: 'Must Watch', icon: Flame, color: 'hover:text-rose-400 hover:bg-rose-500/5 hover:border-rose-500/20', activeColor: 'text-rose-400 bg-rose-500/10 border-rose-500/30' },
-                  { value: 'want_to_watch' as WatchlistPriority, label: 'Want to Watch', icon: Sparkles, color: 'hover:text-orange-400 hover:bg-orange-500/5 hover:border-orange-500/20', activeColor: 'text-orange-400 bg-orange-500/10 border-orange-500/30' },
+                  { value: 'must_watch' as WatchlistPriority, label: 'Must Watch', icon: Flame, color: 'hover:text-rust-400 hover:bg-rust-500/5 hover:border-rust-500/20', activeColor: 'text-rust-400 bg-rust-500/10 border-rust-500/30' },
+                  { value: 'want_to_watch' as WatchlistPriority, label: 'Want to Watch', icon: Sparkles, color: 'hover:text-amber-400 hover:bg-amber-400/5 hover:border-amber-400/20', activeColor: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
                   { value: 'someday' as WatchlistPriority, label: 'Someday', icon: Inbox, color: 'hover:text-zinc-300 hover:bg-zinc-800/20 hover:border-zinc-700', activeColor: 'text-zinc-300 bg-zinc-800/50 border-zinc-700' }
                 ].map(({ value, label, icon: Icon, color, activeColor }) => {
                   const isActive = currentPriority === value

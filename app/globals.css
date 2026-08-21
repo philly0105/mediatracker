@@ -8,6 +8,14 @@
 @import "./styles/design-system/styles.css";
 @import "tailwindcss";
 
+/* Tailwind auto-detects sources by walking up to the repo root, which swept in
+   the markdown under docs/ and generated utilities from every class name quoted
+   inside a design document — including ones no element carries (`bg-violet-500`
+   at 5%, `text-orange-400`) and, since F-47 dropped the hue aliases, ones that
+   now resolve to Tailwind's stock palette rather than the design system.
+   Nothing under docs/ is rendered, so nothing there should emit CSS. */
+@source not "../docs";
+
 /* Bridge the design-system ramp into Tailwind's own colour namespace.
    Tailwind v4 ships its own `--color-zinc-*` (cold, oklch hue 286); the
    design system defines a separate warm-stone `--zinc-*`. Nothing connected
@@ -15,9 +23,11 @@
    ~340 call sites. `inline` makes the utilities emit the token itself, so
    retheming the token file keeps flowing through.
 
-   The legacy hue aliases (violet -> pine, rose -> rust, orange -> amber) are
-   already defined in tokens/colors.css; pointing Tailwind at the same aliases
-   brings the remaining literal call sites on-brand without touching them. */
+   Only the real ramps are bridged. The old violet/rose/orange/emerald aliases
+   used to be bridged too, so `bg-violet-600` quietly rendered pine and read as
+   correct. F-47 migrated those call sites to the ramp they actually meant and
+   dropped the aliases, so a stray `bg-violet-600` now falls through to
+   Tailwind's own stock violet — off-brand, and obvious on sight. */
 @theme inline {
   --color-zinc-100: var(--zinc-100);
   --color-zinc-200: var(--zinc-200);
@@ -29,22 +39,10 @@
   --color-zinc-800: var(--zinc-800);
   --color-zinc-900: var(--zinc-900);
 
-  --color-violet-300: var(--green-300);
-  --color-violet-400: var(--green-400);
-  --color-violet-500: var(--green-500);
-  --color-violet-600: var(--green-600);
-  --color-violet-700: var(--green-700);
-
-  --color-rose-400: var(--rust-400);
-  --color-rose-500: var(--rust-500);
-  --color-rose-600: var(--rust-600);
-
-  --color-orange-400: var(--amber-400);
-  --color-orange-500: var(--amber-400);
-  --color-orange-600: var(--amber-500);
-
-  --color-emerald-400: var(--teal-400);
-  --color-emerald-500: var(--teal-500);
+  --color-rust-300: var(--rust-300);
+  --color-rust-400: var(--rust-400);
+  --color-rust-500: var(--rust-500);
+  --color-rust-600: var(--rust-600);
 
   --color-amber-300: var(--amber-300);
   --color-amber-400: var(--amber-400);
@@ -301,13 +299,13 @@ body::after {
 }
 
 .btn-accent {
-  background: var(--violet-tint-bg);
-  color: var(--violet-300);
-  border: 1px solid var(--violet-tint-border);
+  background: var(--green-tint-bg);
+  color: var(--green-300);
+  border: 1px solid var(--green-tint-border);
 }
 
 .btn-accent:hover:not(:disabled) {
-  background: var(--violet-tint-border);
+  background: var(--green-tint-border);
 }
 
 .btn-link {
@@ -326,7 +324,7 @@ body::after {
    which beat `.btn-*`'s own hover through !important — so "Remove from
    Watchlist" rendered as a solid pine primary button and only revealed itself
    as destructive once the pointer was already on it. These read the rust ramp
-   directly rather than the `--rose-*` aliases, which F-47 has up for removal. */
+   directly; the `--rose-*` aliases they predate are gone as of F-47. */
 .btn-tone-destructive {
   background: var(--rust-tint-bg);
   color: var(--rust-300);

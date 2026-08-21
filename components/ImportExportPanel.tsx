@@ -291,7 +291,7 @@ export default function ImportExportPanel() {
               <div className="flex items-center gap-4 text-sm">
                 <span className="text-white font-medium">{succeeded} imported</span>
                 {skipped > 0 && <span className="text-zinc-500">{skipped} already existed</span>}
-                {failed > 0 && <span className="text-rose-400">{failed} failed</span>}
+                {failed > 0 && <span className="text-rust-400">{failed} failed</span>}
               </div>
             )}
             <div className="rounded-lg overflow-hidden space-y-px" style={{ border: '1px solid var(--border-subtle)' }}>
@@ -311,7 +311,7 @@ export default function ImportExportPanel() {
                     <span className="text-xs text-zinc-500">matched: {r.matched}</span>
                   )}
                   {r.state === 'error' && (
-                    <span className="text-xs text-rose-500">{r.error}</span>
+                    <span className="text-xs text-rust-500">{r.error}</span>
                   )}
                   {r.state === 'pending' && importing && (
                     <span className="text-xs text-zinc-500">waiting</span>

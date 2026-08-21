@@ -169,12 +169,12 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
                     
                     <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
                       {watchedIds.has(item.tmdb_id) && (
-                        <div className="bg-emerald-500/90 p-1 rounded-sm shadow-md border border-emerald-400/30">
+                        <div className="bg-teal-500/90 p-1 rounded-sm shadow-md border border-teal-400/30">
                           <CheckCircle2 className="w-3 h-3 text-white" />
                         </div>
                       )}
                       {!watchedIds.has(item.tmdb_id) && watchlistIds.has(item.tmdb_id) && (
-                        <div className="bg-violet-500/90 p-1 rounded-sm shadow-md border border-violet-400/30">
+                        <div className="bg-green-500/90 p-1 rounded-sm shadow-md border border-green-400/30">
                           <Bookmark className="w-3 h-3 text-white" />
                         </div>
                       )}

@@ -7,8 +7,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
    *  with `hover:!bg-rose-600` at the call site. */
   tone?: 'default' | 'destructive' | 'success'
   size?: 'sm' | 'md' | 'lg'
-  icon?: string
-  iconRight?: string
   fullWidth?: boolean
 }
 
@@ -17,10 +15,6 @@ export function Button({
   variant = 'primary',
   tone = 'default',
   size = 'md',
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  icon,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  iconRight,
   disabled = false,
   fullWidth = false,
   onClick,
