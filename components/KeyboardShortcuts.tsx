@@ -1,18 +1,59 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { isAnyModalOpen } from '@/lib/useModal'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import SearchOverlay from '@/components/SearchOverlay'
+import KeyboardHelp from '@/components/KeyboardHelp'
+import { QUICK_NAV, G_CHORD_MS } from '@/lib/quickNav'
 
 export default function KeyboardShortcuts() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  // When `g` was last pressed. A chord rather than a modifier, so it has to
+  // expire — otherwise a `g` typed and abandoned turns the next `l` into a
+  // navigation an hour later.
+  const gPressedAt = useRef(0)
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      const typing = isTypingTarget(event.target)
+      const plain = !event.metaKey && !event.ctrlKey && !event.altKey
+
+      // g-prefixed jumps. Second key first, so a pending `g` is consumed even
+      // if the follow-up is also a shortcut letter.
+      if (plain && !typing && !isAnyModalOpen() && !open) {
+        if (Date.now() - gPressedAt.current < G_CHORD_MS) {
+          const target = QUICK_NAV.find((item) => item.key === event.key.toLowerCase())
+          gPressedAt.current = 0
+          if (target) {
+            event.preventDefault()
+            router.push(target.href)
+            return
+          }
+        }
+        if (event.key === 'g') {
+          gPressedAt.current = Date.now()
+          return
+        }
+        gPressedAt.current = 0
+
+        // ? is Shift+/ on most layouts, so it has to be checked before the
+        // bare-slash branch below claims it.
+        if (event.key === '?') {
+          event.preventDefault()
+          // Open only. The branch is already gated on !isAnyModalOpen(), and the
+          // sheet registers as a modal, so a second ? never reaches this — it
+          // closes with Escape or the close button, like every other dialog.
+          setHelpOpen(true)
+          return
+        }
+      }
+
       // Cmd/Ctrl+K — a chord, so it fires even while typing.
       const isCmdK = (event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'K') && !event.altKey
       // / — plain slash, ignored when a modifier is held so it can't be stolen
@@ -28,7 +69,7 @@ export default function KeyboardShortcuts() {
       if (open) return
 
       // / must stay typeable inside inputs and contenteditable regions.
-      if (isSlash && isTypingTarget(event.target)) return
+      if (isSlash && typing) return
 
       event.preventDefault()
       setOpen(true)
@@ -49,7 +90,7 @@ export default function KeyboardShortcuts() {
       document.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener(SEARCH_OVERLAY_EVENT, handleSearchOverlayEvent)
     }
-  }, [open])
+  }, [open, router])
 
   // ?search=1 is how the retired /search route (and server-rendered links
   // that can't call openSearchOverlay) summon the overlay. Consume the param:
@@ -67,7 +108,16 @@ export default function KeyboardShortcuts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  return open ? <SearchOverlay onClose={() => setOpen(false)} /> : null
+  return (
+    <>
+      {open ? <SearchOverlay onClose={() => setOpen(false)} /> : null}
+      {/* AnimatePresence so the sheet's exit transition runs; the palette has
+          never had one. */}
+      <AnimatePresence>
+        {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
+      </AnimatePresence>
+    </>
+  )
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {

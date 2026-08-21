@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '../ContinueWatchingRow'
 import { ToastProvider } from '../ToastProvider'
 
@@ -105,5 +105,84 @@ describe('ContinueWatchingRow', () => {
     })
 
     expect(await screen.findByText('Next up: S1 E3')).toBeInTheDocument()
+  })
+})
+
+// jsdom does no layout: scrollWidth, clientWidth and scrollBy are all inert, and
+// ResizeObserver does not exist. Give the scroller real numbers so the arrow
+// enable/disable logic has something to read.
+describe('ContinueWatchingRow scroll affordances (F-44)', () => {
+  let resizeCallbacks: Array<() => void>
+  const metrics = { scrollLeft: 0, clientWidth: 600, scrollWidth: 1600 }
+
+  beforeEach(() => {
+    resizeCallbacks = []
+    fetchMock.mockReset()
+    global.fetch = fetchMock as unknown as typeof fetch
+
+    class FakeResizeObserver {
+      constructor(private cb: () => void) {}
+      observe() { resizeCallbacks.push(this.cb); this.cb() }
+      disconnect() {}
+      unobserve() {}
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+
+    for (const key of ['clientWidth', 'scrollWidth'] as const) {
+      vi.spyOn(HTMLElement.prototype, key, 'get').mockImplementation(function (this: HTMLElement) {
+        return this.className.includes('overflow-x-auto') ? metrics[key] : 0
+      })
+    }
+    vi.spyOn(HTMLElement.prototype, 'scrollLeft', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.className.includes('overflow-x-auto') ? metrics.scrollLeft : 0
+    })
+    // scrollBy is not implemented in jsdom; move the fake offset and re-run the
+    // observer callbacks the way a real scroll event would.
+    HTMLElement.prototype.scrollBy = function (...args: [ScrollToOptions?] | [number, number]) {
+      const left = typeof args[0] === 'number' ? args[0] : args[0]?.left ?? 0
+      metrics.scrollLeft = Math.max(
+        0,
+        Math.min(metrics.scrollWidth - metrics.clientWidth, metrics.scrollLeft + left)
+      )
+      for (const cb of resizeCallbacks) cb()
+    }
+  })
+
+  afterEach(() => {
+    // stubGlobal is not undone by restoreAllMocks, and a leaked ResizeObserver
+    // is exactly the kind of cross-file bleed F-45 documents.
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    metrics.scrollLeft = 0
+  })
+
+  it('starts pinned left: only the right arrow is live', () => {
+    renderRail([makeShow([], 1)])
+
+    expect(screen.getByLabelText('Scroll left')).toBeDisabled()
+    expect(screen.getByLabelText('Scroll right')).toBeEnabled()
+  })
+
+  it('enables the left arrow once scrolled, and disables the right at the end', () => {
+    renderRail([makeShow([], 1)])
+
+    act(() => { fireEvent.click(screen.getByLabelText('Scroll right')) })
+    expect(screen.getByLabelText('Scroll left')).toBeEnabled()
+
+    // Far enough to hit the end whatever the step size works out to.
+    act(() => {
+      for (let i = 0; i < 5; i++) fireEvent.click(screen.getByLabelText('Scroll right'))
+    })
+    expect(screen.getByLabelText('Scroll right')).toBeDisabled()
+    expect(screen.getByLabelText('Scroll left')).toBeEnabled()
+  })
+
+  it('offers no arrows when everything already fits', () => {
+    metrics.scrollWidth = metrics.clientWidth
+    renderRail([makeShow([], 1)])
+
+    expect(screen.getByLabelText('Scroll left')).toBeDisabled()
+    expect(screen.getByLabelText('Scroll right')).toBeDisabled()
+    metrics.scrollWidth = 1600
   })
 })

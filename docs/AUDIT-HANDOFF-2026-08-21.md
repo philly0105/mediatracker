@@ -184,7 +184,7 @@ which I have not looked at in this session.
 | **F-37** | `AnimatePresence` around the 12 unwrapped `MediaInfoModal` call sites. — **DONE (session 2)**, via F-38. See 5.9. |
 | **F-38** | `MediaModalProvider` (removes the duplicated modal state from those 12 sites). — **DONE (session 2).** All 13 sites migrated; see 5.9. |
 | **F-39 (rest)** | `opengraph-image.tsx` routes for generated OG cards. |
-| **F-44** | Small list: show-page progress bar, person-page `BackButton`, `/import` client redirect, Continue Watching scroll affordances, ⌘K recents, `vh`→`dvh` in `SearchOverlay`, `?` help sheet. |
+| **F-44** | Small list: show-page progress bar, person-page `BackButton`, `/import` client redirect, Continue Watching scroll affordances, ⌘K recents, `vh`→`dvh` in `SearchOverlay`, `?` help sheet. — **DONE (session 2).** All seven; see 5.11. |
 | **F-46** | Fill the test-coverage gaps the audit enumerates. |
 | **F-47** | Dead code — **all of these need the user's approval before deleting** (their AGENTS.md: "Ask before deleting or overwriting any file", "`trash` > `rm`"). |
 
@@ -435,6 +435,50 @@ the reason above.
 
 Gate: `tsc` / `lint` / `vitest` (43 files, 341 tests) / `build` all clean. Still not seen in
 a browser — see section 6.
+
+### 5.11 F-44 — the small list
+
+All seven items, in two commits.
+
+| Item | What changed |
+| --- | --- |
+| `/import` flashed blank | Server `redirect()` like its sibling stubs, not a `useEffect` |
+| `vh` in `SearchOverlay` | `12dvh` / `60dvh`, so a mobile keyboard shrinks the palette rather than shoving it off-screen |
+| `/person` back button | `BackButton` (history-length fallback). In "all credits" mode it is not history navigation, so that stays a plain button |
+| `/person` credits | Same Watched/Watchlist chip the streaming grid uses, kept live through the modal's `onChanged` |
+| `/show/[id]` progress | The bar `EpisodeTracker` and `ContinueWatchingRow` already had, plus `role="progressbar"`. `refreshEntry` uses a new `?only=entry` mode instead of re-reading media + seasons + progress for one rating |
+| Continue Watching | Prev/next arrows (pointer only), edge fades, `snap-x`, `scroll-smooth` |
+| ⌘K | Recent searches, and a "search people instead" nudge on a dead end |
+| `?` help sheet | New `KeyboardHelp`, plus `g`-prefixed jumps and Escape-clears-selection |
+
+Things worth knowing:
+
+- **`QUICK_NAV` moved to `lib/quickNav.ts`.** The palette's "Go to" list, the `g` chords and the
+  help sheet all enumerate the same destinations; three copies would drift. Each entry now
+  carries its own `key`, so adding a destination adds its shortcut and its help row at once.
+- **Recents are recorded when a search is *acted on*, not as it is typed.** Recording per
+  keystroke fills the list with the prefixes of one search and buries the actual lookup.
+  They share the arrow-key index space with the quick-nav rows: `[recents…, QUICK_NAV…]`.
+- **`?` opens the sheet; it does not toggle.** The branch is gated on `!isAnyModalOpen()` and
+  the sheet registers as a modal, so a second `?` can never reach it. A test caught this
+  while the code still said `setHelpOpen(v => !v)`, which could only ever open.
+- **Escape-clears-selection lives in `MultiSelectProvider`,** not `KeyboardShortcuts` — that is
+  what holds the selection, and it defers to any open modal.
+- **`window.localStorage` does not exist in this jsdom setup.** `lib/recentSearches` guards for
+  it, and that guard is load-bearing rather than defensive dressing.
+
+**Tests** — `lib/__tests__/recentSearches.test.ts` (9), plus new cases in
+`KeyboardShortcuts.test.tsx` (g-chord expiry, typing guard, modal gating, help sheet contents)
+and `ContinueWatchingRow.test.tsx` (arrow enable/disable, which needs `ResizeObserver` and the
+scroll metrics stubbed — jsdom does no layout). `unstubAllGlobals` in `afterEach` there, since
+a leaked `ResizeObserver` is the cross-file bleed F-45 documents. All mutation-checked.
+
+Gate: `tsc` / `lint` / `vitest` (44 files, 362 tests) / `build` all clean.
+
+**Browser-verified:** `/import` → `/settings#import-export`, fragment preserved, no blank
+frame. Nothing else — see section 6. Note that with Supabase absent the failure bubbles to
+`app/error.tsx`, which sits at the *root*, so it replaces the `(app)` layout and
+`KeyboardShortcuts` with it. That is why none of the keyboard work could be exercised locally.
 
 ---
 

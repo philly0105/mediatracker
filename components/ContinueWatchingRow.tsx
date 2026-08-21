@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Check, Loader2, Play, Tv } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Loader2, Play, Tv } from 'lucide-react'
 import { findNextUp } from '@/lib/nextUp'
 import { useToast } from '@/components/ToastProvider'
 
@@ -144,6 +144,39 @@ export default function ContinueWatchingRow({ shows }: Props) {
     }
   }
 
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    // A sub-pixel slack: fractional widths mean scrollLeft rarely lands exactly
+    // on the maximum, which would leave the right arrow enabled at the end.
+    const max = el.scrollWidth - el.clientWidth
+    setCanScrollLeft(el.scrollLeft > 1)
+    setCanScrollRight(el.scrollLeft < max - 1)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollerRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    // Fires once on observe, so the initial state comes from here rather than
+    // from a setState in the effect body.
+    const observer = new ResizeObserver(updateScrollState)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [updateScrollState, items.length])
+
+  // scrollBy with no `behavior` uses the element's computed scroll-behavior, so
+  // the `scroll-smooth` class applies — and the global prefers-reduced-motion
+  // rule in globals.css turns it back to `auto` for anyone who asked for that.
+  function scrollByCards(direction: 1 | -1) {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * Math.max(el.clientWidth * 0.8, 260) })
+  }
+
   if (items.length === 0) return null
 
   return (
@@ -152,9 +185,46 @@ export default function ContinueWatchingRow({ shows }: Props) {
         <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
           Continue Watching
         </h2>
+        {/* Arrows only where there is a pointer to use them; touch has the swipe
+            and the scrollbar is thin enough to be a poor drag target with a mouse. */}
+        <div className="hidden md:flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => scrollByCards(-1)}
+            disabled={!canScrollLeft}
+            aria-label="Scroll left"
+            className="p-1.5 rounded-sm border border-[var(--border-subtle)] text-zinc-400 enabled:hover:text-white enabled:hover:bg-white/10 disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollByCards(1)}
+            disabled={!canScrollRight}
+            aria-label="Scroll right"
+            className="p-1.5 rounded-sm border border-[var(--border-subtle)] text-zinc-400 enabled:hover:text-white enabled:hover:bg-white/10 disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-3 pl-2 pr-2 [scrollbar-width:thin]">
+      <div className="relative">
+        {/* Edge fades, so a half-cut card reads as "there is more" rather than as
+            a clipping bug. Pointer-events off — they sit over the scroller. */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-y-0 left-0 w-10 z-10 bg-gradient-to-r from-[var(--bg-void)] to-transparent transition-opacity duration-200 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}
+        />
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-y-0 right-0 w-10 z-10 bg-gradient-to-l from-[var(--bg-void)] to-transparent transition-opacity duration-200 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
+        />
+      <div
+        ref={scrollerRef}
+        onScroll={updateScrollState}
+        className="flex gap-4 overflow-x-auto pb-3 pl-2 pr-2 [scrollbar-width:thin] scroll-smooth snap-x snap-proximity"
+      >
         {items.map((show, index) => {
           const watchedKeys = new Set(show.watchedEpisodeKeys)
           const { watched, total } = getEpisodeStats(show.seasons, watchedKeys)
@@ -165,7 +235,7 @@ export default function ContinueWatchingRow({ shows }: Props) {
           return (
             <div
               key={show.media.id}
-              className="group relative flex w-[260px] shrink-0 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--glass-card)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--glass-card-hover)] hover:shadow-[var(--glow-violet)]"
+              className="group relative flex w-[260px] shrink-0 snap-start overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--glass-card)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--glass-card-hover)] hover:shadow-[var(--glow-violet)]"
             >
               <Link
                 href={`/show/${show.media.id}`}
@@ -242,6 +312,7 @@ export default function ContinueWatchingRow({ shows }: Props) {
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )

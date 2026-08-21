@@ -3,12 +3,15 @@ import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Search, CheckCircle2, Bookmark, Check, Plus, Loader2, Home, Library, ListTodo, Clapperboard, Sparkles, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
+import { Search, CheckCircle2, Bookmark, Check, Plus, Loader2, User, Clock } from 'lucide-react'
 import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
 import { useIsMac } from '@/components/ui/Kbd'
 import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { readRecentSearches, recordRecentSearch, clearRecentSearches } from '@/lib/recentSearches'
+// Shared with the g-prefixed shortcuts and the help sheet — see lib/quickNav.
+import { QUICK_NAV } from '@/lib/quickNav'
 import { useMediaActions, isAlreadyWatchedError } from '@/lib/useMediaActions'
 import { useMediaModal, type MediaChange } from '@/components/MediaModalProvider'
 import { Badge } from '@/components/ui/Badge'
@@ -17,20 +20,6 @@ import { useToast } from '@/components/ToastProvider'
 interface Props {
   onClose: () => void
 }
-
-// Everything routable from the keyboard, nav-bar order first, then the
-// destinations that live outside the sidebar's primary six.
-const QUICK_NAV = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Library', href: '/library', icon: Library },
-  { name: 'Watchlist', href: '/watchlist', icon: ListTodo },
-  { name: 'Streaming', href: '/streaming', icon: Clapperboard },
-  { name: 'Recommendations', href: '/recommendations', icon: Sparkles },
-  { name: 'Franchises', href: '/collections', icon: Layers },
-  { name: 'Stats', href: '/stats', icon: BarChart3 },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Settings', href: '/settings', icon: Settings },
-]
 
 export default function SearchOverlay({ onClose }: Props) {
   const [mode, setMode] = useState<SearchMode>('title')
@@ -47,6 +36,10 @@ export default function SearchOverlay({ onClose }: Props) {
     onDone: () => router.refresh(),
   })
   const { openMedia } = useMediaModal()
+
+  // KeyboardShortcuts renders this component only after a keypress, so it never
+  // exists during SSR — a lazy localStorage read here cannot mismatch hydration.
+  const [recents, setRecents] = useState<string[]>(() => readRecentSearches())
 
   const [activeIndex, setActiveIndex] = useState(0)
   const [actioningId, setActioningId] = useState<number | null>(null)
@@ -66,7 +59,25 @@ export default function SearchOverlay({ onClose }: Props) {
   // The overlay stays mounted under the details modal so the search survives.
   // `onNavigateAway` is the exception: following a link out of the modal should
   // take the whole palette with it, same as picking a person result directly.
+  // Remembered when a search is acted on rather than as it is typed — see
+  // lib/recentSearches.
+  function rememberQuery() {
+    setRecents(recordRecentSearch(query))
+  }
+
+  function openPerson(name: string) {
+    rememberQuery()
+    navigateTo(`/person/${encodeURIComponent(name)}`)
+  }
+
+  function applyRecent(recent: string) {
+    setQuery(recent)
+    setActiveIndex(0)
+    inputRef.current?.focus()
+  }
+
   function openDetails(result: TmdbSearchResult) {
+    rememberQuery()
     openMedia(result, {
       onNavigateAway: handleClose,
       // Focus goes back to the input once the modal is really gone, so the user
@@ -86,6 +97,9 @@ export default function SearchOverlay({ onClose }: Props) {
   // slot shows destinations instead, so the palette doubles as quick navigation.
   // People mode has no quick-nav; it shows a hint until there's a query.
   const showQuickNav = mode === 'title' && query.trim().length < 2
+  // Recents sit above the destinations in the same slot, so they share the
+  // arrow-key index space: [recents…, QUICK_NAV…].
+  const shownRecents = showQuickNav ? recents : []
 
   // Typing filters destinations too — prefix match keeps it to what the user
   // is plausibly steering at ("sta" → Stats) without drowning TMDB results.
@@ -100,7 +114,9 @@ export default function SearchOverlay({ onClose }: Props) {
 
   // Every row the arrow keys can reach, in render order. Also what
   // aria-activedescendant indexes into.
-  const optionCount = showQuickNav ? QUICK_NAV.length : matchedPages.length + results.length
+  const optionCount = showQuickNav
+    ? shownRecents.length + QUICK_NAV.length
+    : matchedPages.length + results.length
   const optionId = (index: number) => `search-overlay-option-${index}`
 
   function navigateTo(href: string) {
@@ -204,10 +220,15 @@ export default function SearchOverlay({ onClose }: Props) {
         const p = personResults[activeIndex]
         if (p) {
           e.preventDefault()
-          navigateTo(`/person/${encodeURIComponent(p.name)}`)
+          openPerson(p.name)
         }
       } else if (showQuickNav) {
-        const active = QUICK_NAV[activeIndex]
+        if (activeIndex < shownRecents.length) {
+          e.preventDefault()
+          applyRecent(shownRecents[activeIndex])
+          return
+        }
+        const active = QUICK_NAV[activeIndex - shownRecents.length]
         if (active) {
           e.preventDefault()
           navigateTo(active.href)
@@ -301,10 +322,40 @@ export default function SearchOverlay({ onClose }: Props) {
           aria-label={mode === 'person' ? 'People' : 'Titles and pages'}
           className="max-h-[min(420px,60dvh)] overflow-y-auto p-2"
         >
+          {showQuickNav && shownRecents.length > 0 && (
+            <>
+              <div className="flex items-center justify-between px-3 pt-2 pb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Recent</span>
+                <button
+                  type="button"
+                  onClick={() => setRecents(clearRecentSearches())}
+                  className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 hover:text-zinc-300 transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+              {shownRecents.map((recent, i) => (
+                <div
+                  key={recent}
+                  id={optionId(i)}
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  data-index={i}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onClick={() => applyRecent(recent)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                >
+                  <Clock className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                  <span className="text-sm text-zinc-300">{recent}</span>
+                </div>
+              ))}
+            </>
+          )}
           {showQuickNav && (
             <>
               <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Go to</div>
-              {QUICK_NAV.map((item, i) => {
+              {QUICK_NAV.map((item, navIndex) => {
+                const i = shownRecents.length + navIndex
                 const Icon = item.icon
                 return (
                   <div
@@ -354,7 +405,20 @@ export default function SearchOverlay({ onClose }: Props) {
             <div className="py-8 text-sm text-zinc-500 text-center">Searching…</div>
           )}
           {query.trim().length >= 2 && !loading && results.length === 0 && matchedPages.length === 0 && (
-            <div className="py-8 text-sm text-zinc-500 text-center">No matches for &ldquo;{query}&rdquo;.</div>
+            <div className="py-8 text-center space-y-3">
+              <p className="text-sm text-zinc-500">No matches for &ldquo;{query}&rdquo;.</p>
+              {/* A dead end used to be the whole answer. The other index is one
+                  keystroke away and usually has the thing they meant. */}
+              <button
+                type="button"
+                onClick={() => switchMode(mode === 'title' ? 'person' : 'title')}
+                className="text-xs font-semibold text-[var(--accent)] hover:underline"
+              >
+                {mode === 'title'
+                  ? `Search people for “${query.trim()}” instead`
+                  : `Search titles for “${query.trim()}” instead`}
+              </button>
+            </div>
           )}
           {personResults.map((p, i) => (
             <div
@@ -364,7 +428,7 @@ export default function SearchOverlay({ onClose }: Props) {
               aria-selected={i === activeIndex}
               data-index={i}
               onMouseEnter={() => setActiveIndex(i)}
-              onClick={() => navigateTo(`/person/${encodeURIComponent(p.name)}`)}
+              onClick={() => openPerson(p.name)}
               className={`flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
             >
               {p.profile_url ? (

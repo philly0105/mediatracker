@@ -1,9 +1,10 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
 import { ToastProvider } from '../ToastProvider'
 import { MediaModalProvider } from '../MediaModalProvider'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
+import { QUICK_NAV, G_CHORD_MS } from '@/lib/quickNav'
 import { useModal } from '@/lib/useModal'
 
 // SearchOverlay refreshes the route after logging an item; shortcut wiring just
@@ -362,5 +363,93 @@ describe('KeyboardShortcuts', () => {
     const options = screen.getAllByRole('option')
     expect(options.length).toBeGreaterThan(0)
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
+  })
+})
+
+describe('KeyboardShortcuts g-navigation and help sheet (F-44)', () => {
+  beforeEach(() => {
+    mockSearch = ''
+    replace.mockReset()
+    refresh.mockReset()
+    push.mockReset()
+    HTMLElement.prototype.scrollIntoView = vi.fn()
+    // localStorage is absent in this jsdom setup, which is exactly the case
+    // lib/recentSearches guards for.
+    try { window.localStorage?.clear() } catch { /* not available */ }
+  })
+
+  it('jumps to a destination on g then its key', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: 'g' })
+    fireEvent.keyDown(document, { key: 'l' })
+    expect(push).toHaveBeenCalledWith('/library')
+  })
+
+  it('ignores the second key when g was never pressed', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: 'l' })
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  // A g typed and abandoned must not arm the next keystroke indefinitely.
+  it('expires the g chord', () => {
+    vi.useFakeTimers()
+    try {
+      renderShortcuts()
+      fireEvent.keyDown(document, { key: 'g' })
+      vi.advanceTimersByTime(G_CHORD_MS + 100)
+      fireEvent.keyDown(document, { key: 'l' })
+      expect(push).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not navigate from g while typing in a field', () => {
+    renderShortcuts()
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+    fireEvent.keyDown(input, { key: 'g' })
+    fireEvent.keyDown(input, { key: 'l' })
+    expect(push).not.toHaveBeenCalled()
+    input.remove()
+  })
+
+  it('opens the help sheet on ?', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: '?' })
+    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+  })
+
+  // The sheet registers as a modal, so the ? branch is gated out once it is up.
+  it('does not stack a second help sheet', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: '?' })
+    fireEvent.keyDown(document, { key: '?' })
+    expect(screen.getAllByRole('dialog', { name: 'Keyboard shortcuts' })).toHaveLength(1)
+  })
+
+  it('does not jump on g while the help sheet is up', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: '?' })
+    fireEvent.keyDown(document, { key: 'g' })
+    fireEvent.keyDown(document, { key: 'l' })
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  // ? is Shift+/ on most layouts; the bare-slash branch must not claim it.
+  it('does not open the search palette on ?', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: '?' })
+    expect(screen.queryByPlaceholderText(/Search movies/)).not.toBeInTheDocument()
+  })
+
+  it('lists every quick-nav destination with its chord', () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: '?' })
+    const sheet = screen.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    for (const item of QUICK_NAV) {
+      expect(within(sheet).getByText(item.name)).toBeInTheDocument()
+    }
   })
 })

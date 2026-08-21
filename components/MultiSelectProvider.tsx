@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
 import { poolSettled } from '@/lib/pool'
+import { isAnyModalOpen } from '@/lib/useModal'
 
 interface MultiSelectContextType {
   selectedItems: Map<string, TmdbSearchResult>
@@ -45,6 +46,21 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const isSelectMode = selectedItems.size > 0
+
+  // Escape clears a bulk selection. It lives here rather than in
+  // KeyboardShortcuts because this is what holds the selection — and it defers
+  // to any open modal, whose own Escape handler has the stronger claim.
+  useEffect(() => {
+    if (!isSelectMode) return
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      if (isAnyModalOpen()) return
+      event.preventDefault()
+      setSelectedItems(new Map())
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isSelectMode])
 
   // Held in a ref, not state: cards mount and unmount constantly (filtering,
   // infinite scroll) and re-rendering the whole tree on each one would be
