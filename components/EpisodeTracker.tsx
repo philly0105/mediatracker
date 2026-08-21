@@ -114,13 +114,13 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
               aria-controls={`${panelIdBase}-${season.id}`}
               className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
               style={{ background: 'transparent' }}
-              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)')}
+              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--btn-ghost-bg)')}
               onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
             >
               <span className="font-medium text-white">Season {season.season_number}</span>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+                  <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-soft)' }}>
                     <div
                       className="h-full rounded-full transition-all"
                       style={{ width: `${airedCount > 0 ? (watchedCount / airedCount) * 100 : 0}%`, background: 'var(--teal-400)' }}
@@ -141,7 +141,7 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                     onClick={() => handleSeasonToggle(season, allWatched)}
                     className="px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
                     style={{
-                      background: allWatched ? 'rgba(255,255,255,0.04)' : 'var(--teal-tint-bg)',
+                      background: allWatched ? 'var(--btn-ghost-bg)' : 'var(--teal-tint-bg)',
                       border: `1px solid ${allWatched ? 'var(--border-subtle)' : 'var(--teal-tint-border)'}`,
                       color: allWatched ? 'var(--text-muted)' : 'var(--teal-300)',
                     }}

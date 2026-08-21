@@ -131,7 +131,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
               className="flex items-center gap-3 rounded-[var(--radius-md)] transition-colors"
               style={{
                 padding: '10px 12px',
-                background: pathname === '/settings' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                background: pathname === '/settings' ? 'var(--btn-ghost-bg)' : 'transparent',
                 border: `1px solid ${pathname === '/settings' ? 'var(--border-default)' : 'var(--border-faint)'}`,
               }}
             >

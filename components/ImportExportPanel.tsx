@@ -200,8 +200,9 @@ export default function ImportExportPanel() {
           </div>
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex rounded-sm p-1 gap-1 w-fit" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+        {/* Mode toggle. The track was 3% cold white; --surface-input is what
+            the library and streaming segmented controls already use. */}
+        <div className="flex rounded-sm p-1 gap-1 w-fit" style={{ background: 'var(--surface-input)', border: '1px solid var(--border-subtle)' }}>
           {(['csv', 'watchlist'] as const).map(m => (
             <button key={m} onClick={() => { setMode(m); setRows([]); setResults([]); setDone(false) }}
               className="px-4 py-1.5 rounded-sm text-sm font-semibold transition-colors"
@@ -221,7 +222,7 @@ export default function ImportExportPanel() {
           onClick={() => fileRef.current?.click()}
           className="rounded-lg p-8 text-center cursor-pointer transition-colors"
           style={{
-            background: dragging ? 'rgba(124, 154, 106, 0.08)' : 'rgba(255,255,255,0.02)',
+            background: dragging ? 'rgba(124, 154, 106, 0.08)' : 'var(--btn-ghost-bg)',
             border: `1px dashed ${dragging ? 'var(--accent)' : 'var(--border-default)'}`,
           }}>
           <input ref={fileRef} type="file" accept=".csv" className="hidden"
@@ -277,7 +278,7 @@ export default function ImportExportPanel() {
                 : `${mode === 'watchlist' ? 'Add to watchlist' : 'Import'} ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`}
             </Button>
             {importing && (
-              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-soft)' }}>
                 <div className="h-full rounded-full transition-all" style={{ width: `${(completed / rows.length) * 100}%`, background: 'var(--accent)' }} />
               </div>
             )}
@@ -295,9 +296,12 @@ export default function ImportExportPanel() {
               </div>
             )}
             <div className="rounded-lg overflow-hidden space-y-px" style={{ border: '1px solid var(--border-subtle)' }}>
+              {/* The zebra stripe below was 1% cold white — so faint it never
+                  actually read as banding. --border-faint is the warm ramp's
+                  lowest step and is what the row rule already uses. */}
               {results.map((r, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-2.5"
-                  style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)', borderBottom: '1px solid var(--border-faint)' }}>
+                  style={{ background: i % 2 === 0 ? 'transparent' : 'var(--border-faint)', borderBottom: '1px solid var(--border-faint)' }}>
                   <span className="text-base leading-none" style={{ color: r.state === 'success' ? 'var(--green-500)' : r.state === 'skipped' ? 'var(--zinc-500)' : r.state === 'error' ? 'var(--live)' : 'var(--zinc-700)' }}>
                     {r.state === 'pending' ? '○' : r.state === 'success' ? '✓' : r.state === 'skipped' ? '–' : '✗'}
                   </span>

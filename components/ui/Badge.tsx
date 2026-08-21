@@ -8,7 +8,7 @@ export function Badge({ children, tone = 'neutral', style, ...rest }: BadgeProps
   const theme = {
     brand: { background: 'var(--green-tint-bg)', color: 'var(--green-300)', border: '1px solid var(--green-tint-border)' },
     accent: { background: 'var(--green-tint-bg)', color: 'var(--green-300)', border: '1px solid var(--green-tint-border)' },
-    neutral: { background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' },
+    neutral: { background: 'var(--btn-ghost-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' },
     live: { background: 'var(--rust-tint-bg)', color: 'var(--rust-300)', border: '1px solid var(--rust-tint-border)' },
     rating: { background: 'var(--amber-tint-bg)', color: 'var(--amber-300)', border: '1px solid var(--amber-tint-border)' },
     success: { background: 'var(--teal-tint-bg)', color: 'var(--teal-300)', border: '1px solid var(--teal-tint-border)' },

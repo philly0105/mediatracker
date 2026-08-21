@@ -264,7 +264,7 @@ body::after {
 .nav-item[aria-current='page'] {
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--btn-ghost-bg);
   border-color: var(--border-default);
 }
 

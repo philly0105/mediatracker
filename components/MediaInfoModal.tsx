@@ -554,8 +554,8 @@ export default function MediaInfoModal({
                         fontSize: 'var(--text-xs)',
                         padding: '10px 12px',
                         ...(isActive ? {} : {
-                          background: 'rgba(255,255,255,0.02)',
-                          borderColor: 'rgba(255,255,255,0.05)',
+                          background: 'var(--btn-ghost-bg)',
+                          borderColor: 'var(--border-subtle)',
                           color: 'var(--text-muted)'
                         })
                       }}

@@ -136,7 +136,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
             <BarChart data={data.monthlyActivity}>
               <XAxis dataKey="month" tick={AXIS_TICK} axisLine={false} tickLine={false} />
               <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--btn-ghost-bg)' }} />
               <Legend wrapperStyle={{ color: 'var(--zinc-400)', fontSize: 12 }} />
               <Bar dataKey="movies" fill="var(--green-500)" name="Movies" radius={[4, 4, 0, 0]} />
               <Bar dataKey="episodes" fill="var(--teal-400)" name="Episodes" radius={[4, 4, 0, 0]} />
@@ -180,7 +180,10 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                     {name}
                   </text>
                 )}
-                labelLine={{ stroke: 'rgba(255,255,255,0.25)', strokeWidth: 1 }}
+                // Was 25% cold white — the last of it in the charts.
+                // --zinc-700 is the warm ramp's border value and the nearest
+                // match to what that resolved to over a card.
+                labelLine={{ stroke: 'var(--zinc-700)', strokeWidth: 1 }}
               >
                 {data.genreBreakdown.slice(0, 8).map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -206,7 +209,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
               <BarChart data={data.ratingDist} margin={{ top: 15, right: 10, bottom: 10, left: -15 }}>
                 <XAxis dataKey="rating" tick={AXIS_TICK} axisLine={false} tickLine={false} />
                 <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--btn-ghost-bg)' }} />
                 <Bar dataKey="count" fill="var(--amber-400)" name="Titles" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

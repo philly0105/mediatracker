@@ -98,7 +98,7 @@ export function MediaRow({
           {review && (
             <p style={{
               margin: 0, fontSize: 'var(--text-xs)', fontStyle: 'italic', color: 'var(--text-secondary)',
-              background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-faint)', padding: '6px 8px',
+              background: 'var(--btn-ghost-bg)', border: '1px solid var(--border-faint)', padding: '6px 8px',
               borderRadius: 'var(--radius-sm)', lineHeight: 'var(--leading-relaxed)',
               overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
             }}>{review}</p>
