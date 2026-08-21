@@ -4,10 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { useLibraryIds } from '@/lib/useLibraryIds'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaModal } from '@/components/MediaModalProvider'
 import { useModal } from '@/lib/useModal'
 import type { TmdbSearchResult, MediaType } from '@/types'
-import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
 import { useMultiSelect } from './MultiSelectProvider'
 
@@ -24,7 +23,6 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
   const [items, setItems] = useState<TmdbSearchResult[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const [visibleCount, setVisibleCount] = useState(12)
   const [hasMore, setHasMore] = useState(true)
   const nextBatch = useRef(2)
@@ -36,7 +34,20 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
   const { containerRef } = useModal(onClose)
 
-  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
+  const { openMedia } = useMediaModal()
+
+  // Opens on top of this modal, which opened on top of a MediaInfoModal — the
+  // provider keeps a stack precisely so that nesting survives.
+  function openDetails(result: TmdbSearchResult) {
+    openMedia(result, {
+      onNavigateAway,
+      onChanged: (change, changedItem) => {
+        const id = changedItem.tmdb_id
+        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(id))
+        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(id))
+      },
+    })
+  }
 
   useEffect(() => {
     fetch(`/api/tmdb/similar?id=${tmdbId}&type=${type}&batch=1`)
@@ -95,7 +106,7 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)] backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)]" onClick={onClose}>
       <motion.div
         ref={containerRef}
         role="dialog"
@@ -137,7 +148,7 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
               {items.slice(0, visibleCount).map(item => (
                 <SelectableOverlay key={item.tmdb_id} item={item}>
                 <button
-                  onClick={() => { if (!isSelectMode) setSelected(item) }}
+                  onClick={() => { if (!isSelectMode) openDetails(item) }}
                   className="text-left space-y-1.5 group w-full h-full"
                 >
                   <div className="relative">
@@ -158,12 +169,12 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
                     
                     <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
                       {watchedIds.has(item.tmdb_id) && (
-                        <div className="bg-emerald-500/90 backdrop-blur-md p-1 rounded-sm shadow-md border border-emerald-400/30">
+                        <div className="bg-emerald-500/90 p-1 rounded-sm shadow-md border border-emerald-400/30">
                           <CheckCircle2 className="w-3 h-3 text-white" />
                         </div>
                       )}
                       {!watchedIds.has(item.tmdb_id) && watchlistIds.has(item.tmdb_id) && (
-                        <div className="bg-violet-500/90 backdrop-blur-md p-1 rounded-sm shadow-md border border-violet-400/30">
+                        <div className="bg-violet-500/90 p-1 rounded-sm shadow-md border border-violet-400/30">
                           <Bookmark className="w-3 h-3 text-white" />
                         </div>
                       )}
@@ -197,21 +208,6 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
       </motion.div>
 
     </div>
-      {selected && (
-        <MediaInfoModal
-          item={selected}
-          onClose={() => setSelected(null)}
-          onNavigateAway={onNavigateAway}
-          onAddToWatchlist={async () => {
-            await addToWatchlist(selected.tmdb_id, selected.type)
-            setWatchlistIds(prev => new Set(prev).add(selected.tmdb_id))
-          }}
-          onMarkAsWatched={async (opts) => {
-            await markWatched(selected.tmdb_id, selected.type, opts)
-            setWatchedIds(prev => new Set(prev).add(selected.tmdb_id))
-          }}
-        />
-      )}
     </>
   )
 }

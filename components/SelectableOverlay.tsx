@@ -31,12 +31,15 @@ export default function SelectableOverlay({ item, children }: { item: TmdbSearch
     <div className="relative group h-full w-full">
       {/* Checkbox overlay visible on hover or when selected, or always visible in select mode */}
       <button
+        type="button"
+        aria-label={`Select ${item.title}`}
+        aria-pressed={isSelected}
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()
           toggleSelection(item)
         }}
-        className={`absolute top-2 left-2 z-20 p-1.5 backdrop-blur-md rounded-lg transition-all duration-200 ${
+        className={`absolute top-2 left-2 z-20 p-1.5 rounded-lg transition-all duration-200 ${
           isSelected 
             ? 'bg-violet-600 shadow-lg shadow-violet-500/20 opacity-100 scale-100' 
             : isSelectMode

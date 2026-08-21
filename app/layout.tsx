@@ -1,35 +1,46 @@
 import type { Metadata, Viewport } from 'next'
-import { Suspense } from 'react'
 import { Outfit } from 'next/font/google'
 import './globals.css'
-import { createClient } from '@/lib/supabase/server'
-import Sidebar from '@/components/Sidebar'
-import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 import { ToastProvider } from '@/components/ToastProvider'
 import { MotionProvider } from '@/components/MotionProvider'
-import KeyboardShortcuts from '@/components/KeyboardShortcuts'
 
 const outfit = Outfit({ subsets: ['latin'] })
 
+// `metadataBase` resolves the relative OG image paths below into absolute URLs;
+// without it Next warns and social cards fall back to no image at all.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mediatracker-ebon.vercel.app'
+
 export const metadata: Metadata = {
-  title: 'DorfMovies',
+  metadataBase: new URL(siteUrl),
+  // The template is what gives every route its own tab title. Before this, all
+  // 40-odd of them read "DorfMovies", so history and bookmarks were unusable.
+  title: {
+    default: 'DorfMovies',
+    template: '%s · DorfMovies',
+  },
   description: 'Track your movies, TV shows, and watchlists.',
+  applicationName: 'DorfMovies',
+  openGraph: {
+    siteName: 'DorfMovies',
+    type: 'website',
+  },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#030303',
+  // Matches --bg-base. It was #030303, a cold near-black the app never uses.
+  themeColor: '#100e09',
+  // Without this the safe-area insets resolve to 0, so `pb-safe-bottom` on the
+  // mobile nav has nothing to read and the bar sits under the home indicator.
+  viewportFit: 'cover',
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  let user = null
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    user = data.user
-  } catch {
-    // Supabase unavailable — render without auth nav
-  }
-
+// This layout deliberately does not touch Supabase. It used to await the user so
+// it could decide whether to render the Sidebar, which forced every route in the
+// app — /login, /signup and the two public /share pages included — to be
+// server-rendered on demand. The authenticated shell now lives in
+// app/(app)/layout.tsx, and the routes that have no session live under
+// app/(public).
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       {/* Canvas, grain and base text colour live in globals.css — an unlayered
@@ -46,27 +57,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             style={{ background: 'var(--orb-orange)' }} />
         </div>
 
-        {/* Layout wrapper */}
         <MotionProvider>
           <ToastProvider>
-            <Suspense>
-              <KeyboardShortcuts />
-            </Suspense>
-            <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
-              {user && <Sidebar userEmail={user.email} />}
-
-              <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
-                user ? 'pt-20 md:pt-8 md:pl-72 pb-24 md:pb-8' : 'pb-8'
-              }`}>
-                {/* One shared measure for every route. Without it the bento
-                    grid and library run the full width of an ultrawide display. */}
-                <div className="mx-auto w-full max-w-[var(--content-max)]">
-                  <MultiSelectProvider>
-                    {children}
-                  </MultiSelectProvider>
-                </div>
-              </main>
-            </div>
+            {children}
           </ToastProvider>
         </MotionProvider>
       </body>

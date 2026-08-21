@@ -194,7 +194,7 @@ export default function ImportExportPanel() {
             ].map(({ col, note }) => (
               <div key={col} className="flex gap-2 items-baseline">
                 <code className="text-xs text-[var(--accent)] font-mono">{col}</code>
-                <span className="text-xs text-zinc-600">{note}</span>
+                <span className="text-xs text-zinc-500">{note}</span>
               </div>
             ))}
           </div>
@@ -219,7 +219,7 @@ export default function ImportExportPanel() {
           onDragLeave={() => setDragging(false)}
           onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) loadFile(f) }}
           onClick={() => fileRef.current?.click()}
-          className="rounded-lg p-8 text-center cursor-pointer transition-colors backdrop-blur-md"
+          className="rounded-lg p-8 text-center cursor-pointer transition-colors"
           style={{
             background: dragging ? 'rgba(124, 154, 106, 0.08)' : 'rgba(255,255,255,0.02)',
             border: `1px dashed ${dragging ? 'var(--accent)' : 'var(--border-default)'}`,
@@ -305,16 +305,16 @@ export default function ImportExportPanel() {
                     {r.title}
                   </span>
                   {r.state === 'skipped' && (
-                    <span className="text-xs text-zinc-600">already in library</span>
+                    <span className="text-xs text-zinc-500">already in library</span>
                   )}
                   {r.state === 'success' && r.matched && r.matched !== r.title && (
-                    <span className="text-xs text-zinc-600">matched: {r.matched}</span>
+                    <span className="text-xs text-zinc-500">matched: {r.matched}</span>
                   )}
                   {r.state === 'error' && (
                     <span className="text-xs text-rose-500">{r.error}</span>
                   )}
                   {r.state === 'pending' && importing && (
-                    <span className="text-xs text-zinc-600">waiting</span>
+                    <span className="text-xs text-zinc-500">waiting</span>
                   )}
                 </div>
               ))}

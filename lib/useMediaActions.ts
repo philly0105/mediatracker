@@ -39,11 +39,19 @@ export function useMediaActions(opts: { priority?: WatchlistPriority; onDone?: (
 
   const headers = { 'Content-Type': 'application/json' }
 
-  async function addToWatchlist(tmdb_id: number, type: MediaType) {
+  // `overridePriority` exists for MediaModalProvider, which builds its handlers
+  // once but opens media on behalf of pages that disagree about the default
+  // bucket (the calendar and /person add as must_watch, the rest as
+  // want_to_watch). Everyone else keeps passing two arguments.
+  async function addToWatchlist(
+    tmdb_id: number,
+    type: MediaType,
+    overridePriority?: WatchlistPriority
+  ) {
     const res = await fetch('/api/watchlist', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ tmdb_id, type, priority }),
+      body: JSON.stringify({ tmdb_id, type, priority: overridePriority ?? priority }),
     })
     if (!res.ok) {
       throw new MediaActionError(await readError(res), res.status)

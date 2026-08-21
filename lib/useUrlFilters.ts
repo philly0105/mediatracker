@@ -87,6 +87,23 @@ export function useUrlFilters(defaults: Record<string, string>) {
     [defaults, writeUrl]
   )
 
+  // Put a set of keys back to their defaults in one pass. Looping setValue
+  // instead would fire one router.replace per key, and each intermediate URL
+  // would land in history. `keys` defaults to every tracked key.
+  const reset = useCallback(
+    (keys?: string[]) => {
+      const next = { ...valuesRef.current }
+      for (const key of keys ?? Object.keys(defaults)) next[key] = defaults[key]
+      valuesRef.current = next
+      setValues(next)
+      // A free-text debounce still in flight would fire after this write and
+      // put the cleared query straight back into the URL.
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      writeUrl(next)
+    },
+    [defaults, writeUrl]
+  )
+
   // Don't write the URL after the page unmounts with a pending debounce.
   useEffect(() => {
     return () => {
@@ -94,5 +111,5 @@ export function useUrlFilters(defaults: Record<string, string>) {
     }
   }, [])
 
-  return [values, setValue] as const
+  return [values, setValue, reset] as const
 }

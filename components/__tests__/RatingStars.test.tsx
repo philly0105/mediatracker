@@ -24,9 +24,14 @@ describe('RatingStars', () => {
 
   it('renders filled stars for current value', () => {
     const { container } = render(<RatingStars value={3.5} onChange={vi.fn()} />)
-    const stars = container.querySelectorAll('span')
-    const filledStars = Array.from(stars).filter(s => s.style.color === 'var(--amber-400)')
-    expect(filledStars.length).toBeGreaterThan(0)
+    // The fill lives on the overlay <Star>, clipped by a wrapper whose width is
+    // 100% for a full star and 50% for a half. 3.5 means three full and one half.
+    const overlays = Array.from(container.querySelectorAll('span[style*="width"]'))
+    expect(overlays.map(o => (o as HTMLElement).style.width)).toEqual([
+      '100%', '100%', '100%', '50%',
+    ])
+    const filled = container.querySelectorAll('svg[style*="--amber-400"]')
+    expect(filled).toHaveLength(4)
   })
 
   it('does not call onChange when readOnly', () => {

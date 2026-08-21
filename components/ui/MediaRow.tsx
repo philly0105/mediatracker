@@ -1,9 +1,11 @@
+'use client'
 import Image from 'next/image'
 import React, { useState } from 'react'
 import RatingStars from '@/components/RatingStars'
 import { Badge } from './Badge'
-import { Calendar } from 'lucide-react'
+import { Calendar, Star } from 'lucide-react'
 import { formatDateLabel } from '@/lib/formatDate'
+import { activatableProps } from './activatable'
 
 interface MediaRowProps {
   title: string
@@ -32,26 +34,20 @@ export function MediaRow({
   onClick,
   actions,
 }: MediaRowProps) {
-  const [hover, setHover] = useState(false)
   const [imgErr, setImgErr] = useState(false)
   const hasImg = posterUrl && !imgErr
 
   return (
     <div
       onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      {...activatableProps(onClick, title)}
+      // Hover/focus styling is `.media-row` in globals.css — see the note there.
+      className="media-row"
       style={{
         display: 'flex',
         gap: 'var(--space-4)',
         padding: '14px',
         borderRadius: 'var(--radius-md)',
-        background: hover ? 'var(--glass-card-hover)' : 'var(--glass-card)',
-        border: `1px solid ${hover ? 'var(--border-strong)' : 'var(--border-subtle)'}`,
-        backdropFilter: 'blur(var(--blur-md))',
-        boxShadow: hover ? 'var(--glow-violet), var(--inset-hairline)' : 'none',
-        transform: hover ? 'translateY(-2px) scale(1.01)' : 'none',
-        transition: 'all var(--dur-base) var(--ease-out-expo)',
         cursor: onClick ? 'pointer' : 'default',
       }}
     >
@@ -89,7 +85,7 @@ export function MediaRow({
             {year && <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{year}</span>}
             {tmdbRating != null && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'], color: 'var(--amber-400)' }}>
-                ★ {tmdbRating.toFixed(1)}
+                <Star style={{ width: 11, height: 11, fill: 'currentColor' }} /> {tmdbRating.toFixed(1)}
               </span>
             )}
           </div>

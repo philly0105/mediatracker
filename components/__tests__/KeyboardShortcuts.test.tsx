@@ -2,6 +2,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
 import { ToastProvider } from '../ToastProvider'
+import { MediaModalProvider } from '../MediaModalProvider'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { useModal } from '@/lib/useModal'
 
@@ -38,7 +39,9 @@ vi.mock('@/lib/supabase/client', () => ({
 function renderShortcuts() {
   return render(
     <ToastProvider>
-      <KeyboardShortcuts />
+      <MediaModalProvider>
+        <KeyboardShortcuts />
+      </MediaModalProvider>
     </ToastProvider>
   )
 }

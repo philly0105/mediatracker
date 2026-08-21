@@ -13,7 +13,9 @@ export function BentoGrid({
   const hasGridCols = className.split(' ').some(c => c.includes('grid-cols-'))
   return (
     <div
-      className={`grid gap-4 max-w-7xl mx-auto ${!hasGridCols ? 'grid-cols-1 md:grid-cols-4' : ''} ${className}`}
+      // No max-w here: the layout already wraps every route in
+      // max-w-[var(--content-max)], which is the same 1280px.
+      className={`grid gap-4 ${!hasGridCols ? 'grid-cols-1 md:grid-cols-4' : ''} ${className}`}
     >
       {children}
     </div>

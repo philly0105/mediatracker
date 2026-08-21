@@ -6,10 +6,11 @@ import { motion } from 'framer-motion'
 import { Search, CheckCircle2, Bookmark, Check, Plus, Loader2, Home, Library, ListTodo, Clapperboard, Sparkles, Layers, BarChart3, Calendar, Settings, User } from 'lucide-react'
 import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
+import { useIsMac } from '@/components/ui/Kbd'
 import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { useMediaActions, isAlreadyWatchedError } from '@/lib/useMediaActions'
-import MediaInfoModal from '@/components/MediaInfoModal'
+import { useMediaModal, type MediaChange } from '@/components/MediaModalProvider'
 import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ToastProvider'
 
@@ -33,6 +34,9 @@ const QUICK_NAV = [
 
 export default function SearchOverlay({ onClose }: Props) {
   const [mode, setMode] = useState<SearchMode>('title')
+  // The footer hint said ⌘↵ on every platform; the handler has always taken
+  // Ctrl too (KeyboardShortcuts.tsx).
+  const isMac = useIsMac()
   const { query, setQuery, results, loading, clear } = useTmdbSearch(mode)
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
   // The old dashboard dropdown refreshed the route after an action so Recently
@@ -42,8 +46,8 @@ export default function SearchOverlay({ onClose }: Props) {
     priority: 'want_to_watch',
     onDone: () => router.refresh(),
   })
+  const { openMedia } = useMediaModal()
 
-  const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [actioningId, setActioningId] = useState<number | null>(null)
   const { toast } = useToast()
@@ -51,13 +55,31 @@ export default function SearchOverlay({ onClose }: Props) {
   const { containerRef } = useModal(handleClose)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const prevSelected = useRef<TmdbSearchResult | null>(null)
 
   // Closing resets the query + results. The overlay stays mounted underneath a
   // layered MediaInfoModal, so the reset happens here rather than on unmount.
   function handleClose() {
     clear()
     onClose()
+  }
+
+  // The overlay stays mounted under the details modal so the search survives.
+  // `onNavigateAway` is the exception: following a link out of the modal should
+  // take the whole palette with it, same as picking a person result directly.
+  function openDetails(result: TmdbSearchResult) {
+    openMedia(result, {
+      onNavigateAway: handleClose,
+      // Focus goes back to the input once the modal is really gone, so the user
+      // can keep typing without reaching for the mouse.
+      onClosed: () => inputRef.current?.focus(),
+      onChanged: (change: MediaChange, changedItem: TmdbSearchResult) => {
+        const id = changedItem.tmdb_id
+        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(id))
+        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(id))
+        // Recently Watched on the dashboard reads from the route.
+        router.refresh()
+      },
+    })
   }
 
   // Under two characters there is nothing to search — in title mode the list
@@ -137,15 +159,6 @@ export default function SearchOverlay({ onClose }: Props) {
     inputRef.current?.focus()
   }, [])
 
-  // When the layered MediaInfoModal closes, hand focus back to the input so the
-  // user can keep searching without reaching for the mouse.
-  useEffect(() => {
-    if (prevSelected.current && !selected) {
-      inputRef.current?.focus()
-    }
-    prevSelected.current = selected
-  }, [selected])
-
   // Keep the highlighted row in view as the arrow keys move it.
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)
@@ -210,7 +223,7 @@ export default function SearchOverlay({ onClose }: Props) {
           const active = titleResults[activeIndex - matchedPages.length]
           if (active) {
             e.preventDefault()
-            setSelected(active)
+            openDetails(active)
           }
         }
       }
@@ -220,7 +233,7 @@ export default function SearchOverlay({ onClose }: Props) {
   return (
     <>
     <div
-      className="fixed inset-0 z-[45] flex items-start justify-center backdrop-blur-md"
+      className="fixed inset-0 z-[45] flex items-start justify-center"
       style={{ background: 'var(--scrim)', paddingTop: '12vh' }}
       onClick={handleClose}
     >
@@ -248,6 +261,7 @@ export default function SearchOverlay({ onClose }: Props) {
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
             placeholder={mode === 'person' ? 'Search actors and directors…' : 'Search movies and TV shows…'}
+            aria-label={mode === 'person' ? 'Search actors and directors' : 'Search movies and TV shows'}
             autoFocus
             role="combobox"
             aria-expanded={optionCount > 0}
@@ -289,7 +303,7 @@ export default function SearchOverlay({ onClose }: Props) {
         >
           {showQuickNav && (
             <>
-              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Go to</div>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Go to</div>
               {QUICK_NAV.map((item, i) => {
                 const Icon = item.icon
                 return (
@@ -312,7 +326,7 @@ export default function SearchOverlay({ onClose }: Props) {
           )}
           {!showQuickNav && matchedPages.length > 0 && (
             <>
-              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Pages</div>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Pages</div>
               {matchedPages.map((page, i) => {
                 const Icon = page.icon
                 return (
@@ -334,13 +348,13 @@ export default function SearchOverlay({ onClose }: Props) {
             </>
           )}
           {mode === 'person' && query.trim().length < 2 && (
-            <div className="py-8 text-sm text-zinc-600 text-center">Search for an actor or director by name.</div>
+            <div className="py-8 text-sm text-zinc-500 text-center">Search for an actor or director by name.</div>
           )}
           {query.trim().length >= 2 && loading && (
-            <div className="py-8 text-sm text-zinc-600 text-center">Searching…</div>
+            <div className="py-8 text-sm text-zinc-500 text-center">Searching…</div>
           )}
           {query.trim().length >= 2 && !loading && results.length === 0 && matchedPages.length === 0 && (
-            <div className="py-8 text-sm text-zinc-600 text-center">No matches for &ldquo;{query}&rdquo;.</div>
+            <div className="py-8 text-sm text-zinc-500 text-center">No matches for &ldquo;{query}&rdquo;.</div>
           )}
           {personResults.map((p, i) => (
             <div
@@ -384,7 +398,7 @@ export default function SearchOverlay({ onClose }: Props) {
                 aria-selected={listIndex === activeIndex}
                 data-index={listIndex}
                 onMouseEnter={() => setActiveIndex(listIndex)}
-                onClick={() => setSelected(r)}
+                onClick={() => openDetails(r)}
                 className={`group flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${listIndex === activeIndex ? 'bg-white/[0.06]' : ''}`}
               >
                 {r.poster_url ? (
@@ -455,12 +469,12 @@ export default function SearchOverlay({ onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-2.5 border-t border-white/5 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+        <div className="px-5 py-2.5 border-t border-white/5 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
           <span>↑↓ Navigate</span>
           <span>↵ Open</span>
           {mode === 'title' && !showQuickNav && (
             <>
-              <span>⌘↵ Watched</span>
+              <span>{isMac ? '⌘↵' : 'Ctrl ↵'} Watched</span>
               <span>⇧↵ Watchlist</span>
             </>
           )}
@@ -470,30 +484,6 @@ export default function SearchOverlay({ onClose }: Props) {
 
     </div>
 
-    {/* Layered above the overlay — it portals to body at z-50, above the
-        overlay's z-45 scrim. The overlay stays mounted underneath so focus
-        can return to the input when the modal closes. Kept a React sibling of
-        the scrim, not a child: portal events bubble through the React tree,
-        so nesting it inside the scrim would let every click in the modal hit
-        the scrim's close handler. */}
-    {selected && (
-      <MediaInfoModal
-        item={selected}
-        onClose={() => setSelected(null)}
-        // Dismissing the modal by hand keeps the palette up so the search can
-        // continue, but following a link out of it should not — close the whole
-        // overlay, the same as picking a person result directly.
-        onNavigateAway={handleClose}
-        onAddToWatchlist={async () => {
-          await addToWatchlist(selected.tmdb_id, selected.type)
-          setWatchlistIds((prev) => new Set(prev).add(selected.tmdb_id))
-        }}
-        onMarkAsWatched={async (opts) => {
-          await markWatched(selected.tmdb_id, selected.type, opts)
-          setWatchedIds((prev) => new Set(prev).add(selected.tmdb_id))
-        }}
-      />
-    )}
     </>
   )
 }

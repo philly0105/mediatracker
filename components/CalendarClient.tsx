@@ -3,12 +3,11 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Film, Tv, Clock, Bell, LayoutGrid } from 'lucide-react'
-import MediaInfoModal from '@/components/MediaInfoModal'
-import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult } from '@/types'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useMediaModal } from '@/components/MediaModalProvider'
 
 interface UpcomingRelease {
   tmdb_id: number
@@ -32,10 +31,9 @@ type Props = {
 }
 
 export default function CalendarClient({ releases }: Props) {
-  const [selectedItem, setSelectedItem] = useState<TmdbSearchResult | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
 
-  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'must_watch' })
+  const { openMedia } = useMediaModal()
 
   const filtered = releases.filter(r => filter === 'all' || r.type === filter)
 
@@ -122,7 +120,7 @@ export default function CalendarClient({ releases }: Props) {
                     <div className="w-full pl-12 md:pl-0 md:w-[calc(50%-2rem)]">
                       <SelectableOverlay item={item as unknown as TmdbSearchResult}>
                       <div
-                        onClick={() => setSelectedItem(item as unknown as TmdbSearchResult)}
+                        onClick={() => openMedia(item as unknown as TmdbSearchResult, { priority: 'must_watch' })}
                         className="p-3 flex gap-4 transition-colors cursor-pointer rounded-lg bg-[var(--glass-card)] border border-white/5 hover:border-zinc-500/30"
                       >
                         {item.poster_url ? (
@@ -172,14 +170,6 @@ export default function CalendarClient({ releases }: Props) {
         </div>
       )}
 
-      {selectedItem && (
-        <MediaInfoModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onAddToWatchlist={async () => { await addToWatchlist(selectedItem.tmdb_id, selectedItem.type) }}
-          onMarkAsWatched={async (opts) => { await markWatched(selectedItem.tmdb_id, selectedItem.type, opts) }}
-        />
-      )}
     </div>
   )
 }

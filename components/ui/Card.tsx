@@ -1,29 +1,22 @@
 'use client'
-import React, { useState } from 'react'
+import React from 'react'
+import { activatableProps } from './activatable'
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   onClick?: () => void
 }
 
-export function Card({ children, onClick, style, ...rest }: CardProps) {
-  const [hover, setHover] = useState(false)
-
+// The hover treatment is `.card-interactive` in globals.css rather than a
+// `useState(hover)` inline style: no render per pointer move, keyboard focus
+// gets the same affordance, and reduced-motion can reach the lift.
+export function Card({ children, onClick, style, className, ...rest }: CardProps) {
   return (
     <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       onClick={onClick}
-      style={{
-        padding: 'var(--space-7)',
-        borderRadius: 'var(--radius-lg)',
-        background: hover && onClick ? 'var(--glass-card-hover)' : 'var(--glass-card)',
-        border: `1px solid ${hover && onClick ? 'var(--border-strong)' : 'var(--border-subtle)'}`,
-        boxShadow: hover && onClick ? 'var(--glow-violet), var(--inset-hairline)' : 'none',
-        transform: hover && onClick ? 'translateY(-2px)' : 'none',
-        transition: 'all var(--dur-base) var(--ease-out-expo)',
-        cursor: onClick ? 'pointer' : 'default',
-        ...style,
-      }}
+      // Spread before `rest` so a caller can still supply its own aria-label.
+      {...activatableProps(onClick, rest['aria-label'])}
+      className={['card-surface', onClick && 'card-interactive', className].filter(Boolean).join(' ')}
+      style={style}
       {...rest}
     >
       {children}

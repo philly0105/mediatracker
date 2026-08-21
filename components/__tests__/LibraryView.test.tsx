@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import LibraryView from '../LibraryView'
 import { ToastProvider } from '../ToastProvider'
 import { MultiSelectProvider } from '../MultiSelectProvider'
+import { MediaModalProvider } from '../MediaModalProvider'
 import type { WatchEntry } from '@/types'
 
 type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
@@ -72,9 +73,11 @@ const mockFetch = vi.fn()
 function renderLibrary() {
   return render(
     <ToastProvider>
-      <MultiSelectProvider>
-        <LibraryView />
-      </MultiSelectProvider>
+      <MediaModalProvider>
+        <MultiSelectProvider>
+          <LibraryView />
+        </MultiSelectProvider>
+      </MediaModalProvider>
     </ToastProvider>
   )
 }
@@ -277,20 +280,46 @@ describe('LibraryView', () => {
     renderLibrary()
     await screen.findByText('Heat')
 
-    // The default list view renders MediaRow, whose root is a div, so the title
-    // is not exposed as a button until we switch to the poster grid.
-    expect(screen.queryByRole('button', { name: /Heat/ })).not.toBeInTheDocument()
+    // Both layouts expose the title as a button — MediaRow via role="button" on
+    // its div root, PosterCard via a real <button>. The tag name is what tells
+    // them apart. (This used to assert that the list row was *not* a button,
+    // which was really asserting that list view had no keyboard access.)
+    expect(screen.getByRole('button', { name: /^Heat/ }).tagName).toBe('DIV')
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Grid view' }))
     })
-    // PosterCard's root is a button, so the title now shows up as one.
-    expect(screen.getByRole('button', { name: /Heat/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Heat/ }).tagName).toBe('BUTTON')
     expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute('aria-pressed', 'true')
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'List view' }))
     })
-    expect(screen.queryByRole('button', { name: /Heat/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Heat/ }).tagName).toBe('DIV')
+  })
+
+  it('opens a library row from the keyboard', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await screen.findByText('Heat')
+
+    const row = screen.getByRole('button', { name: /^Heat/ })
+    expect(row).toHaveAttribute('tabindex', '0')
+
+    // List view is the default, so this is the app's primary way of opening a
+    // title — it has to work without a mouse.
+    await act(async () => {
+      fireEvent.keyDown(row, { key: 'Enter' })
+    })
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 })

@@ -8,6 +8,7 @@ import type { TmdbSearchResult } from '@/types'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ToastProvider'
+import { poolSettled } from '@/lib/pool'
 
 interface MultiSelectContextType {
   selectedItems: Map<string, TmdbSearchResult>
@@ -32,6 +33,7 @@ const Context = createContext<MultiSelectContextType | null>(null)
 export function MultiSelectProvider({ children }: { children: ReactNode }) {
   const [selectedItems, setSelectedItems] = useState<Map<string, TmdbSearchResult>>(new Map())
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -84,8 +86,13 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       const items = Array.from(selectedItems.values())
       const today = new Date().toISOString().split('T')[0]
 
-      const results = await Promise.allSettled(
-        items.map(async (item) => {
+      // Pooled, not Promise.allSettled over the whole selection: "Select all"
+      // makes the selection arbitrarily large and each write is several server
+      // round-trips deep.
+      const results = await poolSettled(
+        items,
+        5,
+        async (item) => {
           if (action === 'watched') {
             const resWatch = await fetch('/api/watch', {
               method: 'POST',
@@ -107,7 +114,8 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             })
             if (!resWatchlist.ok) throw new Error('Failed to add to watchlist')
           }
-        })
+        },
+        (done, total) => setProgress({ done, total })
       )
 
       const succeeded = results.filter((r) => r.status === 'fulfilled').length
@@ -133,6 +141,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       console.error(err)
     } finally {
       setLoadingAction(null)
+      setProgress(null)
     }
   }
 
@@ -149,13 +158,20 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 p-2 bg-[var(--bg-void)]/95 backdrop-blur-xl border border-[var(--border-strong)] rounded-lg shadow-2xl shadow-black/50"
+            role="toolbar"
+            aria-label="Bulk actions"
+            /* bottom-24 on mobile clears the fixed bottom nav, which the old
+               bottom-6 sat on top of — the toast stack already gets this right.
+               max-w + flex-wrap keeps five controls on a 320px screen. */
+            className="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex flex-wrap items-center justify-center gap-2 p-2 max-w-[calc(100vw-2rem)] bg-[var(--bg-void)]/95 border border-[var(--border-strong)] rounded-lg shadow-2xl shadow-black/50"
           >
             <div className="flex items-center gap-2 pl-4 pr-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs border border-[var(--accent)]/30">
+              <span aria-hidden="true" className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs border border-[var(--accent)]/30">
                 {selectedItems.size}
               </span>
-              <span className="text-sm font-semibold text-white mr-2">Selected</span>
+              <span aria-live="polite" className="text-sm font-semibold text-white mr-2">
+                {progress ? `${progress.done} of ${progress.total} done` : `${selectedItems.size} selected`}
+              </span>
             </div>
             
             <div className="h-6 w-px bg-white/10" />

@@ -1,13 +1,10 @@
 'use client'
 import Image from 'next/image'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Calendar, Film, Tv, ArrowRight } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
-import MediaInfoModal from '@/components/MediaInfoModal'
-import { useMediaActions } from '@/lib/useMediaActions'
-import { createPortal } from 'react-dom'
+import { useMediaModal } from '@/components/MediaModalProvider'
 import Link from 'next/link'
 import { formatDateLabel } from '@/lib/formatDate'
 import type { UpcomingRelease } from '@/lib/tmdb'
@@ -17,16 +14,9 @@ interface Props {
 }
 
 export default function DashboardUpcomingWidget({ releases }: Props) {
-  const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
   const router = useRouter()
 
-  const { addToWatchlist, markWatched } = useMediaActions({
-    priority: 'want_to_watch',
-    onDone: () => {
-      setSelected(null)
-      router.refresh()
-    },
-  })
+  const { openMedia, closeMedia } = useMediaModal()
 
   // Take the first 3 releases to fit the bento grid neatly
   const upcoming = releases.slice(0, 3)
@@ -76,7 +66,10 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
               return (
                 <button
                   key={`${item.type}-${item.tmdb_id}`}
-                  onClick={() => setSelected(resultItem)}
+                  onClick={() => openMedia(resultItem, {
+                    // Matches the old onDone, which fired for both actions.
+                    onChanged: () => { closeMedia(); router.refresh() },
+                  })}
                   className="w-full flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-void)]/60 border border-white/5 hover:border-[var(--border-strong)] hover:bg-white/5 transition-all text-left group/item"
                 >
                   {item.poster_url ? (
@@ -107,16 +100,6 @@ export default function DashboardUpcomingWidget({ releases }: Props) {
         )}
       </div>
 
-      {/* Info Modal */}
-      {selected && createPortal(
-        <MediaInfoModal
-          item={selected}
-          onClose={() => setSelected(null)}
-          onAddToWatchlist={async () => { await addToWatchlist(selected.tmdb_id, selected.type) }}
-          onMarkAsWatched={async (opts) => { await markWatched(selected.tmdb_id, selected.type, opts) }}
-        />,
-        document.body
-      )}
     </div>
   )
 }

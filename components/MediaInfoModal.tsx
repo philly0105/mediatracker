@@ -355,10 +355,22 @@ export default function MediaInfoModal({
       ? `${iptvBase}/?q=${encodeURIComponent(item.title)}#movies`
       : null
 
+  // F-36: the footer used to render up to five solid pine buttons, every one of
+  // them Button's default `primary`, with no hierarchy at all. Exactly one solid
+  // button now: the contextual next action, which is tracking episodes when the
+  // show is cached locally and otherwise marking it watched. Nothing is primary
+  // once it has been watched — there is no next step to point at.
+  const trackable = item.type === 'show' && !!details?.media_id
+  const primaryAction: 'track' | 'watched' | null = trackable
+    ? 'track'
+    : details?.isWatched
+      ? null
+      : 'watched'
+
   if (!mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{ background: 'var(--scrim)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)' }}>
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -656,10 +668,11 @@ export default function MediaInfoModal({
           {currentPriority || details?.isWatchlisted ? (
             currentPriority || onRemoveFromWatchlist ? (
               <Button
+                variant="ghost"
+                tone="destructive"
                 disabled={loading || actioning !== null}
                 onClick={handleRemoveClick}
                 style={{ flex: 1 }}
-                className="hover:!bg-rose-600 hover:!border-rose-500 hover:!text-white"
               >
                 {actioning === 'remove' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -670,6 +683,7 @@ export default function MediaInfoModal({
               </Button>
             ) : (
               <Button
+                variant="ghost"
                 disabled
                 style={{ flex: 1, opacity: 0.6 }}
               >
@@ -679,10 +693,10 @@ export default function MediaInfoModal({
             )
           ) : (
             <Button
+              variant="ghost"
               disabled={loading || actioning !== null}
               onClick={handleWatchlistClick}
               style={{ flex: 1 }}
-              className="hover:!bg-violet-600 hover:!border-violet-500 hover:!text-white"
             >
               {actioning === 'watchlist' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -698,15 +712,12 @@ export default function MediaInfoModal({
               disabled={loading || actioning !== null}
               onClick={() => handleWatchedClick({ rewatch: true })}
               // This used to be a permanently disabled "Already Watched" chip, so
-              // it carried a dimmed opacity. It is a real action now — leave the
-              // teal "you have seen this" tint but let Button own the opacity, or
-              // an enabled control keeps reading as greyed out.
-              style={{
-                flex: 1,
-                background: 'var(--teal-tint-bg)',
-                border: '1px solid var(--teal-tint-border)',
-                color: 'var(--teal-300)',
-              }}
+              // it carried a dimmed opacity. It is a real action now — the teal
+              // "you have seen this" tint is `tone="success"`, and Button owns the
+              // opacity, or an enabled control keeps reading as greyed out.
+              variant="ghost"
+              tone="success"
+              style={{ flex: 1 }}
             >
               {actioning === 'watched' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -717,10 +728,10 @@ export default function MediaInfoModal({
             </Button>
           ) : (
             <Button
+              variant={primaryAction === 'watched' ? 'primary' : 'ghost'}
               disabled={loading || actioning !== null}
               onClick={() => handleWatchedClick()}
               style={{ flex: 1 }}
-              className="hover:!bg-emerald-600 hover:!border-emerald-500 hover:!text-white"
             >
               {actioning === 'watched' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -736,14 +747,8 @@ export default function MediaInfoModal({
               disabled={loading || actioning !== null}
               onClick={handleFollowToggle}
               fullWidth
-              style={{
-                ...(details?.isFollowed ? {
-                  background: 'var(--teal-tint-bg)',
-                  borderColor: 'var(--teal-tint-border)',
-                  color: 'var(--teal-300)',
-                } : {})
-              }}
-              className={details?.isFollowed ? "hover:!bg-rose-600/10 hover:!border-rose-500/30 hover:!text-rose-400" : "hover:!bg-teal-600 hover:!border-teal-500 hover:!text-white"}
+              variant="ghost"
+              tone={details?.isFollowed ? 'success' : 'default'}
             >
               {actioning === 'follow' ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -763,7 +768,9 @@ export default function MediaInfoModal({
               href={`/show/${details.media_id}`}
               {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
               onNavigate={dismissOnNavigate}
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm text-[var(--violet-300)] bg-[var(--violet-tint-bg)] border border-[var(--violet-tint-border)] hover:bg-violet-600 hover:border-violet-500 hover:text-white transition-colors"
+              // Not a Button, but it is one of the footer's actions, so it takes
+              // the same `.btn-*` classes rather than a hand-rolled copy of them.
+              className={`btn ${primaryAction === 'track' ? 'btn-primary' : 'btn-ghost'} w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm`}
             >
               <ListVideo className="w-4 h-4" />
               <span>Track Episodes</span>
@@ -771,9 +778,9 @@ export default function MediaInfoModal({
           )}
 
           <Button
+            variant="ghost"
             onClick={() => setShowSimilar(true)}
             fullWidth
-            className="hover:!bg-violet-600 hover:!border-violet-500 hover:!text-white"
           >
             <Sparkles className="w-4 h-4" />
             <span>Similar {item.type === 'movie' ? 'Movies' : 'TV Shows'}</span>

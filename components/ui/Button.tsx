@@ -1,7 +1,11 @@
-import React, { useState } from 'react'
+import React from 'react'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'ghost' | 'accent' | 'link'
+  /** Semantic colour on top of `variant`. Exists so destructive actions stop
+   *  being styled as the page's primary affirmative action and then patched
+   *  with `hover:!bg-rose-600` at the call site. */
+  tone?: 'default' | 'destructive' | 'success'
   size?: 'sm' | 'md' | 'lg'
   icon?: string
   iconRight?: string
@@ -11,6 +15,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({
   children,
   variant = 'primary',
+  tone = 'default',
   size = 'md',
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   icon,
@@ -20,49 +25,28 @@ export function Button({
   fullWidth = false,
   onClick,
   style,
+  className,
   ...rest
 }: ButtonProps) {
-  const [hover, setHover] = useState(false)
-
   const pads = {
     sm: { padding: '7px 14px', fontSize: 'var(--text-sm)' },
     md: { padding: '10px 20px', fontSize: 'var(--text-base)' },
     lg: { padding: '12px 26px', fontSize: 'var(--text-md)' },
   }[size]
 
-  const variants = {
-    primary: {
-      background: hover && !disabled ? 'var(--btn-primary-bg-hover)' : 'var(--btn-primary-bg)',
-      color: 'var(--btn-primary-fg)',
-      border: '1px solid transparent',
-    },
-    ghost: {
-      background: hover && !disabled ? 'var(--btn-ghost-bg-hover)' : 'var(--btn-ghost-bg)',
-      color: 'var(--text-primary)',
-      border: '1px solid var(--border-default)',
-      backdropFilter: 'blur(var(--blur-md))',
-    },
-    accent: {
-      background: hover && !disabled ? 'var(--violet-tint-border)' : 'var(--violet-tint-bg)',
-      color: 'var(--violet-300)',
-      border: '1px solid var(--violet-tint-border)',
-    },
-    link: {
-      background: hover ? 'var(--btn-ghost-bg)' : 'transparent',
-      color: hover ? 'var(--text-primary)' : 'var(--text-secondary)',
-      border: '1px solid transparent',
-    },
-  }[variant]
-
-  // The hover handlers sit after {...rest} on purpose. They used to come first,
-  // so any caller passing onMouseEnter or onMouseLeave won the spread and
-  // silently killed hover styling on that button with no error — the version
-  // below composes instead, running both.
+  // Variant colours and their hover states are `.btn-*` in globals.css. They
+  // were a `useState(hover)` inline style, which meant a render on every pointer
+  // enter/leave and — since the hover background was inline — callers could only
+  // override it with `!important`. Moving to a class also drops the composed
+  // onMouseEnter/onMouseLeave handlers that existed purely to keep that state.
   return (
     <button
       type="button"
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
+      className={['btn', `btn-${variant}`, tone !== 'default' && `btn-tone-${tone}`, className]
+        .filter(Boolean)
+        .join(' ')}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -74,15 +58,11 @@ export function Button({
         borderRadius: 'var(--radius-sm)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.4 : 1,
-        transition: 'background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-out-expo)',
         whiteSpace: 'nowrap',
         ...pads,
-        ...variants,
         ...style,
       }}
       {...rest}
-      onMouseEnter={(e) => { setHover(true); rest.onMouseEnter?.(e) }}
-      onMouseLeave={(e) => { setHover(false); rest.onMouseLeave?.(e) }}
     >
       {children}
     </button>

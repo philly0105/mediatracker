@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Check, Loader2, Play, Tv } from 'lucide-react'
 import { findNextUp } from '@/lib/nextUp'
@@ -154,7 +155,7 @@ export default function ContinueWatchingRow({ shows }: Props) {
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-3 pl-2 pr-2 [scrollbar-width:thin]">
-        {items.map((show) => {
+        {items.map((show, index) => {
           const watchedKeys = new Set(show.watchedEpisodeKeys)
           const { watched, total } = getEpisodeStats(show.seasons, watchedKeys)
           const progressPercent = total > 0 ? (watched / total) * 100 : 0
@@ -171,13 +172,24 @@ export default function ContinueWatchingRow({ shows }: Props) {
                 className="flex min-w-0 flex-1 gap-3 p-3 pr-2"
                 aria-label={`Open ${show.media.title}`}
               >
+                {/* Was a CSS `background-image`, the only poster in the app not
+                    going through next/image: no AVIF/WebP, no responsive sizes,
+                    no lazy loading, and it bypassed the remotePatterns allowlist
+                    entirely. The first two are above the fold on the dashboard,
+                    so they carry `priority` instead. */}
                 <div
-                  className="h-24 w-16 shrink-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-void)] bg-cover bg-center shadow-md shadow-black/30 transition-transform duration-500 group-hover:scale-[1.03]"
-                  style={show.media.poster_url ? { backgroundImage: `url(${show.media.poster_url})` } : undefined}
+                  className="relative h-24 w-16 shrink-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-void)] shadow-md shadow-black/30 transition-transform duration-500 group-hover:scale-[1.03]"
                   aria-hidden={Boolean(show.media.poster_url)}
                 >
                   {show.media.poster_url ? (
-                    <span className="sr-only">{show.media.title}</span>
+                    <Image
+                      src={show.media.poster_url}
+                      alt=""
+                      fill
+                      sizes="64px"
+                      priority={index < 2}
+                      style={{ objectFit: 'cover' }}
+                    />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-zinc-700">
                       <Tv className="h-5 w-5" />

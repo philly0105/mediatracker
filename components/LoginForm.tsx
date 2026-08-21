@@ -27,15 +27,17 @@ export default function LoginForm({ signupEnabled }: { signupEnabled: boolean })
   }
 
   return (
-    <AuthShell title="DorfMovies" subtitle="Sign in to your account" onSubmit={handleSubmit}>
+    <AuthShell title="Welcome back" subtitle="Sign in to your account" onSubmit={handleSubmit}>
       {(error || callbackError) && <AuthError>{error || callbackError}</AuthError>}
 
       <div className="space-y-3">
         <AuthInput
+          label="Email"
           type="email" value={email} onChange={e => setEmail(e.target.value)}
           placeholder="Email" autoComplete="email" required
         />
         <AuthInput
+          label="Password"
           type="password" value={password} onChange={e => setPassword(e.target.value)}
           placeholder="Password" autoComplete="current-password" required
         />

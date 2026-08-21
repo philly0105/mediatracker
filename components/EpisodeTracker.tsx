@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { Season, Episode, EpisodeProgress } from '@/types'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatAirDate, isUnaired } from '@/lib/formatDate'
 
 interface Props {
@@ -13,6 +13,30 @@ interface Props {
   onProgressChange: (seasonId: string, episode: number | number[], watched: boolean) => void
 }
 
+/**
+ * Clicking an episode is never a single toggle: clicking E10 marks E1–E10, and
+ * clicking a watched E5 unmarks E5 through the end of the season. Nothing in
+ * the UI said so — the tooltip carried the episode name — so this spells the
+ * range out in both the tooltip and the accessible name.
+ */
+function cascadeLabel(
+  seasonNumber: number,
+  ep: number,
+  watched: boolean,
+  episodeCount: number,
+  name?: string | null,
+) {
+  const suffix = name ? ` (${name})` : ''
+  if (!watched) {
+    return ep === 1
+      ? `Mark S${seasonNumber} E1 watched${suffix}`
+      : `Mark S${seasonNumber} E1–E${ep} watched${suffix}`
+  }
+  return ep === episodeCount
+    ? `Unmark S${seasonNumber} E${ep}${suffix}`
+    : `Unmark S${seasonNumber} E${ep}–E${episodeCount}${suffix}`
+}
+
 const glassCard = {
   background: 'var(--glass-card)',
   border: '1px solid var(--border-subtle)',
@@ -20,6 +44,7 @@ const glassCard = {
 
 export default function EpisodeTracker({ seasons, progress, episodes, onProgressChange }: Props) {
   const [open, setOpen] = useState<string | null>(seasons[0]?.id ?? null)
+  const panelIdBase = useId()
 
   const watchedSet = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
   const episodeMap = new Map((episodes ?? []).map(e => [`${e.season_id}-${e.episode_number}`, e]))
@@ -82,9 +107,11 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
         // grid only works when every cell is three characters wide.
         const hasTitles = (episodes ?? []).some(e => e.season_id === season.id && e.name)
         return (
-          <div key={season.id} className="rounded-lg overflow-hidden backdrop-blur-md" style={glassCard}>
+          <div key={season.id} className="rounded-lg overflow-hidden" style={glassCard}>
             <button
               onClick={() => setOpen(isOpen ? null : season.id)}
+              aria-expanded={isOpen}
+              aria-controls={`${panelIdBase}-${season.id}`}
               className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
               style={{ background: 'transparent' }}
               onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)')}
@@ -107,7 +134,7 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
               </div>
             </button>
             {isOpen && (
-              <div className="px-4 pb-4 pt-1 space-y-3"
+              <div id={`${panelIdBase}-${season.id}`} className="px-4 pb-4 pt-1 space-y-3"
                 style={{ borderTop: '1px solid var(--border-subtle)' }}>
                 <div className="pt-3">
                   <button
@@ -128,18 +155,28 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                   const meta = episodeMap.get(`${season.id}-${ep}`)
                   const airLabel = meta?.air_date ? formatAirDate(meta.air_date) : null
                   const unaired = isUnaired(meta?.air_date ?? null)
+                  const label = cascadeLabel(season.season_number, ep, watched, season.episode_count, meta?.name)
                   return (
                     <button
                       key={ep}
                       onClick={() => handleEpisodeClick(season.id, ep, watched)}
-                      title={meta?.name ?? undefined}
+                      aria-pressed={watched}
+                      aria-label={label}
+                      title={label}
                       className="flex items-center gap-2 px-3 py-2 rounded-sm text-left transition-colors"
                       style={{
-                        background: watched ? 'var(--teal-tint-bg)' : 'rgba(255,255,255,0.04)',
+                        background: watched ? 'var(--teal-tint-bg)' : 'var(--btn-ghost-bg)',
                         border: watched ? '1px solid var(--teal-tint-border)' : '1px solid var(--border-subtle)',
                         opacity: unaired && !watched ? 0.55 : 1,
                       }}
                     >
+                      {/* Both tints sit under 3:1 against the card, so watched
+                          state was carried by colour alone. */}
+                      <Check
+                        aria-hidden="true"
+                        className="w-3.5 h-3.5 shrink-0"
+                        style={{ color: 'var(--teal-400)', visibility: watched ? 'visible' : 'hidden' }}
+                      />
                       <span className="text-sm font-medium shrink-0" style={{ color: watched ? 'var(--teal-400)' : 'var(--text-muted)' }}>
                         E{ep}
                       </span>

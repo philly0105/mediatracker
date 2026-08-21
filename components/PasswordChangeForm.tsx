@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, KeyRound, CheckCircle2, AlertCircle } from 'lucide-react'
 
@@ -9,6 +9,7 @@ export default function PasswordChangeForm() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const fieldId = useId()
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,8 +60,9 @@ export default function PasswordChangeForm() {
 
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 pl-1">New Password</label>
+          <label htmlFor={`${fieldId}-new`} className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 pl-1">New Password</label>
           <input
+            id={`${fieldId}-new`}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -70,8 +72,9 @@ export default function PasswordChangeForm() {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 pl-1">Confirm Password</label>
+          <label htmlFor={`${fieldId}-confirm`} className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 pl-1">Confirm Password</label>
           <input
+            id={`${fieldId}-confirm`}
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}

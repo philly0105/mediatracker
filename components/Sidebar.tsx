@@ -14,13 +14,15 @@ import {
   Layers,
   BarChart3,
   Settings,
-  User,
   MoreHorizontal,
   X,
   type LucideIcon,
 } from 'lucide-react'
 import { NavItem } from './ui/NavItem'
+import { Avatar } from './ui/Avatar'
+import { Kbd } from './ui/Kbd'
 import { openSearchOverlay } from '@/lib/searchOverlayBus'
+import { useModal } from '@/lib/useModal'
 
 interface SidebarProps {
   userEmail?: string | null
@@ -69,7 +71,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     <>
       {/* Desktop Sidebar */}
       <aside
-        className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 z-40 p-6 select-none"
+        className="hidden md:flex flex-col w-[var(--sidebar-width)] fixed inset-y-0 left-0 z-40 p-6 select-none"
         style={{
           background: 'var(--bg-base)',
           borderRight: '1px solid var(--border-subtle)',
@@ -91,7 +93,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         >
           <Search className="w-4 h-4 text-zinc-500 flex-shrink-0" />
           <span className="flex-1 text-sm text-zinc-500 truncate">Search…</span>
-          <kbd className="inline-flex items-center text-[10px] font-semibold text-zinc-500 border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
+          <Kbd keys="K" className="inline-flex items-center text-[10px] font-semibold text-zinc-500 border border-white/10 rounded px-1.5 py-0.5" />
         </button>
 
         {/* Navigation Items */}
@@ -133,12 +135,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 border: `1px solid ${pathname === '/settings' ? 'var(--border-default)' : 'var(--border-faint)'}`,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- external SVG avatar generated dynamically by DiceBear */}
-              <img
-                src={'https://api.dicebear.com/7.x/notionists/svg?seed=' + encodeURIComponent(userEmail)}
-                alt=""
-                style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--zinc-800)', border: '1px solid var(--border-subtle)' }}
-              />
+              <Avatar email={userEmail} size={32} />
               <p
                 className="flex-1"
                 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
@@ -158,7 +155,6 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-4 flex items-center justify-between"
         style={{
           background: 'rgba(36, 31, 23, 0.9)',
-          backdropFilter: 'blur(var(--blur-md))',
           borderBottom: '1px solid var(--border-subtle)',
         }}
       >
@@ -185,12 +181,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
               border: '1px solid var(--border-subtle)',
             }}
           >
-            {userEmail ? (
-              /* eslint-disable-next-line @next/next/no-img-element -- external SVG avatar generated dynamically by DiceBear */
-              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(userEmail)}`} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
-            )}
+            <Avatar email={userEmail} size={30} />
           </Link>
         </div>
       </div>
@@ -200,67 +191,24 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         {moreOpen && (
           <>
             <motion.div
-              className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              className="md:hidden fixed inset-0 z-40 bg-black/60"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMoreOpen(false)}
             />
-            <motion.div
-              className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pt-4 pb-safe-bottom select-none"
-              style={{
-                background: 'var(--glass-panel)',
-                borderTop: '1px solid var(--border-subtle)',
-                borderTopLeftRadius: 'var(--radius-2xl)',
-                borderTopRightRadius: 'var(--radius-2xl)',
-              }}
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-            >
-              <div className="flex items-center justify-between mb-4 px-1">
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>More</span>
-                <button
-                  onClick={() => setMoreOpen(false)}
-                  aria-label="Close menu"
-                  className="p-1 rounded-sm hover:text-white transition-colors"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="grid grid-cols-4 gap-2 pb-4">
-                {moreDrawerItems.map((item) => {
-                  const isActive = isNavActive(pathname, item.href)
-                  const Icon = item.icon
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={() => setMoreOpen(false)}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-md text-[10px] font-medium transition-colors"
-                      style={{
-                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                        border: `1px solid ${isActive ? 'var(--border-default)' : 'transparent'}`,
-                      }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }} />
-                      <span>{item.name}</span>
-                    </Link>
-                  )
-                })}
-              </div>
-            </motion.div>
+            <MoreDrawerPanel
+              items={moreDrawerItems}
+              pathname={pathname}
+              onClose={() => setMoreOpen(false)}
+            />
           </>
         )}
       </AnimatePresence>
 
       {/* Mobile Bottom Navigation Bar */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-4 py-2 flex items-center justify-around pb-safe-bottom select-none"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 px-4 pt-2 flex items-center justify-around pb-safe-bottom select-none"
         style={{
           background: 'var(--bg-bar)',
           borderTop: '1px solid var(--border-subtle)',
@@ -315,5 +263,80 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </button>
       </nav>
     </>
+  )
+}
+
+/**
+ * Split out of the sidebar so it mounts only while the drawer is open — that
+ * is what scopes useModal's body scroll lock to the drawer's lifetime.
+ *
+ * It previously had none of this: no dialog role, no Escape, no focus trap and
+ * no scroll lock, while every other overlay in the app was already wired to
+ * useModal.
+ */
+function MoreDrawerPanel({
+  items,
+  pathname,
+  onClose,
+}: {
+  items: NavEntry[]
+  pathname: string
+  onClose: () => void
+}) {
+  const { containerRef } = useModal(onClose)
+
+  return (
+    <motion.div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="More navigation"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pt-4 pb-safe-bottom select-none"
+      style={{
+        background: 'var(--glass-panel)',
+        borderTop: '1px solid var(--border-subtle)',
+        borderTopLeftRadius: 'var(--radius-2xl)',
+        borderTopRightRadius: 'var(--radius-2xl)',
+      }}
+      initial={{ y: '100%' }}
+      animate={{ y: 0 }}
+      exit={{ y: '100%' }}
+      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+    >
+      <div className="flex items-center justify-between mb-4 px-1">
+        <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>More</span>
+        <button
+          onClick={onClose}
+          aria-label="Close menu"
+          className="p-1 rounded-sm hover:text-white transition-colors"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="grid grid-cols-4 gap-2 pb-4">
+        {items.map((item) => {
+          const isActive = isNavActive(pathname, item.href)
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={onClose}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-md text-[10px] font-medium transition-colors"
+              style={{
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                background: isActive ? 'var(--btn-ghost-bg)' : 'transparent',
+                border: `1px solid ${isActive ? 'var(--border-default)' : 'transparent'}`,
+              }}
+            >
+              <Icon className="w-5 h-5" style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }} />
+              <span>{item.name}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </motion.div>
   )
 }

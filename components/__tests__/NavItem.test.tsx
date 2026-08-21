@@ -11,15 +11,21 @@ describe('NavItem', () => {
     expect(getByText('Dashboard')).toBeInTheDocument()
   })
 
-  it('applies active styles when active prop is true', () => {
+  it('marks the active entry for CSS and for assistive tech', () => {
     const { getByText } = render(
       <NavItem icon={Home} label="Dashboard" active href="/dashboard" />
     )
+    // The active treatment is `.nav-item[aria-current='page']` in globals.css,
+    // so the attribute is the contract — this used to assert the inline style
+    // that a `useState(hover)` implementation produced.
     const linkElement = getByText('Dashboard').closest('a')
-    expect(linkElement).toHaveStyle({
-      color: 'var(--text-primary)',
-      background: 'rgba(255,255,255,0.05)',
-    })
+    expect(linkElement).toHaveAttribute('aria-current', 'page')
+    expect(linkElement).toHaveClass('nav-item')
+  })
+
+  it('leaves aria-current off an inactive entry', () => {
+    const { getByRole } = render(<NavItem icon={Home} label="Dashboard" href="/dashboard" />)
+    expect(getByRole('link')).not.toHaveAttribute('aria-current')
   })
 
   it('triggers onClick when clicked', () => {

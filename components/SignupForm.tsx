@@ -69,18 +69,22 @@ export default function SignupForm() {
 
       <div className="space-y-3">
         <AuthInput
+          label="Email"
           type="email" value={email} onChange={e => setEmail(e.target.value)}
           placeholder="Email" autoComplete="email" required
         />
         <AuthInput
+          label="Password"
           type="password" value={password} onChange={e => setPassword(e.target.value)}
           placeholder="Password" autoComplete="new-password" required minLength={8}
         />
         <AuthInput
+          label="Confirm password"
           type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
           placeholder="Confirm password" autoComplete="new-password" required
         />
         <AuthInput
+          label="Invite code"
           type="text" value={inviteCode} onChange={e => setInviteCode(e.target.value)}
           placeholder="Invite code" autoComplete="off" required
         />

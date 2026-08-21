@@ -1,15 +1,71 @@
 'use client'
+import type { ReactNode } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend, type PieLabelRenderProps } from 'recharts'
 import Link from 'next/link'
+import { Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
-const COLORS = ['#7c9a6a', '#d3a85c', '#c4805f', '#6f9089', '#c8bda7', '#97b27e', '#e6c489', '#d8a18a']
+// Tokens rather than the hex literals these used to be: `var()` resolves in SVG
+// presentation attributes, so the charts retheme with the rest of the app
+// instead of drifting from it.
+const COLORS = [
+  'var(--green-500)', 'var(--amber-400)', 'var(--rust-400)', 'var(--teal-400)',
+  'var(--zinc-300)', 'var(--green-400)', 'var(--amber-300)', 'var(--rust-300)',
+]
+
+const AXIS_TICK = { fill: 'var(--zinc-400)', fontSize: 11 }
 
 const tooltipStyle = {
   background: 'rgba(27,23,17,0.95)',
   border: '1px solid rgba(236,231,218,0.1)',
   borderRadius: '4px',
-  color: '#e9e2d3',
+  color: 'var(--zinc-100)',
+}
+
+/**
+ * Recharts emits raw SVG with no accessible name and no text alternative, so
+ * every panel on this page was silently empty for a screen reader. The chart
+ * carries a one-line summary as an image, and the same numbers follow as a real
+ * table that only assistive tech sees.
+ */
+function ChartFigure({
+  summary,
+  columns,
+  rows,
+  children,
+}: {
+  summary: string
+  columns: string[]
+  rows: Array<Array<string | number>>
+  children: ReactNode
+}) {
+  return (
+    <>
+      <div role="img" aria-label={summary}>{children}</div>
+      <table className="sr-only">
+        <caption>{summary}</caption>
+        <thead>
+          <tr>{columns.map((col) => <th key={col} scope="col">{col}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={String(row[0])}>
+              {row.map((cell, i) => (
+                i === 0
+                  ? <th key={i} scope="row">{cell}</th>
+                  : <td key={i}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  )
+}
+
+function summarise(pairs: Array<[string, number]>, unit: string) {
+  if (pairs.length === 0) return `No ${unit} recorded yet.`
+  return pairs.slice(0, 5).map(([label, value]) => `${label} ${value}`).join(', ')
 }
 
 interface StatsData {
@@ -68,21 +124,38 @@ export default function StatsCharts({ data }: { data: StatsData }) {
             </div>
           )}
         </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={data.monthlyActivity}>
-            <XAxis dataKey="month" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-            <Legend wrapperStyle={{ color: '#9d9079', fontSize: 12 }} />
-            <Bar dataKey="movies" fill="#7c9a6a" name="Movies" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="episodes" fill="#6f9089" name="Episodes" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <ChartFigure
+          summary={`Activity, ${data.activityLabel}: ${summarise(
+            data.monthlyActivity.map((m) => [m.month, m.movies + m.episodes]),
+            'activity'
+          )}`}
+          columns={['Month', 'Movies', 'Episodes']}
+          rows={data.monthlyActivity.map((m) => [m.month, m.movies, m.episodes])}
+        >
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={data.monthlyActivity}>
+              <XAxis dataKey="month" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+              <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+              <Legend wrapperStyle={{ color: 'var(--zinc-400)', fontSize: 12 }} />
+              <Bar dataKey="movies" fill="var(--green-500)" name="Movies" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="episodes" fill="var(--teal-400)" name="Episodes" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartFigure>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Genres</h2>
+          <ChartFigure
+            summary={`Genre breakdown: ${summarise(
+              data.genreBreakdown.map((g) => [g.genre, g.count]),
+              'genres'
+            )}`}
+            columns={['Genre', 'Titles']}
+            rows={data.genreBreakdown.slice(0, 8).map((g) => [g.genre, g.count])}
+          >
           <ResponsiveContainer width="100%" height={280}>
             <PieChart margin={{ top: 25, right: 35, bottom: 25, left: 35 }}>
               <Pie
@@ -92,7 +165,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={82}
-                stroke="#1b1711"
+                stroke="var(--bg-raised)"
                 strokeWidth={1.5}
                 label={({ x, y, name, index, textAnchor }: PieLabelRenderProps) => (
                   <text
@@ -116,18 +189,28 @@ export default function StatsCharts({ data }: { data: StatsData }) {
               <Tooltip contentStyle={tooltipStyle} />
             </PieChart>
           </ResponsiveContainer>
+          </ChartFigure>
         </Card>
 
         <Card>
           <h2 className="text-lg font-semibold tracking-tight mb-5 text-white">Ratings</h2>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data.ratingDist} margin={{ top: 15, right: 10, bottom: 10, left: -15 }}>
-              <XAxis dataKey="rating" tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#9d9079', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-              <Bar dataKey="count" fill="#d3a85c" name="Titles" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <ChartFigure
+            summary={`Rating distribution: ${summarise(
+              data.ratingDist.map((r) => [`${r.rating} stars`, r.count]),
+              'ratings'
+            )}`}
+            columns={['Rating', 'Titles']}
+            rows={data.ratingDist.map((r) => [`${r.rating} stars`, r.count])}
+          >
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={data.ratingDist} margin={{ top: 15, right: 10, bottom: 10, left: -15 }}>
+                <XAxis dataKey="rating" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                <Bar dataKey="count" fill="var(--amber-400)" name="Titles" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartFigure>
         </Card>
       </div>
 
@@ -137,8 +220,8 @@ export default function StatsCharts({ data }: { data: StatsData }) {
           {data.topRated.map((entry) => (
             <div key={`${entry.type}-${entry.title}`} className="flex items-center justify-between gap-4">
               <span className="text-zinc-200 text-sm truncate">{entry.title}</span>
-              <span className="text-[var(--amber-400)] text-sm font-semibold tabular-nums shrink-0">
-                ★ {entry.rating}
+              <span className="flex items-center gap-1 text-[var(--amber-400)] text-sm font-semibold tabular-nums shrink-0">
+                <Star className="w-3.5 h-3.5 fill-current" /> {entry.rating}
               </span>
             </div>
           ))}

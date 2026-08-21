@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { Star } from 'lucide-react'
 
 interface Props {
   value: number | null
@@ -41,13 +42,22 @@ export default function RatingStars({ value, onChange, readOnly = false }: Props
         const half = !full && display >= star - 0.5
         return (
           <div key={star} className={boxClass}>
-            <span className="relative w-6 h-6">
-              <span className="text-2xl leading-none" style={{ color: 'var(--zinc-700)' }}>★</span>
+            {/* Lucide, not the ★ character: the glyph renders differently on
+                every platform and cannot be half-filled cleanly. The empty star
+                was --zinc-700 on the card surface — 1.52:1, effectively
+                invisible, so an unrated row gave no hint it was rateable. */}
+            <span className="relative w-6 h-6 block">
+              <Star className="w-6 h-6" style={{ color: 'var(--zinc-500)' }} />
               {(full || half) && (
                 <span
-                  className="absolute inset-0 text-2xl leading-none overflow-hidden"
-                  style={{ width: full ? '100%' : '50%', color: 'var(--amber-400)' }}
-                >★</span>
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ width: full ? '100%' : '50%' }}
+                >
+                  <Star
+                    className="w-6 h-6"
+                    style={{ color: 'var(--amber-400)', fill: 'var(--amber-400)' }}
+                  />
+                </span>
               )}
             </span>
             {interactive && (

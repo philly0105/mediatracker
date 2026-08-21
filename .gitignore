@@ -48,3 +48,6 @@ yarn-error.log*
 
 # git worktrees
 .worktrees/
+
+# local agent tooling
+.claude/

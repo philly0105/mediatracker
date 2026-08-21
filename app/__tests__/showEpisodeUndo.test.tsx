@@ -2,8 +2,9 @@ import { Suspense } from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import ShowDetailPage from '@/app/show/[id]/page'
+import ShowDetailPage from '@/app/(app)/show/[id]/page'
 import { ToastProvider } from '@/components/ToastProvider'
+import { MediaModalProvider } from '@/components/MediaModalProvider'
 
 type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
   initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
@@ -45,9 +46,11 @@ async function renderPage() {
   await act(async () => {
     render(
       <ToastProvider>
-        <Suspense fallback={null}>
-          <ShowDetailPage params={Promise.resolve({ id: 'm1' })} />
-        </Suspense>
+        <MediaModalProvider>
+          <Suspense fallback={null}>
+            <ShowDetailPage params={Promise.resolve({ id: 'm1' })} />
+          </Suspense>
+        </MediaModalProvider>
       </ToastProvider>
     )
   })

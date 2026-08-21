@@ -4,10 +4,9 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import EditEntryModal from './EditEntryModal'
 import type { WatchEntry } from '@/types'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaModal } from '@/components/MediaModalProvider'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { Pencil, Trash2, Loader2 } from 'lucide-react'
-import MediaInfoModal from './MediaInfoModal'
 import SelectableOverlay from './SelectableOverlay'
 import { MediaRow } from './ui/MediaRow'
 import { PosterCard } from './ui/PosterCard'
@@ -31,12 +30,19 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
   const router = useRouter()
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showInfo, setShowInfo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   // Batched across every card on the page — see lib/tmdbRatings.
   const tmdbRating = useTmdbRating(media.tmdb_id, media.type, media.vote_average ?? null)
 
-  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
+  const { openMedia } = useMediaModal()
+
+  // Marking watched from the modal changes what this row renders, so the route
+  // is refreshed; adding to the watchlist does not.
+  function openDetails() {
+    openMedia(mediaAsResult, {
+      onChanged: (change) => { if (change === 'watched') router.refresh() },
+    })
+  }
 
   const mediaAsResult = mediaToResult(media, { vote_average: tmdbRating })
 
@@ -67,13 +73,13 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
             year={media.release_year ?? undefined}
             posterUrl={media.poster_url}
             rating={rating}
-            onClick={() => { if (!showInfo) setShowInfo(true) }}
+            onClick={openDetails}
           />
           {/* Edit/delete float OUTSIDE the PosterCard (its root is a <button>;
               nesting buttons is invalid HTML). Same hover-chip treatment as the
               watchlist cards: always visible on touch, hover-revealed on md+. */}
           <div
-            className="absolute top-2 right-2 z-10 flex gap-1.5 bg-black/60 backdrop-blur-md p-1 rounded-sm border border-[var(--border-subtle)] opacity-100 md:opacity-0 md:group-hover/poster:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200"
+            className="absolute top-2 right-2 z-10 flex gap-1.5 bg-black/60 p-1 rounded-sm border border-[var(--border-subtle)] opacity-100 md:opacity-0 md:group-hover/poster:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -106,7 +112,7 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
           review={entry.review}
           watchedAt={entry.watched_at}
           tmdbRating={tmdbRating}
-          onClick={() => { if (!showInfo) setShowInfo(true) }}
+          onClick={openDetails}
           actions={
             <div className="flex items-center gap-1 shrink-0">
               <button
@@ -136,18 +142,6 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
           entry={entry}
           onClose={() => setShowEditModal(false)}
           onSaved={onUpdated}
-        />,
-        document.body
-      )}
-      {showInfo && createPortal(
-        <MediaInfoModal
-          item={mediaAsResult}
-          onClose={() => setShowInfo(false)}
-          onAddToWatchlist={async () => { await addToWatchlist(media.tmdb_id, media.type) }}
-          onMarkAsWatched={async (opts) => {
-            await markWatched(media.tmdb_id, media.type, opts)
-            router.refresh()
-          }}
         />,
         document.body
       )}

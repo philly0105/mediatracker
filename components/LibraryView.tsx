@@ -4,9 +4,11 @@ import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { FilterPills } from '@/components/FilterPills'
-import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard } from 'lucide-react'
+import { Select } from '@/components/ui/Select'
+import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard, SearchX } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ClearFilters } from '@/components/ui/ClearFilters'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
 import {
@@ -22,6 +24,9 @@ import { useToast } from '@/components/ToastProvider'
 
 // Matches the watchlist's page size.
 const PAGE_SIZE = 24
+
+// How stale the list has to be before returning to the tab re-pulls it.
+const REFETCH_STALE_MS = 30_000
 
 const sortOptions: { id: WatchEntrySort; label: string }[] = [
   { id: 'recent', label: 'Recently watched' },
@@ -51,7 +56,7 @@ export default function LibraryView() {
   // bookmarkable and survives reloads; state stays the source of truth and the
   // URL is a mirror. Values are re-validated against the option sets below so
   // a malformed param in a shared link falls back to the default.
-  const [filters, setFilter] = useUrlFilters(FILTER_DEFAULTS)
+  const [filters, setFilter, resetFilters] = useUrlFilters(FILTER_DEFAULTS)
   const searchQuery = filters.q
   const sortBy = sortOptions.some((o) => o.id === filters.sort)
     ? (filters.sort as WatchEntrySort)
@@ -69,6 +74,7 @@ export default function LibraryView() {
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const lastFetchedAt = useRef(0)
   const { schedule, cancel } = useDeferredAction()
   const { toast } = useToast()
 
@@ -83,6 +89,7 @@ export default function LibraryView() {
   )
 
   useEffect(() => {
+    lastFetchedAt.current = Date.now()
     fetchEntries()
       .then(setEntries)
       .finally(() => setLoading(false))
@@ -90,6 +97,7 @@ export default function LibraryView() {
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true)
+    lastFetchedAt.current = Date.now()
     fetchEntries()
       .then(setEntries)
       .finally(() => setRefreshing(false))
@@ -100,9 +108,15 @@ export default function LibraryView() {
   // would sit stale here until a manual reload. Refetching when the tab comes
   // back to the foreground is what makes the Refresh button a fallback rather
   // than something you have to remember to press.
+  //
+  // Gated on staleness: the response is the whole library, so an ungated
+  // listener re-downloaded all of it on every alt-tab. Nothing changes that
+  // fast, and the Refresh button covers the impatient case.
   useEffect(() => {
     function refetchIfVisible() {
       if (document.visibilityState !== 'visible') return
+      if (Date.now() - lastFetchedAt.current < REFETCH_STALE_MS) return
+      lastFetchedAt.current = Date.now()
       fetchEntries().then(setEntries).catch(() => {})
     }
     document.addEventListener('visibilitychange', refetchIfVisible)
@@ -240,35 +254,45 @@ export default function LibraryView() {
             />
             <FilterPills options={sortOptions} active={sortBy} onSelect={(id) => setFilter('sort', id)} />
             <FilterPills options={ratingOptions} active={ratingFilter} onSelect={(id) => setFilter('rating', id)} />
-            <select
+            <Select
+              label="Filter by genre"
               value={genreFilter}
               onChange={(e) => setFilter('genre', e.target.value)}
-              className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[140px]"
+              className="min-w-[140px]"
             >
               <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
               {genres.map((g) => (
                 <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
+              label="Filter by decade"
               value={decadeFilter}
               onChange={(e) => setFilter('decade', e.target.value)}
-              className="px-4 py-2 rounded-sm bg-[var(--surface-input)] border border-[var(--border-default)] text-sm font-semibold text-white focus:outline-none focus:border-[var(--border-focus)] appearance-none min-w-[120px]"
+              className="min-w-[120px]"
             >
               <option value="All" className="bg-[var(--bg-void)]">All Years</option>
               {decades.map((d) => (
                 <option key={d} value={String(d)} className="bg-[var(--bg-void)]">{d}s</option>
               ))}
-            </select>
+            </Select>
             <div className="w-full sm:w-64">
               <Input
                 icon={<Search className="w-4 h-4 text-zinc-500" />}
+                aria-label="Search your library"
                 placeholder="Search titles, director, cast..."
                 value={searchQuery}
                 onChange={(e) => setFilter('q', e.target.value)}
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
               />
             </div>
+            {/* Resets exactly the controls hasActiveFilters reports on, so the
+                chip's presence and its effect stay in step. Type, sort and the
+                grid/list toggle are view preferences, not narrowing filters,
+                and survive the clear. */}
+            {hasActiveFilters && (
+              <ClearFilters onClear={() => resetFilters(['q', 'genre', 'rating', 'decade'])} />
+            )}
             <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] self-start">
               <button
                 type="button"
@@ -360,12 +384,16 @@ export default function LibraryView() {
             />
           )}
           {entries.length > 0 && filteredEntries.length === 0 && (
-            <p className="text-zinc-400">
-              No logged titles match
-              {searchQuery.trim()
-                ? ` "${searchQuery}".`
-                : ' the active filters.'}
-            </p>
+            <EmptyState
+              size="compact"
+              icon={SearchX}
+              title={
+                searchQuery.trim()
+                  ? `No logged titles match "${searchQuery}"`
+                  : 'No logged titles match the active filters'
+              }
+              hint="Widen the filters, or clear them to see everything you have logged."
+            />
           )}
         </>
       )}

@@ -6,11 +6,10 @@ import Image from 'next/image'
 import { Dices, Info, X } from 'lucide-react'
 import type { WatchlistItem } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaModal } from '@/components/MediaModalProvider'
 import { useModal } from '@/lib/useModal'
 import { pickTonight } from '@/lib/tonightPick'
 import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
-import MediaInfoModal from '@/components/MediaInfoModal'
 import { FilterPills } from '@/components/FilterPills'
 import { Button } from '@/components/ui/Button'
 
@@ -40,9 +39,8 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
   const [loading, setLoading] = useState(true)
   const [budget, setBudget] = useState<string>('any')
   const [pick, setPick] = useState<WatchlistItem | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
   const { containerRef } = useModal(onClose)
-  const { markWatched } = useMediaActions()
+  const { openMedia } = useMediaModal()
 
   // Fetch every priority in parallel so the picker can weigh across all three
   // buckets, respecting the filters the page had on screen when it was opened.
@@ -84,6 +82,13 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
     setPick((prev) => pickTonight(pool, { budget, avoidId: prev?.id ?? null }))
   }, [pool, budget])
 
+  // Everything in the pool is already on the watchlist, so the modal's
+  // "Add to Watchlist" is deliberately a no-op rather than the provider default.
+  function showPickDetails() {
+    if (!pick?.media) return
+    openMedia(mediaToResult(pick.media), { onAddToWatchlist: async () => {} })
+  }
+
   function handleBudgetSelect(id: string) {
     setBudget(id)
     setPick((prev) => pickTonight(pool, { budget: id, avoidId: prev?.id ?? null }))
@@ -100,7 +105,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
   if (!mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md" style={{ background: 'var(--scrim)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)' }}>
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -210,7 +215,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
             <div className="py-10 text-center text-sm text-zinc-400">
               Nothing on your watchlist matches.
               {budget !== 'any' && (
-                <div className="mt-1 text-xs text-zinc-600">Try a longer time budget.</div>
+                <div className="mt-1 text-xs text-zinc-500">Try a longer time budget.</div>
               )}
             </div>
           )}
@@ -220,7 +225,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
                 <Dices className="w-4 h-4" />
                 <span>Reroll</span>
               </Button>
-              <Button onClick={() => setShowDetails(true)} style={{ flex: 1 }}>
+              <Button onClick={() => showPickDetails()} style={{ flex: 1 }}>
                 <Info className="w-4 h-4" />
                 <span>Details</span>
               </Button>
@@ -228,14 +233,6 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
           )}
         </div>
 
-        {showDetails && pick?.media && (
-          <MediaInfoModal
-            item={mediaToResult(pick.media)}
-            onClose={() => setShowDetails(false)}
-            onAddToWatchlist={async () => {}}
-            onMarkAsWatched={async (opts) => { await markWatched(pick.media!.tmdb_id, pick.media!.type, opts) }}
-          />
-        )}
       </motion.div>
     </div>,
     document.body

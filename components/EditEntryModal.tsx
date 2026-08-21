@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import RatingStars from './RatingStars'
 import type { WatchEntry } from '@/types'
 import { Loader2, X } from 'lucide-react'
@@ -28,6 +28,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
   const { containerRef } = useModal(onClose)
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [review, setReview] = useState(entry.review ?? '')
+  const fieldId = useId()
   const [watchedAt, setWatchedAt] = useState(entry.watched_at)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -61,8 +62,8 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style={{ background: 'var(--scrim)' }} onClick={(e) => { e.stopPropagation(); onClose(); }}>
-      <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Edit Watch Entry" className="w-full max-w-md p-6 space-y-5 rounded-[var(--radius-2xl)] relative backdrop-blur-xl" style={glassModal} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'var(--scrim)' }} onClick={(e) => { e.stopPropagation(); onClose(); }}>
+      <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Edit Watch Entry" className="w-full max-w-md p-6 space-y-5 rounded-[var(--radius-2xl)] relative" style={glassModal} onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3">
           {media.poster_url && (
             <Image src={media.poster_url} alt={media.title} width={64} height={96} className="w-16 h-auto rounded-[var(--radius-xl)] shadow-md" />
@@ -75,16 +76,20 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider">Date watched</label>
-            <Input type="date" value={watchedAt} onChange={e => setWatchedAt(e.target.value)} className="mt-2" />
+            <label htmlFor={`${fieldId}-date`} className="text-xs text-zinc-500 uppercase tracking-wider">Date watched</label>
+            <Input id={`${fieldId}-date`} type="date" value={watchedAt} onChange={e => setWatchedAt(e.target.value)} className="mt-2" />
           </div>
           <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider">Rating</label>
-            <div className="mt-2"><RatingStars value={rating} onChange={setRating} /></div>
+            {/* RatingStars is a row of buttons, so a <label> cannot own it —
+                the group takes its name from the same text instead. */}
+            <span id={`${fieldId}-rating-label`} className="text-xs text-zinc-500 uppercase tracking-wider">Rating</span>
+            <div role="group" aria-labelledby={`${fieldId}-rating-label`} className="mt-2">
+              <RatingStars value={rating} onChange={setRating} />
+            </div>
           </div>
           <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider">Review (optional)</label>
-            <Input multiline rows={4} value={review} onChange={e => setReview(e.target.value)} placeholder="Write your thoughts..." className="mt-2" />
+            <label htmlFor={`${fieldId}-review`} className="text-xs text-zinc-500 uppercase tracking-wider">Review (optional)</label>
+            <Input id={`${fieldId}-review`} multiline rows={4} value={review} onChange={e => setReview(e.target.value)} placeholder="Write your thoughts..." className="mt-2" />
           </div>
         </div>
 

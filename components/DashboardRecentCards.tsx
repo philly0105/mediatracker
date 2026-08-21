@@ -1,9 +1,7 @@
 'use client'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import MediaInfoModal from './MediaInfoModal'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaModal } from '@/components/MediaModalProvider'
 import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
 import { PosterCard } from '@/components/ui/PosterCard'
@@ -15,9 +13,8 @@ interface Props {
 
 export default function DashboardRecentCards({ entries }: Props) {
   const router = useRouter()
-  const [selected, setSelected] = useState<TmdbSearchResult | null>(null)
 
-  const { addToWatchlist, markWatched } = useMediaActions({ priority: 'want_to_watch' })
+  const { openMedia, closeMedia } = useMediaModal()
 
   function toResult(entry: WatchEntry): TmdbSearchResult {
     const media = entry.media!
@@ -27,7 +24,7 @@ export default function DashboardRecentCards({ entries }: Props) {
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
-        {entries.map((entry) => (
+        {entries.map((entry, index) => (
           <SelectableOverlay key={entry.id} item={toResult(entry)}>
             <PosterCard
               title={entry.media?.title || ''}
@@ -35,27 +32,22 @@ export default function DashboardRecentCards({ entries }: Props) {
               posterUrl={entry.media?.poster_url}
               rating={entry.rating}
               overlay={formatDateLabel(entry.watched_at)}
-              onClick={() => setSelected(toResult(entry))}
+              // The first row of the dashboard grid is above the fold — five on
+              // desktop, two on mobile, so the widest row wins.
+              priority={index < 5}
+              onClick={() => openMedia(toResult(entry), {
+                // Both actions closed the modal here; only 'watched' refreshed,
+                // because only that changes what this row renders.
+                onChanged: (change) => {
+                  if (change === 'watched') router.refresh()
+                  closeMedia()
+                },
+              })}
             />
           </SelectableOverlay>
         ))}
       </div>
 
-      {selected && (
-        <MediaInfoModal
-          item={selected}
-          onClose={() => setSelected(null)}
-          onAddToWatchlist={async () => {
-            await addToWatchlist(selected.tmdb_id, selected.type)
-            setSelected(null)
-          }}
-          onMarkAsWatched={async (opts) => {
-            await markWatched(selected.tmdb_id, selected.type, opts)
-            router.refresh()
-            setSelected(null)
-          }}
-        />
-      )}
     </>
   )
 }

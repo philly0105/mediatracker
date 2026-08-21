@@ -1,6 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useCallback, useEffect, useState } from 'react'
 
 type JoinedRow = { media: { tmdb_id: number } | { tmdb_id: number }[] | null }
 
@@ -14,22 +13,66 @@ export function toIdSet(rows: JoinedRow[] | null): Set<number> {
   )
 }
 
+type IdSets = { watched: Set<number>; watchlist: Set<number> }
+
+// Session-lifetime cache. KeyboardShortcuts renders the overlay as
+// `open ? <SearchOverlay/> : null`, so the hook remounts on every ⌘K; without
+// this it re-fetched the whole id set each time. The promise is cached, not
+// just the result, so two components mounting in the same tick share one
+// request.
+let cache: IdSets | null = null
+let inFlight: Promise<IdSets> | null = null
+
+function loadIds(): Promise<IdSets> {
+  if (cache) return Promise.resolve(cache)
+  if (inFlight) return inFlight
+
+  inFlight = fetch('/api/library/ids')
+    .then((res) => (res.ok ? res.json() : { watched: [], watchlist: [] }))
+    .then((data: { watched?: number[]; watchlist?: number[] }) => {
+      cache = {
+        watched: new Set(data.watched ?? []),
+        watchlist: new Set(data.watchlist ?? []),
+      }
+      return cache
+    })
+    .catch(() => ({ watched: new Set<number>(), watchlist: new Set<number>() }))
+    .finally(() => { inFlight = null })
+
+  return inFlight
+}
+
 export function useLibraryIds() {
-  const [watchedIds, setWatchedIds] = useState<Set<number>>(new Set())
-  const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
+  const [watchedIds, setWatchedIdsState] = useState<Set<number>>(() => cache?.watched ?? new Set())
+  const [watchlistIds, setWatchlistIdsState] = useState<Set<number>>(() => cache?.watchlist ?? new Set())
 
   useEffect(() => {
-    async function fetchLibraryIds() {
-      const supabase = createClient()
-      const [watchedRes, watchlistRes] = await Promise.all([
-        supabase.from('watch_entries').select('media!inner(tmdb_id)'),
-        supabase.from('watchlist_items').select('media!inner(tmdb_id)'),
-      ])
+    let active = true
+    loadIds().then((ids) => {
+      if (!active) return
+      setWatchedIdsState(ids.watched)
+      setWatchlistIdsState(ids.watchlist)
+    })
+    return () => { active = false }
+  }, [])
 
-      if (watchedRes.data) setWatchedIds(toIdSet(watchedRes.data as unknown as JoinedRow[]))
-      if (watchlistRes.data) setWatchlistIds(toIdSet(watchlistRes.data as unknown as JoinedRow[]))
-    }
-    fetchLibraryIds()
+  // Callers mark things watched and shortlisted from inside these overlays. The
+  // update has to reach the cache too, or closing and reopening ⌘K would paint
+  // the pre-action badges back.
+  const setWatchedIds = useCallback((update: (prev: Set<number>) => Set<number>) => {
+    setWatchedIdsState((prev) => {
+      const next = update(prev)
+      if (cache) cache.watched = next
+      return next
+    })
+  }, [])
+
+  const setWatchlistIds = useCallback((update: (prev: Set<number>) => Set<number>) => {
+    setWatchlistIdsState((prev) => {
+      const next = update(prev)
+      if (cache) cache.watchlist = next
+      return next
+    })
   }, [])
 
   return { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds }

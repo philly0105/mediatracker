@@ -1,9 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import MediaInfoModal from './MediaInfoModal'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaModal } from '@/components/MediaModalProvider'
 import type { TmdbCollectionPart } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
@@ -17,16 +14,20 @@ interface Props {
 }
 
 export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: Props) {
-  const [showInfo, setShowInfo] = useState(false)
   const router = useRouter()
 
-  const { addToWatchlist, markWatched } = useMediaActions({
-    priority: 'want_to_watch',
-    onDone: () => {
-      setShowInfo(false)
-      router.refresh()
-    },
-  })
+  const { openMedia, closeMedia } = useMediaModal()
+
+  // The old useMediaActions onDone closed the modal and refreshed on *either*
+  // action, so both are preserved here rather than only on 'watched'.
+  function openDetails() {
+    openMedia(item, {
+      onChanged: () => {
+        closeMedia()
+        router.refresh()
+      },
+    })
+  }
 
   const item = mediaToResult(part, { type: 'movie' })
 
@@ -37,7 +38,7 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
           title={part.title}
           year={part.release_year ?? undefined}
           posterUrl={part.poster_url}
-          onClick={() => setShowInfo(true)}
+          onClick={openDetails}
         >
           {(isWatched || isWatchlisted) && (
             <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
@@ -51,15 +52,6 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
         </PosterCard>
       </SelectableOverlay>
 
-      {showInfo && createPortal(
-        <MediaInfoModal
-          item={item}
-          onClose={() => setShowInfo(false)}
-          onAddToWatchlist={async () => { await addToWatchlist(part.tmdb_id, 'movie') }}
-          onMarkAsWatched={async (opts) => { await markWatched(part.tmdb_id, 'movie', opts) }}
-        />,
-        document.body
-      )}
     </>
   )
 }

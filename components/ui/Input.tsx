@@ -1,10 +1,14 @@
-import React, { useState } from 'react'
+import React from 'react'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement> {
   icon?: React.ReactNode
   multiline?: boolean
   rows?: number
 }
+
+// `.input-field` in globals.css carries the base and the focus border. It was a
+// `useState(focus)` inline style, which re-rendered the field on every focus
+// change and needed the directive above to exist at all.
 
 export function Input({
   icon,
@@ -15,23 +19,10 @@ export function Input({
   placeholder,
   type = 'text',
   style,
+  className,
   ...rest
 }: InputProps) {
-  const [focus, setFocus] = useState(false)
-
-  const base = {
-    width: '100%',
-    boxSizing: 'border-box' as React.CSSProperties['boxSizing'],
-    fontFamily: 'var(--font-sans)',
-    fontSize: 'var(--text-base)',
-    fontWeight: 'var(--weight-medium)',
-    color: 'var(--text-primary)',
-    background: 'var(--surface-input)',
-    border: `1px solid ${focus ? 'var(--border-focus)' : 'var(--border-default)'}`,
-    outline: 'none',
-    transition: 'border-color var(--dur-fast) var(--ease-standard)',
-    backdropFilter: 'blur(var(--blur-md))',
-  }
+  const fieldClass = ['input-field', className].filter(Boolean).join(' ')
 
   if (multiline) {
     return (
@@ -40,9 +31,8 @@ export function Input({
         value={value}
         onChange={onChange as React.ChangeEventHandler<HTMLTextAreaElement>}
         placeholder={placeholder}
-        onFocus={() => setFocus(true)}
-        onBlur={() => setFocus(false)}
-        style={{ ...base, resize: 'none' as React.CSSProperties['resize'], borderRadius: 'var(--radius-sm)', padding: '12px 18px', ...style }}
+        className={fieldClass}
+        style={{ resize: 'none' as React.CSSProperties['resize'], borderRadius: 'var(--radius-sm)', padding: '12px 18px', ...style }}
         {...rest}
       />
     )
@@ -60,9 +50,8 @@ export function Input({
         value={value}
         onChange={onChange as React.ChangeEventHandler<HTMLInputElement>}
         placeholder={placeholder}
-        onFocus={() => setFocus(true)}
-        onBlur={() => setFocus(false)}
-        style={{ ...base, borderRadius: 'var(--radius-sm)', padding: icon ? '11px 16px 11px 42px' : '11px 16px', ...style }}
+        className={fieldClass}
+        style={{ borderRadius: 'var(--radius-sm)', padding: icon ? '11px 16px 11px 42px' : '11px 16px', ...style }}
         {...rest}
       />
     </div>

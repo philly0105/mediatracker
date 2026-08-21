@@ -1,4 +1,11 @@
-@import "../.agents/skills/dorfmovies-design/styles.css";
+/* The design system is vendored into the app at app/styles/design-system/.
+   It used to be imported straight out of .agents/skills/dorfmovies-design/,
+   which meant every colour, type and spacing token the app renders came from
+   an agent-tooling folder — one a skill update or a deployment filter could
+   remove, leaving the app as unstyled Tailwind on white. The skill folder is
+   still the authoring surface; app/styles/design-system/README.md covers the
+   sync, and a test fails the build if the two copies drift. */
+@import "./styles/design-system/styles.css";
 @import "tailwindcss";
 
 /* Bridge the design-system ramp into Tailwind's own colour namespace.
@@ -51,6 +58,19 @@
   --color-teal-300: var(--teal-300);
   --color-teal-400: var(--teal-400);
   --color-teal-500: var(--teal-500);
+
+  /* The gap the zinc bridge above left open. `white` is the one Tailwind colour
+     that cannot be retuned by redefining a ramp step, and the app leans on it
+     hard: 229 utilities across 44 files — `text-white` for headings, and
+     `bg-white/5`, `border-white/10` and friends for every hairline and ghost
+     surface. All of it rendered pure #ffffff on a warm brown canvas.
+
+     Pointing it at the stone ramp's top step lands each one within a hair of
+     the token it should have been written as: `bg-white/5` becomes
+     --btn-ghost-bg, `border-white/5` becomes --border-subtle, `border-white/10`
+     becomes --border-default. Fixing it here rather than rewriting 229 call
+     sites also means the next `text-white` someone writes is on-brand too. */
+  --color-white: var(--zinc-100);
 }
 
 /* The canvas lives here rather than on a `bg-[var(--…)]` utility in layout.tsx:
@@ -110,6 +130,274 @@ body::after {
   transform: var(--lift-hover);
 }
 
+/* Interactive primitives.
+   Each of these treatments used to live in its component as a `useState(hover)`
+   plus an inline style. That made every pointer enter/leave a React render — a
+   24-card grid was 24 independent render paths driven by mouse movement — gave
+   keyboard users no hover-equivalent affordance, and, because CSS cannot see
+   React state, put the whole set out of reach of the reduced-motion query at
+   the bottom of this file: it zeroed the transition, which turned each hover
+   into an instant jump rather than removing it. */
+
+.card-surface {
+  padding: var(--space-7);
+  border-radius: var(--radius-lg);
+  background: var(--glass-card);
+  border: 1px solid var(--border-subtle);
+  transition: background var(--dur-base) var(--ease-out-expo),
+              border-color var(--dur-base) var(--ease-out-expo),
+              box-shadow var(--dur-base) var(--ease-out-expo),
+              transform var(--dur-base) var(--ease-out-expo);
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover,
+.card-interactive:focus-visible {
+  background: var(--glass-card-hover);
+  border-color: var(--border-strong);
+  box-shadow: var(--glow-violet), var(--inset-hairline);
+  transform: translateY(-2px);
+}
+
+.media-row {
+  background: var(--glass-card);
+  border: 1px solid var(--border-subtle);
+  transition: background var(--dur-base) var(--ease-out-expo),
+              border-color var(--dur-base) var(--ease-out-expo),
+              box-shadow var(--dur-base) var(--ease-out-expo),
+              transform var(--dur-base) var(--ease-out-expo);
+}
+
+.media-row:hover,
+.media-row:focus-visible {
+  background: var(--glass-card-hover);
+  border-color: var(--border-strong);
+  box-shadow: var(--glow-violet), var(--inset-hairline);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.poster-card {
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-poster);
+  transition: border-color var(--dur-slow) var(--ease-out-expo),
+              box-shadow var(--dur-slow) var(--ease-out-expo),
+              transform var(--dur-slow) var(--ease-out-expo);
+}
+
+.poster-card:hover,
+.poster-card:focus-visible {
+  border-color: var(--border-default);
+  box-shadow: var(--glow-violet), var(--shadow-md);
+  transform: var(--lift-poster);
+}
+
+.poster-card-img {
+  transition: transform var(--dur-slower) var(--ease-out-expo);
+}
+
+.poster-card:hover .poster-card-img,
+.poster-card:focus-visible .poster-card-img {
+  transform: scale(1.1) rotate(1deg);
+}
+
+.poster-card-overlay {
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+
+.poster-card:hover .poster-card-overlay,
+.poster-card:focus-visible .poster-card-overlay {
+  opacity: 1;
+}
+
+.poster-card-title {
+  color: var(--text-primary);
+  transition: color var(--dur-base) var(--ease-standard);
+}
+
+.poster-card:hover .poster-card-title,
+.poster-card:focus-visible .poster-card-title {
+  color: var(--accent);
+}
+
+/* The active entry is keyed off aria-current rather than a second class, so the
+   styling cannot drift from what a screen reader is told. */
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 11px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--dur-base) var(--ease-standard),
+              background var(--dur-base) var(--ease-standard);
+}
+
+.nav-item:hover {
+  color: var(--zinc-300);
+}
+
+.nav-item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform var(--dur-base) var(--ease-out-expo);
+}
+
+.nav-item:hover .nav-item-icon {
+  color: var(--zinc-300);
+  transform: scale(1.1);
+}
+
+.nav-item[aria-current='page'] {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
+}
+
+.nav-item[aria-current='page'] .nav-item-icon {
+  color: var(--accent);
+}
+
+.btn {
+  transition: background var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard),
+              transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  border: 1px solid transparent;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover);
+}
+
+.btn-ghost {
+  background: var(--btn-ghost-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--btn-ghost-bg-hover);
+}
+
+.btn-accent {
+  background: var(--violet-tint-bg);
+  color: var(--violet-300);
+  border: 1px solid var(--violet-tint-border);
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: var(--violet-tint-border);
+}
+
+.btn-link {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+}
+
+.btn-link:hover:not(:disabled) {
+  background: var(--btn-ghost-bg);
+  color: var(--text-primary);
+}
+
+/* Tone sits on top of a variant: `<Button variant="ghost" tone="destructive">`.
+   Call sites used to reach for `hover:!bg-rose-600 hover:!border-rose-500`,
+   which beat `.btn-*`'s own hover through !important — so "Remove from
+   Watchlist" rendered as a solid pine primary button and only revealed itself
+   as destructive once the pointer was already on it. These read the rust ramp
+   directly rather than the `--rose-*` aliases, which F-47 has up for removal. */
+.btn-tone-destructive {
+  background: var(--rust-tint-bg);
+  color: var(--rust-300);
+  border: 1px solid var(--rust-tint-border);
+}
+
+.btn-tone-destructive:hover:not(:disabled),
+.btn-tone-destructive:focus-visible:not(:disabled) {
+  background: var(--rust-500);
+  color: var(--zinc-100);
+  border-color: var(--rust-400);
+}
+
+.btn-tone-success {
+  background: var(--teal-tint-bg);
+  color: var(--teal-300);
+  border: 1px solid var(--teal-tint-border);
+}
+
+.btn-tone-success:hover:not(:disabled),
+.btn-tone-success:focus-visible:not(:disabled) {
+  background: var(--teal-500);
+  color: var(--zinc-100);
+  border-color: var(--teal-400);
+}
+
+/* Appears only while a filter is actually narrowing something, so it reads as
+   "undo this" rather than as a tenth control in an already nine-wide bank. */
+.clear-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--rust-300);
+  background: var(--rust-tint-bg);
+  border: 1px solid var(--rust-tint-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-standard),
+              color var(--dur-fast) var(--ease-standard);
+}
+
+.clear-filters:hover,
+.clear-filters:focus-visible {
+  background: var(--rust-500);
+  color: var(--zinc-100);
+  border-color: var(--rust-400);
+}
+
+.input-field {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  background: var(--surface-input);
+  border: 1px solid var(--border-default);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+.input-field:focus {
+  border-color: var(--border-focus);
+}
+
 /* Scrollbar customization */
 ::-webkit-scrollbar {
   width: 4px;
@@ -127,6 +415,22 @@ body::after {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-strong);
+}
+
+/* Two utilities the app has always used but nothing ever defined — Tailwind v4
+   ships neither, so both silently compiled to nothing. `pb-safe-bottom` was the
+   costly one: the mobile nav had no clearance for the iPhone home indicator.
+   It pairs with `viewportFit: 'cover'` in the root layout's viewport export,
+   without which the inset resolves to 0. */
+@utility pb-safe-bottom {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Keyboard focus: most controls either disable the UA outline or never had
@@ -150,7 +454,16 @@ body::after {
 
   /* The system's hover affordance is a lift; with motion reduced, the border
      and shadow still carry the state. */
-  .glass-card:hover {
+  .glass-card:hover,
+  .card-interactive:hover,
+  .card-interactive:focus-visible,
+  .media-row:hover,
+  .media-row:focus-visible,
+  .poster-card:hover,
+  .poster-card:focus-visible,
+  .poster-card:hover .poster-card-img,
+  .poster-card:focus-visible .poster-card-img,
+  .nav-item:hover .nav-item-icon {
     transform: none;
   }
 }

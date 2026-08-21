@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
+import { fetchAllRows } from '@/lib/fetchAllRows'
 import { parseRating, parseMediaType, parseTmdbId, parseDate, parseUuid, parseText, badRequest } from '@/lib/validation'
 
 // `overview` is deliberately absent: nothing in the library list renders it and
@@ -22,22 +23,33 @@ export async function GET(request: NextRequest) {
 
   const filterByType = type === 'movie' || type === 'show'
 
-  // !inner is what makes .eq('media.type') filter the parent rows. Without it
-  // PostgREST filters only the embedded resource and returns every entry with
-  // media: null on the non-matches.
-  let query = supabase
-    .from('watch_entries')
-    .select(filterByType ? WATCH_SELECT : WATCH_SELECT_LEFT)
-    .eq('user_id', user.id)
-    .order('watched_at', { ascending: false })
+  // Paged rather than a single unbounded select: PostgREST caps a response at
+  // 1000 rows and does not say so, which silently froze the Library at 1000
+  // titles. The client still filters and sorts the whole set, so the shape of
+  // the response is unchanged.
+  const { rows, error, truncated } = await fetchAllRows((from, to) => {
+    // !inner is what makes .eq('media.type') filter the parent rows. Without it
+    // PostgREST filters only the embedded resource and returns every entry with
+    // media: null on the non-matches.
+    let query = supabase
+      .from('watch_entries')
+      .select(filterByType ? WATCH_SELECT : WATCH_SELECT_LEFT)
+      .eq('user_id', user.id)
+      .order('watched_at', { ascending: false })
+      // Tiebreak: watched_at is a date, so same-day entries have no inherent
+      // order and rows would drift between range windows without this.
+      .order('id', { ascending: false })
+      .range(from, to)
 
-  if (filterByType) {
-    query = query.eq('media.type', type)
-  }
+    if (filterByType) {
+      query = query.eq('media.type', type)
+    }
 
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ entries: data })
+    return query
+  })
+
+  if (error) return NextResponse.json({ error }, { status: 500 })
+  return NextResponse.json({ entries: rows, truncated })
 }
 
 // POST: log a watched entry
