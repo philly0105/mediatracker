@@ -21,10 +21,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return {
       title,
       description: data.overview ?? undefined,
+      // No `images` here on purpose. An openGraph.images set in config beats the
+      // sibling opengraph-image.tsx (verified in the browser — the docs claim
+      // the file wins, it does not), and the raw 2:3 poster this used to hand
+      // out is cropped to a sliver by every unfurler.
       openGraph: {
         title: `${title} · DorfMovies`,
         description: data.overview ?? undefined,
-        images: data.poster_url ? [data.poster_url] : undefined,
       },
     }
   } catch {

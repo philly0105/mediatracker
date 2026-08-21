@@ -18,9 +18,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return {
       title: collection.name,
       description: collection.overview || `${collection.parts.length} films in the ${collection.name}.`,
+      // See the note in app/(app)/show/[id]/layout.tsx: setting images here
+      // would suppress this segment's opengraph-image.tsx.
       openGraph: {
         title: `${collection.name} · DorfMovies`,
-        images: collection.poster_url ? [collection.poster_url] : undefined,
       },
     }
   } catch {

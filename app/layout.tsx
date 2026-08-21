@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     siteName: 'DorfMovies',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 export const viewport: Viewport = {
