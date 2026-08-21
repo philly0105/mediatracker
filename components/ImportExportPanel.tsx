@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 import { Download, Upload } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 interface ImportRow {
   title: string
@@ -200,19 +201,21 @@ export default function ImportExportPanel() {
           </div>
         </div>
 
-        {/* Mode toggle. The track was 3% cold white; --surface-input is what
-            the library and streaming segmented controls already use. */}
-        <div className="flex rounded-sm p-1 gap-1 w-fit" style={{ background: 'var(--surface-input)', border: '1px solid var(--border-subtle)' }}>
-          {(['csv', 'watchlist'] as const).map(m => (
-            <button key={m} onClick={() => { setMode(m); setRows([]); setResults([]); setDone(false) }}
-              className="px-4 py-1.5 rounded-sm text-sm font-semibold transition-colors"
-              style={mode === m
-                ? { background: 'var(--accent)', color: 'var(--bg-void)' }
-                : { background: 'transparent', color: 'var(--text-secondary)' }}>
-              {m === 'csv' ? 'From CSV' : 'Watchlist only'}
-            </button>
-          ))}
-        </div>
+        {/* Mode toggle */}
+        <SegmentedControl
+          options={[
+            { id: 'csv', label: 'From CSV' },
+            { id: 'watchlist', label: 'Watchlist only' },
+          ]}
+          value={mode}
+          onChange={(m) => {
+            setMode(m)
+            setRows([])
+            setResults([])
+            setDone(false)
+          }}
+          size="sm"
+        />
 
         {/* Drop zone */}
         <div

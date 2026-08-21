@@ -70,4 +70,17 @@ describe('RatingStars', () => {
     fireEvent.click(button25)
     expect(onChange).toHaveBeenCalledWith(null)
   })
+
+  it('updates live star preview on focus and resets on blur', () => {
+    const { container } = render(<RatingStars value={null} onChange={vi.fn()} />)
+    const button3 = screen.getByRole('button', { name: 'Rate 3 stars' })
+
+    fireEvent.focus(button3)
+    let filled = container.querySelectorAll('svg[style*="--amber-400"]')
+    expect(filled).toHaveLength(3)
+
+    fireEvent.blur(button3)
+    filled = container.querySelectorAll('svg[style*="--amber-400"]')
+    expect(filled).toHaveLength(0)
+  })
 })

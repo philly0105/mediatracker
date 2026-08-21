@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice } from '@/components/AuthShell'
+import { Button } from '@/components/ui/Button'
 
 // Reached from the emailed recovery link, by way of /auth/callback — which has
 // already exchanged the link's code for a session by the time this renders. So
@@ -52,14 +53,13 @@ export default function ResetPasswordPage() {
     return (
       <AuthShell title="Password updated" subtitle="You're signed in.">
         <AuthNotice>Your password has been changed.</AuthNotice>
-        <button
+        <Button
           type="button"
           onClick={() => { router.push('/'); router.refresh() }}
-          className="w-full py-2.5 rounded-full font-medium text-sm transition-colors"
-          style={{ background: '#ffffff', color: '#0d0d0f' }}
+          fullWidth
         >
           Continue
-        </button>
+        </Button>
       </AuthShell>
     )
   }

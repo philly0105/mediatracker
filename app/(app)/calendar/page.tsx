@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { fetchUpcomingReleases } from '@/lib/tmdb'
 import CalendarClient from '@/components/CalendarClient'
@@ -23,9 +23,9 @@ type FollowedRow = {
 type FollowedMedia = NonNullable<FollowedRow['media']>
 
 export default async function CalendarPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   const { data: followedRows } = await supabase
     .from('followed_shows')

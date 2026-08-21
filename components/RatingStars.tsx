@@ -66,16 +66,20 @@ export default function RatingStars({ value, onChange, readOnly = false }: Props
                   type="button"
                   data-half={`${star - 0.5}`}
                   aria-label={hitLabel(star - 0.5)}
-                  className="absolute left-0 top-0 w-1/2 h-full cursor-pointer"
+                  className="absolute left-0 top-0 w-1/2 h-full cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber-400)] focus-visible:rounded-xs"
                   onMouseEnter={() => setHover(star - 0.5)}
+                  onFocus={() => setHover(star - 0.5)}
+                  onBlur={() => setHover(null)}
                   onClick={() => select(star - 0.5)}
                 />
                 <button
                   type="button"
                   data-half={`${star}.0`}
                   aria-label={hitLabel(star)}
-                  className="absolute right-0 top-0 w-1/2 h-full cursor-pointer"
+                  className="absolute right-0 top-0 w-1/2 h-full cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber-400)] focus-visible:rounded-xs"
                   onMouseEnter={() => setHover(star)}
+                  onFocus={() => setHover(star)}
+                  onBlur={() => setHover(null)}
                   onClick={() => select(star)}
                 />
               </>

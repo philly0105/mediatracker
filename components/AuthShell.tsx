@@ -33,13 +33,6 @@ export function AuthShell({
       className="flex items-center justify-center min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-4rem)]"
       style={{ background: 'var(--surface-page)' }}
     >
-      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[150px]"
-          style={{ background: 'var(--orb-violet)' }} />
-        <div className="absolute -bottom-32 -right-32 w-[600px] h-[600px] rounded-full blur-[130px]"
-          style={{ background: 'var(--orb-rose)' }} />
-      </div>
-
       <Panel
         onSubmit={onSubmit}
         className="relative w-full max-w-sm p-8 space-y-5"
@@ -84,15 +77,13 @@ export function AuthInput({
       <input
         id={inputId}
         {...props}
-        className="w-full px-4 py-2.5 text-sm placeholder:text-[var(--text-muted)] focus:outline-none transition-colors"
+        className="input-field w-full px-4 py-2.5 text-sm placeholder:text-[var(--text-muted)] focus:outline-none transition-colors"
         style={{
           background: 'var(--surface-input)',
           border: '1px solid var(--border-default)',
           borderRadius: 'var(--radius-sm)',
           color: 'var(--text-primary)',
         }}
-        onFocus={e => (e.target.style.borderColor = 'var(--border-strong)')}
-        onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
       />
     </div>
   )
@@ -100,15 +91,11 @@ export function AuthInput({
 
 export function AuthSubmit({ children, disabled }: { children: ReactNode; disabled?: boolean }) {
   return (
-    <button type="submit" disabled={disabled}
-      className="w-full py-2.5 font-semibold text-sm transition-colors disabled:opacity-60"
-      style={{
-        background: 'var(--btn-primary-bg)',
-        color: 'var(--btn-primary-fg)',
-        borderRadius: 'var(--radius-sm)',
-      }}
-      onMouseEnter={e => { if (!disabled) (e.target as HTMLElement).style.background = 'var(--btn-primary-bg-hover)' }}
-      onMouseLeave={e => ((e.target as HTMLElement).style.background = 'var(--btn-primary-bg)')}>
+    <button
+      type="submit"
+      disabled={disabled}
+      className="btn btn-primary w-full py-2.5 font-semibold text-sm transition-colors disabled:opacity-60 rounded-sm"
+    >
       {children}
     </button>
   )

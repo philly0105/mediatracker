@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Layers } from 'lucide-react'
 import PopularCollectionsFeed from '@/components/PopularCollectionsFeed'
@@ -14,9 +14,9 @@ export const metadata: Metadata = {
 }
 
 export default async function CollectionsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   // Paged: this counts every entry in a franchise, so a truncated read drops
   // whole collections off the page rather than failing visibly.
@@ -95,7 +95,7 @@ export default async function CollectionsPage() {
 
       {/* Popular Collections */}
       <section className="space-y-5">
-        <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+        <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
           <h2 className="text-lg font-bold tracking-tight text-white">Popular Collections</h2>
         </div>
         <PopularCollectionsFeed />

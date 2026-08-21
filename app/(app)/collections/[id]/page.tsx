@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { getCollectionDetails } from '@/lib/tmdb'
 import CollectionMovieCard from '@/components/CollectionMovieCard'
@@ -38,9 +38,9 @@ export default async function CollectionDetailPage({
   const collectionId = parseInt(id)
   if (isNaN(collectionId)) notFound()
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   let collection
   try {
@@ -78,7 +78,7 @@ export default async function CollectionDetailPage({
       <BackButton label="Collections" fallback="/collections" />
 
       {/* Hero */}
-      <div className="relative rounded-2xl overflow-hidden">
+      <div className="relative rounded-[var(--radius-2xl)] overflow-hidden border border-white/5">
         {collection.backdrop_url ? (
           <Image
             src={collection.backdrop_url}
@@ -89,9 +89,9 @@ export default async function CollectionDetailPage({
             className="w-full h-48 sm:h-64 object-cover"
           />
         ) : (
-          <div className="w-full h-48 sm:h-64 bg-zinc-900" />
+          <div className="w-full h-48 sm:h-64 bg-[var(--bg-void)]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-void)] via-[var(--bg-void)]/60 to-transparent" />
         <div className="absolute bottom-6 left-6 right-6 flex items-end gap-4">
           {collection.poster_url && (
             <Image

@@ -186,8 +186,8 @@ export default function PersonPage() {
           ))}
         </div>
       ) : error ? (
-        <Card className="p-8 border border-[var(--live)]/20 text-center space-y-4">
-          <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
+        <Card className="p-8 text-center space-y-4" style={{ borderColor: 'var(--rust-tint-border)' }}>
+          <AlertCircle className="w-10 h-10 text-[var(--live)] mx-auto" />
           <h2 className="text-lg font-bold text-white">Something went wrong</h2>
           <p className="text-sm text-zinc-400">{error}</p>
         </Card>

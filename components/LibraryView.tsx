@@ -393,6 +393,8 @@ export default function LibraryView() {
                   : 'No logged titles match the active filters'
               }
               hint="Widen the filters, or clear them to see everything you have logged."
+              actionLabel="Clear filters"
+              onAction={() => resetFilters(['q', 'genre', 'rating', 'decade'])}
             />
           )}
         </>

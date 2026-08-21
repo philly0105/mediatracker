@@ -41,8 +41,8 @@ export function MediaRow({
     <div
       onClick={onClick}
       {...activatableProps(onClick, title)}
-      // Hover/focus styling is `.media-row` in globals.css — see the note there.
-      className="media-row"
+      // Hover/focus styling is `.media-row-interactive` in globals.css.
+      className={['media-row', onClick && 'media-row-interactive'].filter(Boolean).join(' ')}
       style={{
         display: 'flex',
         gap: 'var(--space-4)',

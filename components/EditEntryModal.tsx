@@ -94,8 +94,8 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
         </div>
 
         {error && (
-          <p className="text-sm text-rust-400 px-3 py-2 rounded-lg"
-            style={{ background: 'rgba(225,29,72,0.1)', border: '1px solid rgba(225,29,72,0.2)' }}>
+          <p className="text-sm text-rust-400 px-3 py-2 rounded-sm"
+            style={{ background: 'var(--rust-tint-bg)', border: '1px solid var(--rust-tint-border)' }}>
             {error}
           </p>
         )}

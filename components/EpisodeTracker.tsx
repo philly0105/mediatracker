@@ -112,10 +112,7 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
               onClick={() => setOpen(isOpen ? null : season.id)}
               aria-expanded={isOpen}
               aria-controls={`${panelIdBase}-${season.id}`}
-              className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
-              style={{ background: 'transparent' }}
-              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--btn-ghost-bg)')}
-              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+              className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[var(--btn-ghost-bg)] focus-visible:outline-none focus-visible:bg-[var(--btn-ghost-bg)]"
             >
               <span className="font-medium text-white">Season {season.season_number}</span>
               <div className="flex items-center gap-3">

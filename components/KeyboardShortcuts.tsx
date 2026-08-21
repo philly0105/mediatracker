@@ -110,9 +110,10 @@ export default function KeyboardShortcuts() {
 
   return (
     <>
-      {open ? <SearchOverlay onClose={() => setOpen(false)} /> : null}
-      {/* AnimatePresence so the sheet's exit transition runs; the palette has
-          never had one. */}
+      <AnimatePresence>
+        {open && <SearchOverlay onClose={() => setOpen(false)} />}
+      </AnimatePresence>
+      {/* AnimatePresence so the sheet's exit transition runs */}
       <AnimatePresence>
         {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
       </AnimatePresence>

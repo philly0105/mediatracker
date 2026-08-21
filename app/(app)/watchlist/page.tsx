@@ -537,8 +537,8 @@ function WatchlistSection({
     <div className="space-y-5">
       {/* Group Header */}
       <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-        <div className={`p-1.5 rounded-lg border ${config.color.split(' ')[1]} ${config.color.split(' ')[2]}`}>
-          <Icon className={`w-4 h-4 ${config.color.split(' ')[0]}`} />
+        <div className={`p-1.5 rounded-lg border ${config.borderClass} ${config.bgClass}`}>
+          <Icon className={`w-4 h-4 ${config.textClass}`} />
         </div>
         <h2 className="text-lg font-bold tracking-tight text-white">
           {PRIORITY_LABELS[priority]}

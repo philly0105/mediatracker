@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ShareToggle from '@/components/ShareToggle'
 import PasswordChangeForm from '@/components/PasswordChangeForm'
@@ -14,9 +14,9 @@ export const metadata: Metadata = {
 }
 
 export default async function SettingsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
+  const supabase = await createClient()
 
   const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle()
 
@@ -37,7 +37,7 @@ export default async function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Account Section */}
         <section className="space-y-4">
-          <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+          <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
             <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
               <KeyRound className="w-4 h-4 text-[var(--accent)]" />
             </div>
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
 
         {/* Sharing Section */}
         <section className="space-y-4">
-          <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+          <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
             <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
               <Share2 className="w-4 h-4 text-[var(--accent)]" />
             </div>
@@ -70,7 +70,7 @@ export default async function SettingsPage() {
                 token={settings?.watched_share_token ?? null}
                 shareUrl={settings?.watched_share_token ? `${appUrl}/share/watched/${settings.watched_share_token}` : null}
               />
-              <div className="h-px w-full bg-white/5" />
+              <div className="h-px w-full bg-[var(--border-subtle)]" />
               <ShareToggle
                 label="Watchlist"
                 type="watchlist"
@@ -84,7 +84,7 @@ export default async function SettingsPage() {
 
       {/* Import / Export Section */}
       <section id="import-export" className="space-y-4 scroll-mt-8">
-        <div className="flex items-center gap-3 pb-2 border-b border-white/[0.04]">
+        <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
           <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
             <ArrowLeftRight className="w-4 h-4 text-[var(--accent)]" />
           </div>

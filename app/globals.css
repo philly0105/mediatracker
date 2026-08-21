@@ -169,8 +169,8 @@ body::after {
               transform var(--dur-base) var(--ease-out-expo);
 }
 
-.media-row:hover,
-.media-row:focus-visible {
+.media-row-interactive:hover,
+.media-row-interactive:focus-visible {
   background: var(--glass-card-hover);
   border-color: var(--border-strong);
   box-shadow: var(--glow-violet), var(--inset-hairline);
@@ -455,8 +455,8 @@ body::after {
   .glass-card:hover,
   .card-interactive:hover,
   .card-interactive:focus-visible,
-  .media-row:hover,
-  .media-row:focus-visible,
+  .media-row-interactive:hover,
+  .media-row-interactive:focus-visible,
   .poster-card:hover,
   .poster-card:focus-visible,
   .poster-card:hover .poster-card-img,

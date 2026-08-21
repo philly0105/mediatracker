@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 interface Props {
   label: string
@@ -37,12 +39,16 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-zinc-300">{label}</span>
-        <button 
-          onClick={toggle} 
-          className={`px-3 py-1.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-            token 
-              ? 'bg-[var(--green-tint-bg)] text-green-300 border border-[var(--green-tint-border)] hover:bg-white/10' 
-              : 'bg-white/5 text-zinc-500 border border-white/10 hover:bg-white/10 hover:text-zinc-300'
+        <button
+          type="button"
+          role="switch"
+          aria-checked={Boolean(token)}
+          aria-label={`Toggle public sharing for ${label}`}
+          onClick={toggle}
+          className={`px-3 py-1.5 rounded-sm text-xs font-bold uppercase tracking-wider transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+            token
+              ? 'bg-[var(--green-tint-bg)] text-[var(--accent)] border border-[var(--green-tint-border)] hover:bg-[var(--green-tint-bg)]/80'
+              : 'bg-[var(--btn-ghost-bg)] text-[var(--text-muted)] border border-[var(--border-subtle)] hover:bg-white/5 hover:text-zinc-300'
           }`}
         >
           {token ? 'Enabled' : 'Disabled'}
@@ -50,17 +56,20 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
       </div>
       {url && (
         <div className="flex gap-2">
-          <input 
-            readOnly 
-            value={url} 
-            className="flex-1 px-3 py-2 bg-[var(--surface-input)] text-zinc-300 rounded-sm text-xs font-medium border border-white/5 focus:outline-none focus:border-[var(--border-focus)] transition-colors" 
+          <Input
+            readOnly
+            value={url}
+            className="text-xs"
           />
-          <button 
-            onClick={copyUrl} 
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-white rounded-sm transition-colors shrink-0"
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={copyUrl}
+            className="shrink-0"
           >
             {copied ? 'Copied!' : 'Copy'}
-          </button>
+          </Button>
         </div>
       )}
     </div>

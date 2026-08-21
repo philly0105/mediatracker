@@ -50,19 +50,21 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
     async function load() {
       setLoading(true)
       try {
-        const results = await Promise.all(
-          (['must_watch', 'want_to_watch', 'someday'] as const).map((priority) => {
-            const params = new URLSearchParams()
-            params.set('priority', priority)
-            params.set('page', '1')
-            params.set('limit', '100')
-            if (typeFilter !== 'all') params.set('type', typeFilter)
-            if (genreFilter !== 'All') params.set('genre', genreFilter)
-            return fetch(`/api/watchlist?${params.toString()}`).then((r) => r.json())
-          })
-        )
+        const params = new URLSearchParams()
+        params.set('group', 'priority')
+        params.set('limit', '100')
+        if (typeFilter !== 'all') params.set('type', typeFilter)
+        if (genreFilter !== 'All') params.set('genre', genreFilter)
+        const res = await fetch(`/api/watchlist?${params.toString()}`)
+        if (!res.ok) throw new Error('Failed to load watchlist')
+        const data = await res.json()
         if (!active) return
-        const merged: WatchlistItem[] = results.flatMap((d) => (Array.isArray(d.items) ? d.items : []))
+        const groups = data.groups ?? {}
+        const merged: WatchlistItem[] = [
+          ...(Array.isArray(groups.must_watch?.items) ? groups.must_watch.items : []),
+          ...(Array.isArray(groups.want_to_watch?.items) ? groups.want_to_watch.items : []),
+          ...(Array.isArray(groups.someday?.items) ? groups.someday.items : []),
+        ]
         setPool(merged)
         setPick(pickTonight(merged, { budget }))
       } catch {

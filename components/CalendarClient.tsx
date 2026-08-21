@@ -7,6 +7,7 @@ import type { TmdbSearchResult } from '@/types'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { activatableProps } from '@/components/ui/activatable'
 import { useMediaModal } from '@/components/MediaModalProvider'
 
 interface UpcomingRelease {
@@ -55,7 +56,7 @@ export default function CalendarClient({ releases }: Props) {
       />
 
       {/* Type filter */}
-      <div className="flex bg-black/40 p-1.5 rounded-sm w-fit">
+      <div className="flex bg-[var(--surface-input)] border border-[var(--border-subtle)] p-1 rounded-sm w-fit">
         {([
           { value: 'all', label: 'All', Icon: LayoutGrid },
           { value: 'movie', label: 'Movies', Icon: Film },
@@ -63,11 +64,13 @@ export default function CalendarClient({ releases }: Props) {
         ] as const).map(({ value, label, Icon }) => (
           <button
             key={value}
+            type="button"
+            aria-pressed={filter === value}
             onClick={() => setFilter(value)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-sm transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-sm font-bold text-sm transition-all ${
               filter === value
-                ? 'bg-green-500 text-zinc-950 shadow-lg shadow-green-500/20'
-                : 'text-zinc-500 hover:text-white hover:bg-white/5'
+                ? 'bg-[var(--accent)] text-[var(--btn-primary-fg)] shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
             <Icon className="w-4 h-4" />
@@ -92,7 +95,7 @@ export default function CalendarClient({ releases }: Props) {
           {Object.entries(groupedReleases).map(([monthYear, items]) => (
             <div key={monthYear} className="relative z-10">
               <div className="flex items-center md:justify-center mb-6 sticky top-20 z-20">
-                <span className="bg-zinc-900 text-white border border-white/10 px-4 py-1.5 rounded-full text-sm font-bold shadow-xl">
+                <span className="bg-[var(--surface-modal)] text-white border border-[var(--border-subtle)] px-4 py-1.5 rounded-full text-sm font-bold shadow-xl">
                   {monthYear}
                 </span>
               </div>
@@ -108,7 +111,7 @@ export default function CalendarClient({ releases }: Props) {
                     className="relative flex items-center justify-between md:justify-normal md:even:flex-row-reverse group"
                   >
                     {/* Timeline Node */}
-                    <div className={`absolute left-[23px] md:left-1/2 -translate-x-1/2 flex items-center justify-center w-6 h-6 rounded-full border-4 border-zinc-950 shadow-lg group-hover:scale-125 transition-transform ${
+                    <div className={`absolute left-[23px] md:left-1/2 -translate-x-1/2 flex items-center justify-center w-6 h-6 rounded-full border-4 border-[var(--bg-void)] shadow-lg group-hover:scale-125 transition-transform ${
                       item.followed
                         ? 'bg-teal-400 shadow-teal-400/20'
                         : item.type === 'show'
@@ -121,7 +124,8 @@ export default function CalendarClient({ releases }: Props) {
                       <SelectableOverlay item={item as unknown as TmdbSearchResult}>
                       <div
                         onClick={() => openMedia(item as unknown as TmdbSearchResult, { priority: 'must_watch' })}
-                        className="p-3 flex gap-4 transition-colors cursor-pointer rounded-lg bg-[var(--glass-card)] border border-white/5 hover:border-zinc-500/30"
+                        {...activatableProps(() => openMedia(item as unknown as TmdbSearchResult, { priority: 'must_watch' }), item.title)}
+                        className="p-3 flex gap-4 transition-all duration-300 cursor-pointer rounded-lg bg-[var(--glass-card)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--glass-card-hover)] hover:shadow-[var(--glow-violet)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                       >
                         {item.poster_url ? (
                           <Image
@@ -129,10 +133,10 @@ export default function CalendarClient({ releases }: Props) {
                             alt={item.title}
                             width={64}
                             height={96}
-                            className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-white/5 shrink-0"
+                            className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-[var(--border-subtle)] shrink-0"
                           />
                         ) : (
-                          <div className="w-16 h-24 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
+                          <div className="w-16 h-24 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
                             No Poster
                           </div>
                         )}

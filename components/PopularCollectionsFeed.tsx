@@ -1,63 +1,22 @@
 'use client'
 import Image from 'next/image'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import type { TmdbCollectionSummary } from '@/types'
 
+const CACHE_KEY = 'popular-collections-cache'
+
 export default function PopularCollectionsFeed() {
-  const CACHE_KEY = 'popular-collections-cache'
-
-  const [collections, setCollections] = useState<TmdbCollectionSummary[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem(CACHE_KEY)
-        if (cached) return JSON.parse(cached).collections
-      } catch {}
-    }
-    return []
-  })
-  
-  const [loading, setLoading] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !sessionStorage.getItem(CACHE_KEY)
-    }
-    return true
-  })
-  
-  const [batch, setBatch] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem(CACHE_KEY)
-        if (cached) return JSON.parse(cached).batch
-      } catch {}
-    }
-    return 1
-  })
-  
-  const [hasMore, setHasMore] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem(CACHE_KEY)
-        if (cached) return JSON.parse(cached).hasMore
-      } catch {}
-    }
-    return true
-  })
-
+  const [collections, setCollections] = useState<TmdbCollectionSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [batch, setBatch] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const seenIds = useRef(new Set<number>())
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  // Populate seenIds on mount if we restored from cache
-  useEffect(() => {
-    if (collections.length > 0 && seenIds.current.size === 0) {
-      collections.forEach(c => seenIds.current.add(c.id))
-    }
-  }, [collections])
-
-  async function fetchBatch(batchNum: number, isLoadMore = false) {
+  const fetchBatch = useCallback(async (batchNum: number, isLoadMore = false) => {
     if (isLoadMore) setLoadingMore(true)
     else setLoading(true)
     try {
@@ -82,18 +41,30 @@ export default function PopularCollectionsFeed() {
       if (isLoadMore) setLoadingMore(false)
       else setLoading(false)
     }
-  }
+  }, [])
 
-  // First batch on mount, skipped when sessionStorage already restored one.
+  // Safely restore cache or fetch batch 1 on client mount without hydration mismatch
   useEffect(() => {
-    if (collections.length === 0 && loading) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    let restored = false
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed.collections) && parsed.collections.length > 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setCollections(parsed.collections)
+          setBatch(parsed.batch ?? 1)
+          setHasMore(parsed.hasMore ?? true)
+          setLoading(false)
+          parsed.collections.forEach((c: TmdbCollectionSummary) => seenIds.current.add(c.id))
+          restored = true
+        }
+      }
+    } catch {}
+    if (!restored) {
       fetchBatch(1)
     }
-    // Mount-only on purpose: re-running on collections/loading would refetch
-    // every time a batch lands.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [fetchBatch])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -110,13 +81,13 @@ export default function PopularCollectionsFeed() {
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [batch, hasMore, loadingMore, loading])
+  }, [batch, hasMore, loadingMore, loading, fetchBatch])
 
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="glass-card rounded-2xl aspect-video animate-pulse bg-white/5" />
+          <div key={i} className="glass-card rounded-[var(--radius-2xl)] aspect-video animate-pulse bg-white/5" />
         ))}
       </div>
     )
@@ -131,25 +102,21 @@ export default function PopularCollectionsFeed() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {collections.map(c => (
           <Link key={c.id} href={`/collections/${c.id}`}>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="glass-card rounded-2xl overflow-hidden cursor-pointer"
-            >
+            <div className="glass-card rounded-[var(--radius-2xl)] overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
               <div className="relative aspect-video">
                 {c.backdrop_url ? (
                   <Image src={c.backdrop_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
                 ) : c.poster_url ? (
-                  <Image src={c.poster_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain bg-zinc-900" />
+                  <Image src={c.poster_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain bg-[var(--bg-void)]" />
                 ) : (
-                  <div className="w-full h-full bg-zinc-900" />
+                  <div className="w-full h-full bg-[var(--bg-void)]" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <p className="absolute bottom-2 left-3 right-3 text-white text-sm font-bold line-clamp-2 leading-snug drop-shadow-md">
                   {c.name}
                 </p>
               </div>
-            </motion.div>
+            </div>
           </Link>
         ))}
       </div>

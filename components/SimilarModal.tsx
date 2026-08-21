@@ -136,8 +136,8 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
             <div className="grid grid-cols-4 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="animate-pulse space-y-2">
-                  <div className="aspect-[2/3] rounded-[var(--radius-xl)] bg-zinc-900" />
-                  <div className="h-2.5 bg-zinc-900 rounded w-3/4" />
+                  <div className="aspect-[2/3] rounded-[var(--radius-xl)] bg-[var(--bg-void)]" />
+                  <div className="h-2.5 bg-[var(--bg-void)] rounded w-3/4" />
                 </div>
               ))}
             </div>
@@ -162,20 +162,20 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
                         className="w-full aspect-[2/3] rounded-[var(--radius-xl)] object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
                       />
                     ) : (
-                      <div className="w-full aspect-[2/3] rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
+                      <div className="w-full aspect-[2/3] rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
                         No Poster
                       </div>
                     )}
                     
                     <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
                       {watchedIds.has(item.tmdb_id) && (
-                        <div className="bg-teal-500/90 p-1 rounded-sm shadow-md border border-teal-400/30">
-                          <CheckCircle2 className="w-3 h-3 text-white" />
+                        <div className="bg-[var(--teal-tint-bg)] p-1 rounded-sm shadow-md border border-[var(--teal-tint-border)]">
+                          <CheckCircle2 className="w-3 h-3 text-[var(--teal-300)]" />
                         </div>
                       )}
                       {!watchedIds.has(item.tmdb_id) && watchlistIds.has(item.tmdb_id) && (
-                        <div className="bg-green-500/90 p-1 rounded-sm shadow-md border border-green-400/30">
-                          <Bookmark className="w-3 h-3 text-white" />
+                        <div className="bg-[var(--green-tint-bg)] p-1 rounded-sm shadow-md border border-[var(--green-tint-border)]">
+                          <Bookmark className="w-3 h-3 text-[var(--accent)]" />
                         </div>
                       )}
                     </div>

@@ -154,7 +154,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-40 px-4 py-4 flex items-center justify-between"
         style={{
-          background: 'rgba(36, 31, 23, 0.9)',
+          background: 'var(--bg-bar)',
           borderBottom: '1px solid var(--border-subtle)',
         }}
       >

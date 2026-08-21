@@ -3,6 +3,8 @@
 import { useId, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, KeyRound, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
 
 export default function PasswordChangeForm() {
   const [password, setPassword] = useState('')
@@ -46,13 +48,21 @@ export default function PasswordChangeForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm font-medium">
+        <div
+          role="alert"
+          className="flex items-center gap-2 p-3 rounded-sm text-sm font-medium text-rust-400"
+          style={{ background: 'var(--rust-tint-bg)', border: '1px solid var(--rust-tint-border)' }}
+        >
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
       {success && (
-        <div className="flex items-center gap-2 p-3 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-xl text-sm font-medium">
+        <div
+          role="status"
+          className="flex items-center gap-2 p-3 rounded-sm text-sm font-medium text-[var(--teal-400)]"
+          style={{ background: 'var(--teal-tint-bg)', border: '1px solid var(--teal-tint-border)' }}
+        >
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Password updated successfully.</span>
         </div>
@@ -61,38 +71,38 @@ export default function PasswordChangeForm() {
       <div className="space-y-3">
         <div>
           <label htmlFor={`${fieldId}-new`} className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 pl-1">New Password</label>
-          <input
+          <Input
             id={`${fieldId}-new`}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors"
             placeholder="••••••••"
             required
+            autoComplete="new-password"
           />
         </div>
         <div>
           <label htmlFor={`${fieldId}-confirm`} className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 pl-1">Confirm Password</label>
-          <input
+          <Input
             id={`${fieldId}-confirm`}
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors"
             placeholder="••••••••"
             required
+            autoComplete="new-password"
           />
         </div>
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={loading || !password || !confirm}
-        className="flex items-center justify-center gap-2 w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-sm font-bold tracking-wide transition-all active:scale-95 disabled:opacity-50"
+        fullWidth
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
         <span>Update Password</span>
-      </button>
+      </Button>
     </form>
   )
 }

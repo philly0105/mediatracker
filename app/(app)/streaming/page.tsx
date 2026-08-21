@@ -11,6 +11,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, Bookmark, EyeOff, Loader2, Star, Tv } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 const PROVIDERS = [
   { id: '8', name: 'Netflix' },
@@ -222,29 +223,15 @@ function StreamingContent() {
 
       {/* Type toggle */}
       <div className="flex justify-start">
-        <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] select-none">
-          {([
+        <SegmentedControl
+          options={[
             { id: 'movie', label: 'Movies' },
             { id: 'show', label: 'TV Shows' },
-          ] as const).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => changeType(t.id)}
-              className={`relative px-4 py-2 rounded-sm font-bold text-xs transition-all duration-300 active:scale-95 whitespace-nowrap ${
-                type === t.id ? 'text-white' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              {type === t.id && (
-                <motion.div
-                  layoutId="activeStreamingType"
-                  className="absolute inset-0 bg-white/10 rounded-sm -z-10 shadow-md"
-                  transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-                />
-              )}
-              <span>{t.label}</span>
-            </button>
-          ))}
-        </div>
+          ]}
+          value={type}
+          onChange={changeType}
+          size="sm"
+        />
       </div>
 
       {/* Sort and filters */}
@@ -337,7 +324,7 @@ function StreamingContent() {
                       <span>{item.release_year ?? '—'}</span>
                       {item.vote_average !== undefined && item.vote_average > 0 && (
                         <span className="inline-flex items-center gap-1 text-zinc-400">
-                          <Star className="w-3 h-3 fill-current text-[var(--accent)]" />
+                          <Star className="w-3 h-3 fill-current text-[var(--rating)]" />
                           {item.vote_average.toFixed(1)}
                         </span>
                       )}

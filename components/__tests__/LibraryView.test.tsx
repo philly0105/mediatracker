@@ -122,8 +122,8 @@ describe('LibraryView', () => {
     expect(screen.queryByText('Film 30')).not.toBeInTheDocument()
 
     await act(async () => { trigger?.() })
+    await screen.findByText('Film 30')
     expect(screen.getAllByTitle('Delete entry')).toHaveLength(30)
-    expect(screen.getByText('Film 30')).toBeInTheDocument()
   })
 
   it('resets the window when a filter narrows the list', async () => {

@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { activatableProps } from '@/components/ui/activatable'
 import { useToast } from '@/components/ToastProvider'
+import { useUrlFilters } from '@/lib/useUrlFilters'
 
 interface Recommendation {
   tmdb_id: number
@@ -33,6 +34,11 @@ interface Recommendation {
   seed_title?: string
 }
 
+const FILTER_DEFAULTS = {
+  type: 'all',
+  genre: 'All',
+}
+
 export default function RecommendationsPage() {
   const { toast } = useToast()
   const [items, setItems] = useState<Recommendation[]>([])
@@ -41,8 +47,9 @@ export default function RecommendationsPage() {
   const [fallback, setFallback] = useState(false)
   const [actioningId, setActioningId] = useState<number | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
-  const [activeGenre, setActiveGenre] = useState('All')
-  const [activeType, setActiveType] = useState<'all' | 'movie' | 'show'>('all')
+  const [filters, setFilter] = useUrlFilters(FILTER_DEFAULTS)
+  const activeType = (filters.type as 'all' | 'movie' | 'show') || 'all'
+  const activeGenre = filters.genre || 'All'
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -382,8 +389,8 @@ export default function RecommendationsPage() {
               ]}
               active={activeType}
               onSelect={(id) => {
-                setActiveType(id)
-                setActiveGenre('All')
+                setFilter('type', id)
+                setFilter('genre', 'All')
                 setDiscoverPageByFilter({})
                 setHasMoreByFilter({})
                 setVisibleCount(10)
@@ -393,7 +400,7 @@ export default function RecommendationsPage() {
               options={topGenres.map((genre) => ({ id: genre, label: genre }))}
               active={effectiveGenre}
               onSelect={(genre) => {
-                setActiveGenre(genre)
+                setFilter('genre', genre)
                 setDiscoverPageByFilter((prev) => ({ ...prev, [`${activeType}:${genre}`]: 1 }))
                 setHasMoreByFilter((prev) => {
                   const next = { ...prev }
@@ -413,7 +420,7 @@ export default function RecommendationsPage() {
                 title={`Nothing left in ${effectiveGenre}`}
                 hint="You have seen everything we can suggest here."
                 actionLabel="Show all genres"
-                onAction={() => setActiveGenre('All')}
+                onAction={() => setFilter('genre', 'All')}
               />
             </div>
           ) : (
