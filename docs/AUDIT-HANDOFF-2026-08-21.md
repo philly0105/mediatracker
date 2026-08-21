@@ -681,6 +681,10 @@ media-modal — are the only context hooks in the app that throw when unprovided
 
 ### 7.6 Still open
 
+> **Superseded by 7.7.** A finding-by-finding re-read of the audit against the code
+> turned up two more open items that the "What is left" table in section 3 never
+> carried. Both are now closed — see 7.7 and 7.8. F-24 remains the only open finding.
+
 **F-24 only.** The user chose again to defer the toggle consolidation until there is a
 local Supabase credential: it is six visual surfaces with framer `layoutId` transitions,
 and no test tells you it looks right. Section 6 still applies.
@@ -688,3 +692,83 @@ and no test tells you it looks right. Section 6 still applies.
 `--glow-*` and `--orb-violet` / `--orb-orange` / `--orb-rose` also still carry names from
 a palette that no longer exists. Their *values* are correct; only the names mislead. Not
 part of F-47's stated scope, and renaming them is pure churn unless done alongside F-24.
+
+---
+
+### 7.7 Audit re-read — two findings the table had lost
+
+The user asked whether anything besides F-24 was left, so every finding F-01…F-47 was
+re-checked against the code rather than against section 3's table. F-01 through F-21,
+F-23, F-25 through F-29, F-31 through F-47 all verified done. Two did not:
+
+**F-22 was only half done.** The `--color-white: var(--zinc-100)` bridge retunes all ~230
+`text-white` / `bg-white/x` Tailwind utilities at their source, and that half is right and
+deliberate — do not sweep those call sites. But the bridge cannot reach a literal
+`rgba(255, 255, 255, …)` in an inline style or an SVG attribute, and the audit counted 24
+of those. **18 were still there.**
+
+**The PWA icons were still the Vercel triangle.** Section 3 flagged
+`public/icon-192.png` / `icon-512.png` as starter assets and nothing ever replaced them.
+`app/icon.tsx` and `app/apple-icon.tsx` (F-30) fixed browser tabs and iOS home screens,
+but `app/manifest.ts` still pointed at the two PNGs, so **installing the app to an Android
+home screen gave you Vercel's logo**, and the `maskable` entry reused the non-padded 512.
+
+### 7.8 Both closed
+
+**F-22 remainder — 18 literals swept.** Mapped to the tokens the audit's own fix text
+prescribes (`--btn-ghost-bg`, `--border-*`, `--surface-input`) rather than to new tokens:
+
+| Where | Was | Now |
+|---|---|---|
+| `globals.css` `.nav-item[aria-current]` | 5% white | `--btn-ghost-bg` |
+| `show/[id]/page.tsx` genre chip | 3% | `--btn-ghost-bg` |
+| `EpisodeTracker` season hover, season toggle | 4% | `--btn-ghost-bg` |
+| `EpisodeTracker` + `ImportExportPanel` progress tracks | 10% | `--border-soft` |
+| `ImportExportPanel` mode-toggle track | 3% | `--surface-input` |
+| `ImportExportPanel` dropzone | 2% | `--btn-ghost-bg` |
+| `ImportExportPanel` zebra stripe | 1% | `--border-faint` |
+| `EditEntryModal` modal border | 10% | `--border-soft` |
+| `MediaInfoModal` inactive priority chip | 2% / 5% | `--btn-ghost-bg` / `--border-subtle` |
+| `MediaRow` review quote | 2% | `--btn-ghost-bg` |
+| `Badge` neutral tone | 5% | `--btn-ghost-bg` |
+| `Sidebar` active settings link | 5% | `--btn-ghost-bg` |
+| `StatsCharts` two tooltip cursors | 3% | `--btn-ghost-bg` |
+| `StatsCharts` pie label line | 25% | `--zinc-700` |
+
+Verified in the built CSS: `--btn-ghost-bg` emits `#ece7da0d`, `--border-soft` `#ece7da1a`
+— warm cream at the intended alphas. Four of these lift by 0.01–0.03; the zebra stripe
+(1% → 4%) and the pie label line are the only two that change perceptibly, and both were
+below the threshold of being visible at all before.
+
+`ImportExportPanel`'s mode-toggle track moving to `--surface-input` also lines it up with
+the library and streaming segmented controls, which is a free step toward F-24.
+
+**New:** `app/__tests__/warmPalette.test.ts` — 2 cases. Guards that no
+`rgba(255,255,255,…)` literal returns to `app/`, `components/` or `lib/`, and that the
+`--color-white` bridge line still exists (the sweep is only safe while it does). An
+ESLint ban on `-white` class names, which the audit suggested, would flag the ~230
+intentional utilities instead, so the guard is on the literal. Both assertions
+mutation-checked. **Watch out:** the first assertion scans comments too, so a comment
+quoting an old `rgba(255,255,255,…)` value trips it — write "5% cold white" in prose.
+
+**PWA icons regenerated.** `public/icon-192.png` and `icon-512.png` overwritten (the user
+approved replacing them), plus a new `public/icon-maskable-512.png`. All three are the
+same mark `app/icon.tsx` and `app/apple-icon.tsx` draw — `#100e09` canvas, `#7c9a6a` D —
+rendered by driving `next/og`'s `ImageResponse` from a throwaway node script, so the
+installed icon cannot drift from the tab icon. The maskable one sizes the glyph at 0.44
+of the canvas so Android's circular crop (inscribed in the middle 80%) does not cut it;
+the other two use 0.75, matching `app/icon.tsx`'s 24-of-32. `app/manifest.ts` now names
+`purpose: 'any'` explicitly on the first two and points `maskable` at its own file.
+
+To regenerate, `next/og` is importable from a plain `.mjs` script via
+`createRequire(<repo>/package.json)` — resolving it relative to the script fails.
+
+### 7.9 F-45 is not fully fixed
+
+The full suite failed once on `LibraryView.test.tsx > renders only the first page and
+grows as the sentinel is reached` (got 24 cards, expected 30) while gating this work, then
+passed 3/3 in isolation and 3/3 more full runs. Same test, same symptom the audit
+characterised — so the `restoreMocks` / `unstubGlobals` / `clearMocks` config fix reduced
+the flake but did not eliminate it. Unrelated to this change (a background colour cannot
+change a card count). Worth a real fix: the sentinel callback is probably being captured
+before the second `IntersectionObserver` registration under load.
