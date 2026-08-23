@@ -38,7 +38,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
           {user && <Sidebar userEmail={user.email} />}
 
-          <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-all duration-300 ${
+          {/* transition-[padding-left], not transition-all: padding-left is the
+              only thing here that ever animates, and `all` made the browser
+              watch every animatable property on the one element whose entire
+              subtree is replaced on every navigation. */}
+          <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-[padding-left] duration-300 ${
             // pl = the rail's own width plus the page's md:px-8 gutter, both read
             // from the token. It used to be a literal md:pl-72 (288px) against a
             // 256px --sidebar-width, so the three numbers could drift apart.

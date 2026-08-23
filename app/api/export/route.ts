@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import type { WatchEntry, WatchlistItem } from '@/types'
 
 function csvField(value: string): string {
@@ -14,7 +14,7 @@ function csvField(value: string): string {
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const [{ data: entries }, { data: watchlist }] = await Promise.all([

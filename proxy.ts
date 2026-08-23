@@ -36,7 +36,15 @@ export async function proxy(request: NextRequest) {
       }
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
+    // getClaims(), not getUser(): this runs on every request the matcher
+    // below lets through — every page navigation, every RSC prefetch and every
+    // /api call — and getUser() made each one wait on a round trip to the
+    // Supabase Auth server. getClaims() verifies the token signature locally
+    // against a cached JWKS, and still refreshes an expiring session first so
+    // the cookie rotation below is unaffected. See lib/supabase/server.ts for
+    // the signing-key caveat.
+    const { data } = await supabase.auth.getClaims()
+    const user = data?.claims?.sub ? data.claims : null
     const path = request.nextUrl.pathname
     const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p + '/'))
     const isApi = path.startsWith('/api')

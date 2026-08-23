@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TMDB_GENRES } from '@/lib/tmdb'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/supabase/server'
 
 // A raw row from /person/:id/combined_credits. Only the fields we read are typed.
 type PersonCredit = {
@@ -19,8 +19,7 @@ type PersonCredit = {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)

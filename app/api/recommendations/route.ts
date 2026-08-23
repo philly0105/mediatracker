@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { discoverByGenre, fetchTmdbRecommendations, fetchTmdbTrending } from '@/lib/tmdb'
 import type { MediaType, TmdbSearchResult } from '@/types'
 
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
   const cycle = parseCycle(searchParams.get('cycle'))
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // 1. Fetch user's full history to exclude already watched/watchlisted items

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { fetchTmdbDetails } from '@/lib/tmdb'
 import { NextResponse } from 'next/server'
 import { timingSafeEqual, createHash } from 'node:crypto'
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
   // media's update policy is "auth.uid() is not null", so a sessionless anon
   // client writes zero rows however many it reports. Fail loudly instead.
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) {
     return NextResponse.json({
       error: 'No authenticated Supabase session. media\'s update policy requires auth.uid() is not null, so this must run with a logged-in session (or a service-role client).',

@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import LibraryView from '../LibraryView'
+import LibraryView, { __resetEntryCache } from '../LibraryView'
 import { ToastProvider } from '../ToastProvider'
 import { MultiSelectProvider } from '../MultiSelectProvider'
 import { MediaModalProvider } from '../MediaModalProvider'
@@ -87,6 +87,9 @@ describe('LibraryView', () => {
     refresh.mockClear()
     mockFetch.mockReset()
     global.fetch = mockFetch
+    // The entry cache is module state that survives unmount by design, so
+    // without this each case inherits the previous one's library.
+    __resetEntryCache()
     // No confirm() spy: deleting no longer prompts, it offers an Undo instead.
   })
 

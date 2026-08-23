@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { fetchAllRows } from '@/lib/fetchAllRows'
 
 type JoinedRow = { media: { tmdb_id: number } | { tmdb_id: number }[] | null }
@@ -22,7 +22,7 @@ function toIds(rows: JoinedRow[]): number[] {
 // direct reads, so the client no longer talks to PostgREST at all.
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const [watched, watchlist] = await Promise.all([

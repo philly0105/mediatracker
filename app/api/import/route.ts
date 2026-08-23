@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { searchTmdb } from '@/lib/tmdb'
 import { upsertMedia } from '@/lib/media'
 import { parseRating, parseDate, parseMediaType, parseText, badRequest } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { title, year, type, rating, date, review, status } = await request.json()

@@ -25,8 +25,36 @@ import { useToast } from '@/components/ToastProvider'
 // Matches the watchlist's page size.
 const PAGE_SIZE = 24
 
-// How stale the list has to be before returning to the tab re-pulls it.
+// How stale the list has to be before returning to the tab re-pulls it, and
+// before a cached list is re-pulled on navigating back here.
 const REFETCH_STALE_MS = 30_000
+
+// Survives unmount so navigating away and back does not re-download the whole
+// library — /api/watch returns every entry, paged past PostgREST's 1000-row cap,
+// which is several sequential DB round trips on a large library. Same
+// module-level pattern as lib/useLibraryIds.ts.
+//
+// ponytail: one slot, not a map keyed by type. Switching the type pill just
+// misses and refetches, exactly as it did before this cache existed. A map
+// would also have to keep the three types consistent with each other after a
+// delete, which is a lot of bookkeeping for a filter you flip far less often
+// than you navigate away and come back.
+let cached: { type: string; entries: WatchEntry[]; at: number } | null = null
+
+function readCache(type: string) {
+  return cached?.type === type ? cached : null
+}
+
+/**
+ * Drops the cache. Module state outlives any single render, so a test file that
+ * mounts LibraryView more than once has the first case's entries seeded into
+ * every case after it — which reads as "the fetch never fired". Nothing in the
+ * app calls this: there is no sign-out, so no in-app path swaps users without a
+ * full page load that clears the module anyway.
+ */
+export function __resetEntryCache() {
+  cached = null
+}
 
 const sortOptions: { id: WatchEntrySort; label: string }[] = [
   { id: 'recent', label: 'Recently watched' },
@@ -51,7 +79,6 @@ const ratingOptions: { id: string; label: string }[] = [
 const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All', view: 'list' }
 
 export default function LibraryView() {
-  const [entries, setEntries] = useState<WatchEntry[]>([])
   // Filter state now lives in the URL (via useUrlFilters) so a view is
   // bookmarkable and survives reloads; state stays the source of truth and the
   // URL is a mirror. Values are re-validated against the option sets below so
@@ -70,11 +97,14 @@ export default function LibraryView() {
   // The type filter splits the combined library into movies, shows, or the
   // whole set; a malformed param in a shared link falls back to 'all'.
   const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
-  const [loading, setLoading] = useState(true)
+  // Seeded from the cache so a return visit paints the list on the first frame
+  // instead of a skeleton. Declared after typeFilter because it reads it.
+  const [entries, setEntries] = useState<WatchEntry[]>(() => readCache(typeFilter)?.entries ?? [])
+  const [loading, setLoading] = useState(() => !readCache(typeFilter))
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const lastFetchedAt = useRef(0)
+  const lastFetchedAt = useRef(readCache(typeFilter)?.at ?? 0)
   const { schedule, cancel } = useDeferredAction()
   const { toast } = useToast()
 
@@ -89,11 +119,27 @@ export default function LibraryView() {
   )
 
   useEffect(() => {
+    // Fresh hit: the useState seeds above already painted it, so there is
+    // nothing to set — just skip the request. A miss (including every type
+    // switch) falls through and refetches, as it did before the cache existed.
+    const hit = readCache(typeFilter)
+    if (hit && Date.now() - hit.at < REFETCH_STALE_MS) return
+
     lastFetchedAt.current = Date.now()
     fetchEntries()
       .then(setEntries)
       .finally(() => setLoading(false))
-  }, [fetchEntries])
+  }, [fetchEntries, typeFilter])
+
+  // One mirror instead of writing the cache at each of the ten setEntries call
+  // sites — deletes, undo restores and refetches all land here. Gated on a real
+  // fetch having happened: without it the first render caches the empty initial
+  // array, and a remount before that fetch resolved would read the empty set as
+  // a hit and paint "nothing watched yet" instead of the skeleton.
+  useEffect(() => {
+    if (lastFetchedAt.current === 0) return
+    cached = { type: typeFilter, entries, at: lastFetchedAt.current }
+  }, [entries, typeFilter])
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true)
@@ -172,6 +218,7 @@ export default function LibraryView() {
   // An edit can change rating, review or watched_at — any of which feeds the
   // active sort — so re-pull rather than trying to patch the row in place.
   const handleEntryUpdated = useCallback(() => {
+    lastFetchedAt.current = Date.now()
     fetchEntries().then(setEntries)
   }, [fetchEntries])
 

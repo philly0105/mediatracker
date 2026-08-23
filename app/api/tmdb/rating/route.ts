@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchTmdbDetails } from '@/lib/tmdb'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import type { MediaType } from '@/types'
 
 // Batch rating lookup for rows whose media.vote_average is still null.
@@ -29,7 +29,7 @@ function parseKey(raw: string): { key: string; tmdb_id: number; type: MediaType 
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const raw = req.nextUrl.searchParams.get('ids')

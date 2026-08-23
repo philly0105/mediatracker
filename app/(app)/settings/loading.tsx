@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/Skeleton'
 
-// Settings awaits auth.getUser() and a user_settings read before it renders
+// Settings awaits the session and a user_settings read before it renders
 // anything, so navigating here used to show a blank page for the duration.
 // Mirrors the real layout: header, the two-column account/sharing cards, then
 // the full-width import/export section.
