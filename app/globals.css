@@ -495,3 +495,12 @@ body::after {
     transform: none;
   }
 }
+
+/* Ambient background orbs: reduce blur radius and opacity on mobile viewports
+   to trim expensive fixed-element rasterization and paint costs. */
+@media (max-width: 640px) {
+  .ambient-orb {
+    filter: blur(60px);
+    opacity: 0.1;
+  }
+}

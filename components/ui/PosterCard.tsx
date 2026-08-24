@@ -13,10 +13,8 @@ interface PosterCardProps {
   onClick?: () => void
   /** Renders the card as a link instead of a button. Give one of href/onClick. */
   href?: string
-  /** Opts the poster out of lazy loading. Set it on the cards that are above
-   *  the fold — no <Image> in the app set it, so every route lazy-loaded its
-   *  own LCP image. */
-  priority?: boolean
+  /** Preloads the poster for LCP optimization using Next.js 16 Image preload. */
+  preload?: boolean
   children?: React.ReactNode
 }
 
@@ -28,7 +26,7 @@ export function PosterCard({
   overlay,
   onClick,
   href,
-  priority = false,
+  preload = false,
   children,
 }: PosterCardProps) {
   const [imgErr, setImgErr] = useState(false)
@@ -70,7 +68,7 @@ export function PosterCard({
             alt={title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            priority={priority}
+            preload={preload}
             onError={() => setImgErr(true)}
             className="poster-card-img"
             style={{ objectFit: 'cover' }}

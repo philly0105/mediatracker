@@ -32,9 +32,8 @@ export default function DashboardRecentCards({ entries }: Props) {
               posterUrl={entry.media?.poster_url}
               rating={entry.rating}
               overlay={formatDateLabel(entry.watched_at)}
-              // The first row of the dashboard grid is above the fold — five on
-              // desktop, two on mobile, so the widest row wins.
-              priority={index < 5}
+              // Only the first poster receives preload as the primary LCP candidate.
+              preload={index === 0}
               onClick={() => openMedia(toResult(entry), {
                 // Both actions closed the modal here; only 'watched' refreshed,
                 // because only that changes what this row renders.
