@@ -143,6 +143,8 @@ export default function LibraryView({
   const loadedTypeRef = useRef<string | null>(
     isMatchingSeed ? initialType : (readCache(typeFilter)?.type ?? null)
   )
+  const requestGenRef = useRef(0)
+
   const { schedule, cancel } = useDeferredAction()
   const { toast } = useToast()
 
@@ -157,16 +159,28 @@ export default function LibraryView({
   )
 
   useEffect(() => {
+    const gen = ++requestGenRef.current
     const hit = readCache(typeFilter)
     if (hit && hit.at > 0 && Date.now() - hit.at < REFETCH_STALE_MS) return
 
-    lastFetchedAt.current = Date.now()
+    const targetType = typeFilter
+    const fetchTime = Date.now()
     fetchEntries()
       .then((data) => {
-        loadedTypeRef.current = typeFilter
+        if (gen !== requestGenRef.current || targetType !== typeFilter) return
+        loadedTypeRef.current = targetType
+        lastFetchedAt.current = fetchTime
         setEntries(data)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (gen === requestGenRef.current) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      requestGenRef.current += 1
+    }
   }, [fetchEntries, typeFilter])
 
   // One mirror instead of writing the cache at each of the ten setEntries call
@@ -181,13 +195,21 @@ export default function LibraryView({
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true)
-    lastFetchedAt.current = Date.now()
+    const gen = ++requestGenRef.current
+    const targetType = typeFilter
+    const fetchTime = Date.now()
     fetchEntries()
       .then((data) => {
-        loadedTypeRef.current = typeFilter
+        if (gen !== requestGenRef.current || targetType !== typeFilter) return
+        loadedTypeRef.current = targetType
+        lastFetchedAt.current = fetchTime
         setEntries(data)
       })
-      .finally(() => setRefreshing(false))
+      .finally(() => {
+        if (gen === requestGenRef.current) {
+          setRefreshing(false)
+        }
+      })
   }, [fetchEntries, typeFilter])
 
   // The list is fetched once into client state, so router.refresh() cannot
@@ -203,10 +225,14 @@ export default function LibraryView({
     function refetchIfVisible() {
       if (document.visibilityState !== 'visible') return
       if (Date.now() - lastFetchedAt.current < REFETCH_STALE_MS) return
-      lastFetchedAt.current = Date.now()
+      const gen = ++requestGenRef.current
+      const targetType = typeFilter
+      const fetchTime = Date.now()
       fetchEntries()
         .then((data) => {
-          loadedTypeRef.current = typeFilter
+          if (gen !== requestGenRef.current || targetType !== typeFilter) return
+          loadedTypeRef.current = targetType
+          lastFetchedAt.current = fetchTime
           setEntries(data)
         })
         .catch(() => {})
@@ -264,9 +290,13 @@ export default function LibraryView({
   // An edit can change rating, review or watched_at — any of which feeds the
   // active sort — so re-pull rather than trying to patch the row in place.
   const handleEntryUpdated = useCallback(() => {
-    lastFetchedAt.current = Date.now()
+    const gen = ++requestGenRef.current
+    const targetType = typeFilter
+    const fetchTime = Date.now()
     fetchEntries().then((data) => {
-      loadedTypeRef.current = typeFilter
+      if (gen !== requestGenRef.current || targetType !== typeFilter) return
+      loadedTypeRef.current = targetType
+      lastFetchedAt.current = fetchTime
       setEntries(data)
     })
   }, [fetchEntries, typeFilter])

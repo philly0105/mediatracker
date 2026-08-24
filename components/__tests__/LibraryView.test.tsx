@@ -507,4 +507,67 @@ describe('LibraryView', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/watch')
     expect(await screen.findByText('Fresh Server Film')).toBeInTheDocument()
   })
+
+  it('ignores late scoped responses when navigating back to cached all before request resolves', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seededAll = [entry('1', 'All Seed Film')]
+    let resolveMovies!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+    const moviesPromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>(
+      (resolve) => {
+        resolveMovies = resolve
+      }
+    )
+
+    mockFetch.mockImplementationOnce(() => moviesPromise)
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={seededAll}
+              initialType="all"
+              initialFetchedAt={Date.now()}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    expect(screen.getByText('All Seed Film')).toBeInTheDocument()
+    expect(mockFetch).not.toHaveBeenCalled()
+
+    // Switch to Movies — starts the scoped fetch
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+    })
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenCalledWith('/api/watch?type=movie')
+
+    // Switch back to All before the movie request resolves — should be satisfied from cache/seed
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0])
+    })
+
+    // Assert no unnecessary All request when the fresh All cache/seed is still valid
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+
+    // Now resolve the late Movies response
+    await act(async () => {
+      resolveMovies({
+        ok: true,
+        json: async () => ({ entries: [entry('2', 'Late Movie Film')] }),
+      })
+    })
+
+    // UI remains All and late Movies rows never replace it
+    expect(screen.getByText('All Seed Film')).toBeInTheDocument()
+    expect(screen.queryByText('Late Movie Film')).not.toBeInTheDocument()
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
 })

@@ -157,7 +157,10 @@ describe('fetchWatchEntries', () => {
     ])
   })
 
-  it('falls back to left-join and no media.type filter for unrecognized type or null', async () => {
+  it.each([
+    { typeDesc: 'unrecognized type', typeVal: 'invalid-type' },
+    { typeDesc: 'null type', typeVal: null },
+  ])('falls back to left-join and no media.type filter for $typeDesc', async ({ typeVal }) => {
     let capturedQuery: QueryCall | null = null
     const mockClient = createMockSupabase((query) => {
       capturedQuery = query
@@ -167,7 +170,7 @@ describe('fetchWatchEntries', () => {
     await fetchWatchEntries({
       supabase: mockClient,
       userId: 'u-456',
-      type: 'invalid-type',
+      type: typeVal,
     })
 
     if (!capturedQuery) throw new Error('Expected query to be captured')
