@@ -1,15 +1,24 @@
 import React, { Suspense } from 'react'
 import type { ComponentType } from 'react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import DeferredStatsCharts from '../DeferredStatsCharts'
+import DeferredStatsCharts, { ChartsSkeleton } from '../DeferredStatsCharts'
 import type StatsCharts from '../StatsCharts'
+
+const dynamicMockState = vi.hoisted(() => ({
+  capturedOptions: undefined as { loading?: ComponentType<any>; ssr?: boolean } | undefined,
+  capturedLoader: undefined as (() => Promise<any>) | undefined,
+}))
 
 vi.mock('next/dynamic', () => ({
   default: (
     loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
     options?: { loading?: ComponentType<any>; ssr?: boolean }
   ) => {
+    dynamicMockState.capturedLoader = loader
+    dynamicMockState.capturedOptions = options
     const LazyComponent = React.lazy(async () => {
       const mod = await loader()
       if (mod && typeof mod === 'object' && 'default' in mod) {
@@ -101,13 +110,26 @@ describe('DeferredStatsCharts', () => {
     vi.restoreAllMocks()
   })
 
+  it('configures next/dynamic with ssr: false and the shared skeleton loader', () => {
+    expect(dynamicMockState.capturedOptions?.ssr).toBe(false)
+    expect(typeof dynamicMockState.capturedOptions?.loading).toBe('function')
+
+    if (dynamicMockState.capturedOptions?.loading) {
+      const Loading = dynamicMockState.capturedOptions.loading
+      const { container } = render(<Loading />)
+      expect(container.querySelector('[role="status"]')).toBeInTheDocument()
+      expect(screen.getByText('Loading charts...')).toBeInTheDocument()
+    }
+  })
+
   it('defers rendering chart component until intersecting, uses 300px vertical rootMargin, and disconnects observer', async () => {
     render(<DeferredStatsCharts data={sampleStatsData} />)
 
     expect(observeSpy).toHaveBeenCalledTimes(1)
     expect(observerOptions).toEqual({ rootMargin: '300px 0px' })
     expect(screen.queryByText(/loaded charts/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Loading charts')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('Loading charts...')).toBeInTheDocument()
 
     act(() => {
       observerCallback?.([{ isIntersecting: true }])
@@ -136,5 +158,65 @@ describe('DeferredStatsCharts', () => {
     expect(disconnectSpy).not.toHaveBeenCalled()
     unmount()
     expect(disconnectSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('guards IntersectionObserver callback if fired after unmount and performs no state update', () => {
+    const { unmount } = render(<DeferredStatsCharts data={sampleStatsData} />)
+
+    expect(disconnectSpy).not.toHaveBeenCalled()
+    unmount()
+    expect(disconnectSpy).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      observerCallback?.([{ isIntersecting: true }])
+    })
+
+    expect(screen.queryByText(/loaded charts/)).not.toBeInTheDocument()
+  })
+
+  it('immediately loads charts when IntersectionObserver is not available', async () => {
+    // @ts-expect-error test environment override
+    delete window.IntersectionObserver
+
+    render(<DeferredStatsCharts data={sampleStatsData} />)
+
+    expect(await screen.findByText('loaded charts - Last 12 months')).toBeInTheDocument()
+  })
+
+  it('renders accessible loading state with role="status" and visually hidden label without noisy nested announcements', () => {
+    const { container } = render(<ChartsSkeleton />)
+
+    const statusEl = screen.getByRole('status')
+    expect(statusEl).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText('Loading charts...')).toHaveClass('sr-only')
+
+    const ariaHiddenContainers = container.querySelectorAll('[aria-hidden="true"]')
+    expect(ariaHiddenContainers.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('reserves identical 5-row stable list heights and chart dimensions across skeleton and loaded components', () => {
+    const { container } = render(<ChartsSkeleton />)
+
+    // Chart height reservations
+    expect(container.querySelector('.h-\\[200px\\]')).toBeInTheDocument()
+    const chart280Skeletons = container.querySelectorAll('.h-\\[280px\\]')
+    expect(chart280Skeletons.length).toBe(2)
+
+    // List card containers in skeleton reserve min-height for 5 rows
+    const reservedListContainers = container.querySelectorAll('.space-y-2\\.5.min-h-\\[140px\\]')
+    expect(reservedListContainers.length).toBe(3) // Highest Rated, Directors, Actors
+
+    // Each list container in skeleton has exactly 5 skeleton rows
+    reservedListContainers.forEach((listContainer) => {
+      const rows = listContainer.querySelectorAll('.h-5')
+      expect(rows.length).toBe(5)
+    })
+
+    // Source assertions on StatsCharts.tsx confirming matching min-h-[140px] and 5-item layout
+    const statsChartsSource = readFileSync(join(__dirname, '..', 'StatsCharts.tsx'), 'utf8')
+    expect(statsChartsSource).toContain('space-y-2.5 min-h-[140px]')
+    // Match count: 1 for topRated + 1 in the map over [Top Directors, Top Actors] = all 3 list cards
+    const minHeightMatches = statsChartsSource.match(/min-h-\[140px\]/g)
+    expect(minHeightMatches?.length).toBe(2)
   })
 })

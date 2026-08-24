@@ -219,7 +219,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
 
       <Card>
         <h2 className="text-lg font-semibold tracking-tight mb-4 text-white">Your Highest Rated</h2>
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 min-h-[140px]">
           {data.topRated.map((entry) => (
             <div key={`${entry.type}-${entry.title}`} className="flex items-center justify-between gap-4">
               <span className="text-zinc-200 text-sm truncate">{entry.title}</span>
@@ -241,7 +241,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
         ].map(({ title, items }) => (
           <Card key={title}>
             <h2 className="text-lg font-semibold tracking-tight mb-4 text-white">{title}</h2>
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 min-h-[140px]">
               {items.map(({ name, count }) => (
                 <div key={name} className="flex items-center justify-between">
                   <Link href={`/person/${encodeURIComponent(name)}`} className="text-zinc-200 text-sm hover:text-zinc-100 hover:underline transition-colors">

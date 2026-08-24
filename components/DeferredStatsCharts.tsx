@@ -8,51 +8,66 @@ import { Skeleton } from '@/components/ui/Skeleton'
 
 export function ChartsSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse" aria-busy="true" aria-label="Loading charts">
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-          <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-6 w-48" />
-        </div>
-        <Skeleton className="h-[200px] w-full" />
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div
+      role="status"
+      aria-busy="true"
+      className="space-y-6 animate-pulse"
+    >
+      <span className="sr-only">Loading charts...</span>
+      <div aria-hidden="true" className="space-y-6">
         <Card>
-          <Skeleton className="h-6 w-24 mb-5" />
-          <Skeleton className="h-[280px] w-full" />
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <Skeleton className="h-7 w-36" />
+            <Skeleton className="h-7 w-48" />
+          </div>
+          <Skeleton className="h-[200px] w-full" />
         </Card>
 
-        <Card>
-          <Skeleton className="h-6 w-24 mb-5" />
-          <Skeleton className="h-[280px] w-full" />
-        </Card>
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <Skeleton className="h-7 w-24 mb-5" />
+            <Skeleton className="h-[280px] w-full" />
+          </Card>
 
-      <Card>
-        <Skeleton className="h-6 w-44 mb-4" />
-        <div className="space-y-2.5">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-4/5" />
-          <Skeleton className="h-5 w-3/5" />
+          <Card>
+            <Skeleton className="h-7 w-24 mb-5" />
+            <Skeleton className="h-[280px] w-full" />
+          </Card>
         </div>
-      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
-          <Skeleton className="h-6 w-32 mb-4" />
-          <div className="space-y-2.5">
+          <Skeleton className="h-7 w-44 mb-4" />
+          <div className="space-y-2.5 min-h-[140px]">
             <Skeleton className="h-5 w-full" />
             <Skeleton className="h-5 w-4/5" />
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-5 w-1/2" />
           </div>
         </Card>
-        <Card>
-          <Skeleton className="h-6 w-28 mb-4" />
-          <div className="space-y-2.5">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-4/5" />
-          </div>
-        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <Skeleton className="h-7 w-32 mb-4" />
+            <div className="space-y-2.5 min-h-[140px]">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-4/5" />
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-5 w-1/2" />
+            </div>
+          </Card>
+          <Card>
+            <Skeleton className="h-7 w-28 mb-4" />
+            <div className="space-y-2.5 min-h-[140px]">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-4/5" />
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-5 w-1/2" />
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   )
@@ -90,10 +105,11 @@ export default function DeferredStatsCharts(props: DeferredStatsChartsProps) {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (disconnected) return
         const isIntersecting = entries.some((entry) => entry.isIntersecting)
         if (isIntersecting) {
-          setIsVisible(true)
           disconnect()
+          setIsVisible(true)
         }
       },
       { rootMargin: '300px 0px' }
