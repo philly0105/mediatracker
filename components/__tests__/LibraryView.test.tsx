@@ -570,4 +570,312 @@ describe('LibraryView', () => {
     expect(screen.queryByText('Late Movie Film')).not.toBeInTheDocument()
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
+
+  it('coalesces stale visibilitychange and focus requests into exactly one GET and updates entries', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('IntersectionObserver', class {
+        observe() {}
+        disconnect() {}
+      })
+
+      const initialTime = 1700000000000
+      vi.setSystemTime(initialTime)
+
+      const seededAll = [entry('1', 'Seed Movie')]
+      let resolveBackground!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+      const bgPromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>((resolve) => {
+        resolveBackground = resolve
+      })
+
+      mockFetch.mockImplementation(() => bgPromise)
+
+      render(
+        <ToastProvider>
+          <MediaModalProvider>
+            <MultiSelectProvider>
+              <LibraryView
+                initialEntries={seededAll}
+                initialType="all"
+                initialFetchedAt={initialTime}
+              />
+            </MultiSelectProvider>
+          </MediaModalProvider>
+        </ToastProvider>
+      )
+
+      expect(screen.getByText('Seed Movie')).toBeInTheDocument()
+      expect(mockFetch).not.toHaveBeenCalled()
+
+      // Advance system time past the 30s stale threshold
+      vi.setSystemTime(initialTime + 35_000)
+
+      // Ensure document visibility is visible
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+
+      // Fire visibilitychange and focus back-to-back
+      fireEvent(document, new Event('visibilitychange'))
+      fireEvent(window, new Event('focus'))
+
+      // Assert only one GET is made
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(mockFetch).toHaveBeenCalledWith('/api/watch')
+
+      // Resolve the background response
+      await act(async () => {
+        resolveBackground({
+          ok: true,
+          json: async () => ({ entries: [entry('2', 'Background Updated Film')] }),
+        })
+      })
+
+      // Assert accepted response updates current type and no extra GET was triggered
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(screen.getByText('Background Updated Film')).toBeInTheDocument()
+      expect(screen.queryByText('Seed Movie')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('coalesces visibility and focus during active manual refresh and resets refreshing state on resolution', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('IntersectionObserver', class {
+        observe() {}
+        disconnect() {}
+      })
+
+      const initialTime = 1700000000000
+      vi.setSystemTime(initialTime)
+
+      const seededAll = [entry('1', 'Initial Film')]
+      let resolveRefresh!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+      const refreshPromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>((resolve) => {
+        resolveRefresh = resolve
+      })
+
+      mockFetch.mockImplementation(() => refreshPromise)
+
+      render(
+        <ToastProvider>
+          <MediaModalProvider>
+            <MultiSelectProvider>
+              <LibraryView
+                initialEntries={seededAll}
+                initialType="all"
+                initialFetchedAt={initialTime}
+              />
+            </MultiSelectProvider>
+          </MediaModalProvider>
+        </ToastProvider>
+      )
+
+      expect(screen.getByText('Initial Film')).toBeInTheDocument()
+      expect(mockFetch).not.toHaveBeenCalled()
+
+      // Advance time past stale threshold
+      vi.setSystemTime(initialTime + 35_000)
+
+      // Click manual refresh
+      const refreshBtn = screen.getByRole('button', { name: 'Refresh library' })
+      fireEvent.click(refreshBtn)
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(mockFetch).toHaveBeenCalledWith('/api/watch')
+      expect(screen.getByRole('button', { name: 'Refreshing library' })).toBeDisabled()
+
+      // Ensure document visibility is visible and fire visibilitychange & focus while refresh is pending
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+      fireEvent(document, new Event('visibilitychange'))
+      fireEvent(window, new Event('focus'))
+
+      // No duplicate background GET should be fired
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+
+      // Resolve manual refresh response
+      await act(async () => {
+        resolveRefresh({
+          ok: true,
+          json: async () => ({ entries: [entry('2', 'Refreshed Film')] }),
+        })
+      })
+
+      // Accepted response updates entries
+      expect(screen.getByText('Refreshed Film')).toBeInTheDocument()
+      expect(screen.queryByText('Initial Film')).not.toBeInTheDocument()
+
+      // Refresh button is no longer spinning or disabled
+      expect(screen.getByRole('button', { name: 'Refresh library' })).not.toBeDisabled()
+      expect(screen.queryByRole('button', { name: 'Refreshing library' })).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('guarantees post-mutation read on entry update when a prior background fetch was in flight', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('IntersectionObserver', class {
+        observe() {}
+        disconnect() {}
+      })
+
+      const initialTime = 1700000000000
+      vi.setSystemTime(initialTime)
+
+      const seededAll = [entry('1', 'Film Pre-Mutation')]
+      let resolveBackground!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+      const bgPromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>((resolve) => {
+        resolveBackground = resolve
+      })
+
+      let resolveMutationUpdate!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+      const updatePromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>((resolve) => {
+        resolveMutationUpdate = resolve
+      })
+
+      mockFetch.mockImplementation((url, init) => {
+        if (init?.method === 'PATCH') {
+          return Promise.resolve({ ok: true, json: async () => ({}) })
+        }
+        if (mockFetch.mock.calls.filter(([, reqInit]) => !reqInit || reqInit.method !== 'PATCH').length === 1) {
+          return bgPromise
+        }
+        return updatePromise
+      })
+
+      render(
+        <ToastProvider>
+          <MediaModalProvider>
+            <MultiSelectProvider>
+              <LibraryView
+                initialEntries={seededAll}
+                initialType="all"
+                initialFetchedAt={initialTime}
+              />
+            </MultiSelectProvider>
+          </MediaModalProvider>
+        </ToastProvider>
+      )
+
+      expect(screen.getByText('Film Pre-Mutation')).toBeInTheDocument()
+
+      // Advance time past stale threshold
+      vi.setSystemTime(initialTime + 35_000)
+
+      // Trigger background visibility fetch
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+      fireEvent(document, new Event('visibilitychange'))
+
+      // 1 GET call initiated
+      expect(mockFetch).toHaveBeenCalledWith('/api/watch')
+
+      // Open edit modal on card and save
+      fireEvent.click(screen.getByTitle('Edit entry'))
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+      })
+
+      // The mutation fetch must have been issued (post-mutation current-type read)
+      expect(
+        mockFetch.mock.calls.filter(([url, init]) => url === '/api/watch' && (!init || init.method !== 'PATCH'))
+      ).toHaveLength(2)
+
+      // Resolve the pre-mutation background fetch with old data
+      await act(async () => {
+        resolveBackground({
+          ok: true,
+          json: async () => ({ entries: [entry('1', 'Film Pre-Mutation Old Data')] }),
+        })
+      })
+
+      // Stale pre-mutation response must NOT overwrite the UI
+      expect(screen.queryByText('Film Pre-Mutation Old Data')).not.toBeInTheDocument()
+
+      // Resolve the post-mutation fetch
+      await act(async () => {
+        resolveMutationUpdate({
+          ok: true,
+          json: async () => ({ entries: [entry('1', 'Film Post-Mutation Updated')] }),
+        })
+      })
+
+      // Post-mutation response is accepted
+      expect(screen.getByText('Film Post-Mutation Updated')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('resets refreshing state and does not strand controls if filter type changes while refresh is in flight', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seededAll = [entry('1', 'All Seed Film')]
+    let resolveAllRefresh!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+    const allRefreshPromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>((resolve) => {
+      resolveAllRefresh = resolve
+    })
+
+    let resolveMoviesFetch!: (value: { ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }) => void
+    const moviesPromise = new Promise<{ ok: boolean; json: () => Promise<{ entries: WatchEntry[] }> }>((resolve) => {
+      resolveMoviesFetch = resolve
+    })
+
+    mockFetch.mockImplementation((url) => {
+      if (url === '/api/watch') return allRefreshPromise
+      if (url === '/api/watch?type=movie') return moviesPromise
+      return Promise.resolve({ ok: true, json: async () => ({ entries: [] }) })
+    })
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={seededAll}
+              initialType="all"
+              initialFetchedAt={Date.now()}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    // Trigger manual refresh on 'all'
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh library' }))
+    expect(screen.getByRole('button', { name: 'Refreshing library' })).toBeDisabled()
+
+    // While refresh is pending, switch type filter to 'Movies'
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+    })
+
+    // Now resolve the older 'all' refresh
+    await act(async () => {
+      resolveAllRefresh({
+        ok: true,
+        json: async () => ({ entries: [entry('1', 'Late All Refresh Data')] }),
+      })
+    })
+
+    // Refresh button must NOT be stuck in spinning/disabled state
+    expect(screen.queryByRole('button', { name: 'Refreshing library' })).not.toBeInTheDocument()
+
+    // Late 'all' data must NOT be accepted in Movies view
+    expect(screen.queryByText('Late All Refresh Data')).not.toBeInTheDocument()
+
+    // Now resolve the Movies fetch
+    await act(async () => {
+      resolveMoviesFetch({
+        ok: true,
+        json: async () => ({ entries: [entry('2', 'Movie Data')] }),
+      })
+    })
+
+    expect(screen.getByText('Movie Data')).toBeInTheDocument()
+  })
 })

@@ -144,6 +144,11 @@ export default function LibraryView({
     isMatchingSeed ? initialType : (readCache(typeFilter)?.type ?? null)
   )
   const requestGenRef = useRef(0)
+  const inFlightRef = useRef<{
+    type: string
+    gen: number
+    promise: Promise<WatchEntry[]>
+  } | null>(null)
 
   const { schedule, cancel } = useDeferredAction()
   const { toast } = useToast()
@@ -159,13 +164,16 @@ export default function LibraryView({
   )
 
   useEffect(() => {
-    const gen = ++requestGenRef.current
     const hit = readCache(typeFilter)
     if (hit && hit.at > 0 && Date.now() - hit.at < REFETCH_STALE_MS) return
 
+    const gen = ++requestGenRef.current
     const targetType = typeFilter
     const fetchTime = Date.now()
-    fetchEntries()
+    const promise = fetchEntries()
+    inFlightRef.current = { type: targetType, gen, promise }
+
+    promise
       .then((data) => {
         if (gen !== requestGenRef.current || targetType !== typeFilter) return
         loadedTypeRef.current = targetType
@@ -173,6 +181,9 @@ export default function LibraryView({
         setEntries(data)
       })
       .finally(() => {
+        if (inFlightRef.current?.gen === gen) {
+          inFlightRef.current = null
+        }
         if (gen === requestGenRef.current) {
           setLoading(false)
         }
@@ -180,6 +191,9 @@ export default function LibraryView({
 
     return () => {
       requestGenRef.current += 1
+      if (inFlightRef.current?.gen === gen) {
+        inFlightRef.current = null
+      }
     }
   }, [fetchEntries, typeFilter])
 
@@ -198,7 +212,10 @@ export default function LibraryView({
     const gen = ++requestGenRef.current
     const targetType = typeFilter
     const fetchTime = Date.now()
-    fetchEntries()
+    const promise = fetchEntries()
+    inFlightRef.current = { type: targetType, gen, promise }
+
+    promise
       .then((data) => {
         if (gen !== requestGenRef.current || targetType !== typeFilter) return
         loadedTypeRef.current = targetType
@@ -206,9 +223,10 @@ export default function LibraryView({
         setEntries(data)
       })
       .finally(() => {
-        if (gen === requestGenRef.current) {
-          setRefreshing(false)
+        if (inFlightRef.current?.gen === gen) {
+          inFlightRef.current = null
         }
+        setRefreshing(false)
       })
   }, [fetchEntries, typeFilter])
 
@@ -225,10 +243,15 @@ export default function LibraryView({
     function refetchIfVisible() {
       if (document.visibilityState !== 'visible') return
       if (Date.now() - lastFetchedAt.current < REFETCH_STALE_MS) return
+      if (inFlightRef.current && inFlightRef.current.type === typeFilter) return
+
       const gen = ++requestGenRef.current
       const targetType = typeFilter
       const fetchTime = Date.now()
-      fetchEntries()
+      const promise = fetchEntries()
+      inFlightRef.current = { type: targetType, gen, promise }
+
+      promise
         .then((data) => {
           if (gen !== requestGenRef.current || targetType !== typeFilter) return
           loadedTypeRef.current = targetType
@@ -236,6 +259,11 @@ export default function LibraryView({
           setEntries(data)
         })
         .catch(() => {})
+        .finally(() => {
+          if (inFlightRef.current?.gen === gen) {
+            inFlightRef.current = null
+          }
+        })
     }
     document.addEventListener('visibilitychange', refetchIfVisible)
     window.addEventListener('focus', refetchIfVisible)
@@ -293,12 +321,21 @@ export default function LibraryView({
     const gen = ++requestGenRef.current
     const targetType = typeFilter
     const fetchTime = Date.now()
-    fetchEntries().then((data) => {
-      if (gen !== requestGenRef.current || targetType !== typeFilter) return
-      loadedTypeRef.current = targetType
-      lastFetchedAt.current = fetchTime
-      setEntries(data)
-    })
+    const promise = fetchEntries()
+    inFlightRef.current = { type: targetType, gen, promise }
+
+    promise
+      .then((data) => {
+        if (gen !== requestGenRef.current || targetType !== typeFilter) return
+        loadedTypeRef.current = targetType
+        lastFetchedAt.current = fetchTime
+        setEntries(data)
+      })
+      .finally(() => {
+        if (inFlightRef.current?.gen === gen) {
+          inFlightRef.current = null
+        }
+      })
   }, [fetchEntries, typeFilter])
 
   const genres = useMemo(() => distinctGenres(entries), [entries])
