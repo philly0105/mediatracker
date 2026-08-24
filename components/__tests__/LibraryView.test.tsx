@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import { StrictMode, type HTMLAttributes, type ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import LibraryView, { __resetEntryCache } from '../LibraryView'
@@ -324,5 +324,187 @@ describe('LibraryView', () => {
       fireEvent.keyDown(row, { key: 'Enter' })
     })
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('renders server-seeded entries without making an initial hydration fetch', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seeded = [entry('1', 'Heat')]
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={seeded}
+              initialType="all"
+              initialFetchedAt={Date.now()}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    expect(screen.getByText('Heat')).toBeInTheDocument()
+    expect(screen.getByText('1 watched')).toBeInTheDocument()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('fetches scoped entries when switching type filter from seeded initial data', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seeded = [entry('1', 'Heat')]
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('2', 'The Godfather')] }),
+    })
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={seeded}
+              initialType="all"
+              initialFetchedAt={Date.now()}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    expect(screen.getByText('Heat')).toBeInTheDocument()
+    expect(mockFetch).not.toHaveBeenCalled()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+    })
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenCalledWith('/api/watch?type=movie')
+    expect(await screen.findByText('The Godfather')).toBeInTheDocument()
+  })
+
+  it('refetches and renders all entries when switching back to all after viewing movies', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seededAll = [entry('1', 'All Seed Film')]
+    const movieEntries = [entry('2', 'Movie Only Film')]
+    const refetchedAll = [entry('3', 'Refetched All Film')]
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ entries: movieEntries }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ entries: refetchedAll }),
+      })
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={seededAll}
+              initialType="all"
+              initialFetchedAt={Date.now()}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    expect(screen.getByText('All Seed Film')).toBeInTheDocument()
+    expect(mockFetch).not.toHaveBeenCalled()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+    })
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/watch?type=movie')
+    expect(await screen.findByText('Movie Only Film')).toBeInTheDocument()
+    expect(screen.queryByText('All Seed Film')).not.toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0])
+    })
+
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/watch')
+    expect(await screen.findByText('Refetched All Film')).toBeInTheDocument()
+    expect(screen.queryByText('Movie Only Film')).not.toBeInTheDocument()
+  })
+
+  it('does not make hydration fetch even under React StrictMode double effect invocation', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seededAll = [entry('1', 'Strict Seed Film')]
+
+    render(
+      <StrictMode>
+        <ToastProvider>
+          <MediaModalProvider>
+            <MultiSelectProvider>
+              <LibraryView
+                initialEntries={seededAll}
+                initialType="all"
+                initialFetchedAt={Date.now()}
+              />
+            </MultiSelectProvider>
+          </MediaModalProvider>
+        </ToastProvider>
+      </StrictMode>
+    )
+
+    expect(screen.getByText('Strict Seed Film')).toBeInTheDocument()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('refetches on mount if initial seed is older than the stale threshold', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const staleEntries = [entry('1', 'Stale Seed Film')]
+    const freshEntries = [entry('2', 'Fresh Server Film')]
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: freshEntries }),
+    })
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={staleEntries}
+              initialType="all"
+              initialFetchedAt={Date.now() - 35_000}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenCalledWith('/api/watch')
+    expect(await screen.findByText('Fresh Server Film')).toBeInTheDocument()
   })
 })

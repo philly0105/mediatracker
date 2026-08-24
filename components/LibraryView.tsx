@@ -78,7 +78,17 @@ const ratingOptions: { id: string; label: string }[] = [
 // free-text key (default '') and so gets its URL write debounced.
 const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All', view: 'list' }
 
-export default function LibraryView() {
+export interface LibraryViewProps {
+  initialEntries?: WatchEntry[]
+  initialType?: 'all' | 'movie' | 'show'
+  initialFetchedAt?: number
+}
+
+export default function LibraryView({
+  initialEntries,
+  initialType,
+  initialFetchedAt,
+}: LibraryViewProps = {}) {
   // Filter state now lives in the URL (via useUrlFilters) so a view is
   // bookmarkable and survives reloads; state stays the source of truth and the
   // URL is a mirror. Values are re-validated against the option sets below so
@@ -97,14 +107,42 @@ export default function LibraryView() {
   // The type filter splits the combined library into movies, shows, or the
   // whole set; a malformed param in a shared link falls back to 'all'.
   const typeFilter = (['all', 'movie', 'show'] as const).find((t) => t === filters.type) ?? 'all'
-  // Seeded from the cache so a return visit paints the list on the first frame
-  // instead of a skeleton. Declared after typeFilter because it reads it.
-  const [entries, setEntries] = useState<WatchEntry[]>(() => readCache(typeFilter)?.entries ?? [])
-  const [loading, setLoading] = useState(() => !readCache(typeFilter))
+
+  const isMatchingSeed =
+    initialType !== undefined &&
+    initialType === typeFilter &&
+    initialEntries !== undefined
+
+  // Seeded from the cache or server props so a return visit or initial load paints the list
+  // on the first frame instead of a skeleton. Declared after typeFilter because it reads it.
+  const [entries, setEntries] = useState<WatchEntry[]>(() => {
+    if (isMatchingSeed) {
+      if (!cached || (initialFetchedAt !== undefined && initialFetchedAt > cached.at)) {
+        cached = {
+          type: initialType,
+          entries: initialEntries,
+          at: initialFetchedAt ?? 0,
+        }
+      }
+      return initialEntries
+    }
+    return readCache(typeFilter)?.entries ?? []
+  })
+  const [loading, setLoading] = useState(() => {
+    if (isMatchingSeed) return false
+    return !readCache(typeFilter)
+  })
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const lastFetchedAt = useRef(readCache(typeFilter)?.at ?? 0)
+  const lastFetchedAt = useRef(
+    isMatchingSeed
+      ? (initialFetchedAt ?? 0)
+      : (readCache(typeFilter)?.at ?? 0)
+  )
+  const loadedTypeRef = useRef<string | null>(
+    isMatchingSeed ? initialType : (readCache(typeFilter)?.type ?? null)
+  )
   const { schedule, cancel } = useDeferredAction()
   const { toast } = useToast()
 
@@ -119,15 +157,15 @@ export default function LibraryView() {
   )
 
   useEffect(() => {
-    // Fresh hit: the useState seeds above already painted it, so there is
-    // nothing to set — just skip the request. A miss (including every type
-    // switch) falls through and refetches, as it did before the cache existed.
     const hit = readCache(typeFilter)
-    if (hit && Date.now() - hit.at < REFETCH_STALE_MS) return
+    if (hit && hit.at > 0 && Date.now() - hit.at < REFETCH_STALE_MS) return
 
     lastFetchedAt.current = Date.now()
     fetchEntries()
-      .then(setEntries)
+      .then((data) => {
+        loadedTypeRef.current = typeFilter
+        setEntries(data)
+      })
       .finally(() => setLoading(false))
   }, [fetchEntries, typeFilter])
 
@@ -137,7 +175,7 @@ export default function LibraryView() {
   // array, and a remount before that fetch resolved would read the empty set as
   // a hit and paint "nothing watched yet" instead of the skeleton.
   useEffect(() => {
-    if (lastFetchedAt.current === 0) return
+    if (lastFetchedAt.current === 0 || loadedTypeRef.current !== typeFilter) return
     cached = { type: typeFilter, entries, at: lastFetchedAt.current }
   }, [entries, typeFilter])
 
@@ -145,9 +183,12 @@ export default function LibraryView() {
     setRefreshing(true)
     lastFetchedAt.current = Date.now()
     fetchEntries()
-      .then(setEntries)
+      .then((data) => {
+        loadedTypeRef.current = typeFilter
+        setEntries(data)
+      })
       .finally(() => setRefreshing(false))
-  }, [fetchEntries])
+  }, [fetchEntries, typeFilter])
 
   // The list is fetched once into client state, so router.refresh() cannot
   // reach it: an entry edited on a show page, in another tab, or on a phone
@@ -163,7 +204,12 @@ export default function LibraryView() {
       if (document.visibilityState !== 'visible') return
       if (Date.now() - lastFetchedAt.current < REFETCH_STALE_MS) return
       lastFetchedAt.current = Date.now()
-      fetchEntries().then(setEntries).catch(() => {})
+      fetchEntries()
+        .then((data) => {
+          loadedTypeRef.current = typeFilter
+          setEntries(data)
+        })
+        .catch(() => {})
     }
     document.addEventListener('visibilitychange', refetchIfVisible)
     window.addEventListener('focus', refetchIfVisible)
@@ -171,7 +217,7 @@ export default function LibraryView() {
       document.removeEventListener('visibilitychange', refetchIfVisible)
       window.removeEventListener('focus', refetchIfVisible)
     }
-  }, [fetchEntries])
+  }, [fetchEntries, typeFilter])
 
   // Deleting drops the row immediately and defers the write, so Undo just
   // cancels the pending request rather than trying to reconstruct the entry.
@@ -219,8 +265,11 @@ export default function LibraryView() {
   // active sort — so re-pull rather than trying to patch the row in place.
   const handleEntryUpdated = useCallback(() => {
     lastFetchedAt.current = Date.now()
-    fetchEntries().then(setEntries)
-  }, [fetchEntries])
+    fetchEntries().then((data) => {
+      loadedTypeRef.current = typeFilter
+      setEntries(data)
+    })
+  }, [fetchEntries, typeFilter])
 
   const genres = useMemo(() => distinctGenres(entries), [entries])
   const decades = useMemo(() => distinctDecades(entries), [entries])

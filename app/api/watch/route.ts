@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
-import { fetchAllRows } from '@/lib/fetchAllRows'
+import { fetchWatchEntries } from '@/lib/watchEntries'
 import { parseRating, parseMediaType, parseTmdbId, parseDate, parseUuid, parseText, badRequest } from '@/lib/validation'
-
-// `overview` is deliberately absent: nothing in the library list renders it and
-// the client-side search does not read it (lib/matchesLibraryQuery uses title,
-// director, year, cast and genres), so it was several hundred bytes per row of
-// pure wire weight. MediaInfoModal now takes the synopsis from
-// /api/tmdb/details, which was already returning it unused.
-const WATCH_SELECT = 'id, rating, review, watched_at, rewatch, created_at, media!inner(id, tmdb_id, type, title, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
-const WATCH_SELECT_LEFT = 'id, rating, review, watched_at, rewatch, created_at, media(id, tmdb_id, type, title, poster_url, release_year, genres, vote_average, runtime_mins, director, cast_members)'
 
 // GET: fetch watch entries (with media) for the authenticated user
 export async function GET(request: NextRequest) {
@@ -21,35 +13,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') // 'movie' or 'show' or null for all
 
-  const filterByType = type === 'movie' || type === 'show'
-
-  // Paged rather than a single unbounded select: PostgREST caps a response at
-  // 1000 rows and does not say so, which silently froze the Library at 1000
-  // titles. The client still filters and sorts the whole set, so the shape of
-  // the response is unchanged.
-  const { rows, error, truncated } = await fetchAllRows((from, to) => {
-    // !inner is what makes .eq('media.type') filter the parent rows. Without it
-    // PostgREST filters only the embedded resource and returns every entry with
-    // media: null on the non-matches.
-    let query = supabase
-      .from('watch_entries')
-      .select(filterByType ? WATCH_SELECT : WATCH_SELECT_LEFT)
-      .eq('user_id', user.id)
-      .order('watched_at', { ascending: false })
-      // Tiebreak: watched_at is a date, so same-day entries have no inherent
-      // order and rows would drift between range windows without this.
-      .order('id', { ascending: false })
-      .range(from, to)
-
-    if (filterByType) {
-      query = query.eq('media.type', type)
-    }
-
-    return query
+  const { entries, error, truncated } = await fetchWatchEntries({
+    supabase,
+    userId: user.id,
+    type,
   })
 
   if (error) return NextResponse.json({ error }, { status: 500 })
-  return NextResponse.json({ entries: rows, truncated })
+  return NextResponse.json({ entries, truncated })
 }
 
 // POST: log a watched entry
