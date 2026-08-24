@@ -1,19 +1,20 @@
 # Signed-in Production Performance Baseline and Measurement Report
 
 Date: 2026-08-23
-Commit: 33676f894851dec3d79b100cc7d9e20f851791f2
+Source Commit: b6aa7238edd48d72e53f85de230f7dc135e28b06 (Task 1 source state used for build)
 Next.js Version: 16.2.6 (Turbopack)
 
 ## 1. Build Baseline (before)
 
-- **Build Command:** `npm run build`
-- **Build Commit:** `33676f894851dec3d79b100cc7d9e20f851791f2`
-- **Turbopack Workspace Root Warning:** Resolved (eliminated by explicit `turbopack.root: process.cwd()` in `next.config.ts`)
-- **Build Durations (before):**
-  - Compilation: 7.1s
+- **Build Command:** `npm run build` (measured with PowerShell `[System.Diagnostics.Stopwatch]`)
+- **Source Commit Used for Build:** `b6aa7238edd48d72e53f85de230f7dc135e28b06` (`b6aa723`)
+- **Exit Code:** 0
+- **Turbopack Workspace Root Warning:** Eliminated (PASS - resolved by explicit `turbopack.root: process.cwd()` in `next.config.ts`)
+- **Elapsed Wall Clock Duration:** 14.63s (14,626 ms)
+- **Phase Durations:**
+  - Compilation: 4.8s
   - TypeScript validation: 5.7s
-  - Static page generation: 471ms (46/46 pages)
-  - Total build execution time: ~13.3s
+  - Static page generation: 535ms (46/46 pages)
 
 ## 2. Chunk Measurement Methodology
 
@@ -66,9 +67,9 @@ Common client chunks referenced by all authenticated routes under `app/(app)`:
 
 ## 5. Summary Baseline Table
 
-| Metric | Baseline (before) | Target | Notes |
+| Metric | Post-Task-1 Baseline (before) | Target | Notes |
 | --- | --- | --- | --- |
-| Turbopack Root Warning | Warning present | Eliminated (PASS) | Resolved in Task 1 |
+| Turbopack Root Warning | Eliminated (PASS) | Eliminated (PASS) | Resolved in Task 1 (`turbopack.root` configured) |
 | Authenticated Layout Common Size | 304,739 B (297.6 KiB) | >= 30% reduction | Target for Tasks 2-4 |
 | Dashboard Initial Bundle Size | 321,287 B (313.8 KiB) | Reduced with shell | Measured from `/(app)/page` manifest |
 | Stats Initial Bundle Size | 675,408 B (659.6 KiB) | <= 316 KiB (defer Recharts) | Target for Task 5 |
