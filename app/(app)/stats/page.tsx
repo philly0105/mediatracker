@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
-import StatsCharts from '@/components/StatsCharts'
+import DeferredStatsCharts from '@/components/DeferredStatsCharts'
 import {
   computeGenreBreakdown,
   computeRatingDistribution,
@@ -145,7 +145,7 @@ export default async function StatsPage({
             <StatTile label="Current streak" value={statsData.currentStreak} />
             <StatTile label="Longest streak" value={statsData.longestStreak} />
           </div>
-          <StatsCharts data={statsData} />
+          <DeferredStatsCharts data={statsData} />
         </>
       ) : (
         <EmptyState
