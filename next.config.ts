@@ -12,6 +12,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   experimental: {
     // Every route under app/(app) is dynamic — the shell awaits the session, so
     // cookies() is read before any page renders. Next gives dynamic routes a
