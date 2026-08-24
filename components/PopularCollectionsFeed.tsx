@@ -105,9 +105,9 @@ export default function PopularCollectionsFeed() {
             <div className="glass-card rounded-[var(--radius-2xl)] overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
               <div className="relative aspect-video">
                 {c.backdrop_url ? (
-                  <Image src={c.backdrop_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+                  <Image src={c.backdrop_url} alt={c.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" />
                 ) : c.poster_url ? (
-                  <Image src={c.poster_url} alt={c.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain bg-[var(--bg-void)]" />
+                  <Image src={c.poster_url} alt={c.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-contain bg-[var(--bg-void)]" />
                 ) : (
                   <div className="w-full h-full bg-[var(--bg-void)]" />
                 )}

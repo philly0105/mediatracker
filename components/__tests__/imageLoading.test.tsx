@@ -176,6 +176,13 @@ describe('image loading policy (Next.js 16)', () => {
     expect(offenders).toEqual([])
   })
 
+  it('matches Popular Collections image hints to its 2/3/4-column grid', () => {
+    const source = readFileSync(path.join(ROOT, 'components/PopularCollectionsFeed.tsx'), 'utf8')
+    const expectedSizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+
+    expect(source.split(`sizes="${expectedSizes}"`)).toHaveLength(3)
+  })
+
   it('applies ambient-orb class to ambient layout orbs and configures mobile-only blur/opacity reduction', () => {
     const layoutContent = readFileSync(path.join(ROOT, 'app/layout.tsx'), 'utf8')
     const globalsContent = readFileSync(path.join(ROOT, 'app/globals.css'), 'utf8')
