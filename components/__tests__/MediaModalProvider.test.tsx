@@ -1,5 +1,5 @@
-import { useEffect, useRef, Children } from 'react'
-import type { HTMLAttributes, ReactNode } from 'react'
+import React, { Suspense, useEffect, useRef, Children } from 'react'
+import type { HTMLAttributes, ReactNode, ComponentType } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -7,6 +7,29 @@ import { join } from 'node:path'
 import { MediaModalProvider, useMediaModal } from '../MediaModalProvider'
 import { ToastProvider } from '../ToastProvider'
 import type { TmdbSearchResult } from '@/types'
+
+vi.mock('next/dynamic', () => ({
+  default: (
+    loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
+    options?: { loading?: ComponentType<any>; ssr?: boolean }
+  ) => {
+    const LazyComponent = React.lazy(async () => {
+      const mod = await loader()
+      if (mod && typeof mod === 'object' && 'default' in mod) {
+        return mod as { default: ComponentType<any> }
+      }
+      return { default: mod as ComponentType<any> }
+    })
+
+    return function DynamicComponent(props: any) {
+      return (
+        <Suspense fallback={options?.loading ? <options.loading /> : null}>
+          <LazyComponent {...props} />
+        </Suspense>
+      )
+    }
+  },
+}))
 
 type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
   initial?: unknown

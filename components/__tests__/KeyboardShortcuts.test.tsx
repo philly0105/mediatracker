@@ -1,3 +1,5 @@
+import React, { Suspense } from 'react'
+import type { HTMLAttributes, ReactNode, ComponentType } from 'react'
 import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
@@ -6,6 +8,51 @@ import { MediaModalProvider } from '../MediaModalProvider'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { QUICK_NAV, G_CHORD_MS } from '@/lib/quickNav'
 import { useModal } from '@/lib/useModal'
+
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
+  initial?: unknown
+  animate?: unknown
+  exit?: unknown
+  transition?: unknown
+}
+
+function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
+  delete props.initial
+  delete props.animate
+  delete props.exit
+  delete props.transition
+  return props
+}
+
+vi.mock('next/dynamic', () => ({
+  default: (
+    loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
+    options?: { loading?: ComponentType<any>; ssr?: boolean }
+  ) => {
+    const LazyComponent = React.lazy(async () => {
+      const mod = await loader()
+      if (mod && typeof mod === 'object' && 'default' in mod) {
+        return mod as { default: ComponentType<any> }
+      }
+      return { default: mod as ComponentType<any> }
+    })
+
+    return function DynamicComponent(props: any) {
+      return (
+        <Suspense fallback={options?.loading ? <options.loading /> : null}>
+          <LazyComponent {...props} />
+        </Suspense>
+      )
+    }
+  },
+}))
+
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: { children?: ReactNode }) => (
+    <div data-testid="animate-presence-host">{children}</div>
+  ),
+  motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
+}))
 
 // SearchOverlay refreshes the route after logging an item; shortcut wiring just
 // needs the call to exist, not to do anything. The ?search=1 param path reads
@@ -465,5 +512,19 @@ describe('KeyboardShortcuts g-navigation and help sheet (F-44)', () => {
     for (const item of QUICK_NAV) {
       expect(within(sheet).getByText(item.name)).toBeInTheDocument()
     }
+  })
+
+  it('renders KeyboardHelp inside AnimatePresence and keeps host mounted across close', async () => {
+    renderShortcuts()
+    fireEvent.keyDown(document, { key: '?' })
+    const sheet = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
+    expect(sheet).toBeInTheDocument()
+
+    const presenceHost = screen.getByTestId('animate-presence-host')
+    expect(presenceHost).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument()
+    expect(presenceHost).toBeInTheDocument()
   })
 })

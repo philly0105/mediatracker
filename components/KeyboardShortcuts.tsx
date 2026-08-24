@@ -6,8 +6,7 @@ import { isAnyModalOpen } from '@/lib/useModal'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { QUICK_NAV, G_CHORD_MS } from '@/lib/quickNav'
 
-const SearchOverlay = dynamic(() => import('@/components/SearchOverlay'))
-const KeyboardHelp = dynamic(() => import('@/components/KeyboardHelp'))
+const KeyboardShortcutPanels = dynamic(() => import('@/components/KeyboardShortcutPanels'))
 
 export default function KeyboardShortcuts() {
   const searchParams = useSearchParams()
@@ -15,6 +14,7 @@ export default function KeyboardShortcuts() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [panelsLoaded, setPanelsLoaded] = useState(false)
   // When `g` was last pressed. A chord rather than a modifier, so it has to
   // expire — otherwise a `g` typed and abandoned turns the next `l` into a
   // navigation an hour later.
@@ -50,6 +50,7 @@ export default function KeyboardShortcuts() {
           // Open only. The branch is already gated on !isAnyModalOpen(), and the
           // sheet registers as a modal, so a second ? never reaches this — it
           // closes with Escape or the close button, like every other dialog.
+          setPanelsLoaded(true)
           setHelpOpen(true)
           return
         }
@@ -73,6 +74,7 @@ export default function KeyboardShortcuts() {
       if (isSlash && typing) return
 
       event.preventDefault()
+      setPanelsLoaded(true)
       setOpen(true)
     }
 
@@ -82,6 +84,7 @@ export default function KeyboardShortcuts() {
     function handleSearchOverlayEvent() {
       if (isAnyModalOpen()) return
       if (open) return
+      setPanelsLoaded(true)
       setOpen(true)
     }
 
@@ -101,7 +104,10 @@ export default function KeyboardShortcuts() {
     // Opening on a param is the one intentional setState-in-effect; the effect
     // is keyed to searchParams so it re-runs exactly when the param appears.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!isAnyModalOpen() && !open) setOpen(true)
+    if (!isAnyModalOpen() && !open) {
+      setPanelsLoaded(true)
+      setOpen(true)
+    }
     const params = new URLSearchParams(searchParams)
     params.delete('search')
     const qs = params.toString()
@@ -111,8 +117,14 @@ export default function KeyboardShortcuts() {
 
   return (
     <>
-      {open && <SearchOverlay onClose={() => setOpen(false)} />}
-      {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
+      {panelsLoaded && (
+        <KeyboardShortcutPanels
+          searchOpen={open}
+          helpOpen={helpOpen}
+          onCloseSearch={() => setOpen(false)}
+          onCloseHelp={() => setHelpOpen(false)}
+        />
+      )}
     </>
   )
 }

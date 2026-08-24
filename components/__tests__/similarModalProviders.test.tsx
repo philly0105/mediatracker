@@ -87,11 +87,12 @@ describe('Similar modal inside the provider-owned modal stack', () => {
     render(<AppShell><Opener /></AppShell>)
 
     await act(async () => { fireEvent.click(screen.getByText('open')) })
-    await act(async () => { fireEvent.click(screen.getByText(/Similar Movies/)) })
+    const similarButton = await screen.findByText(/Similar Movies/)
+    await act(async () => { fireEvent.click(similarButton) })
 
     // Reaching this at all means useMultiSelect() found a provider. Before the
     // fix this render threw "useMultiSelect must be used within MultiSelectProvider".
-    expect(screen.getByRole('dialog', { name: /similar/i })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: /similar/i })).toBeInTheDocument()
   })
 })
 

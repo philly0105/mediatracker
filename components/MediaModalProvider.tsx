@@ -3,23 +3,8 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import dynamic from 'next/dynamic'
 import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
-import type { MediaModalStackProps } from './MediaModalStack'
 
-declare global {
-  interface ImportMeta {
-    glob: <T = unknown>(pattern: string, options?: { eager?: boolean }) => Record<string, T>
-  }
-}
-
-const DynamicMediaModalStack = dynamic(() => import('./MediaModalStack'))
-
-const testModules =
-  process.env.NODE_ENV === 'test' && typeof import.meta.glob === 'function'
-    ? import.meta.glob<{ default: React.ComponentType<MediaModalStackProps> }>('./MediaModalStack.tsx', { eager: true })
-    : null
-const TestMediaModalStack = testModules?.['./MediaModalStack.tsx']?.default
-
-const MediaModalStack = TestMediaModalStack ?? DynamicMediaModalStack
+const MediaModalStack = dynamic(() => import('./MediaModalStack'))
 
 /** What just succeeded, so a caller keeping its own list or badge state can react. */
 export type MediaChange = 'watchlisted' | 'watched' | 'removed'
