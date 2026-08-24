@@ -1,7 +1,6 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import {
   Home,
@@ -187,24 +186,19 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       </div>
 
       {/* Mobile More Drawer */}
-      <AnimatePresence>
-        {moreOpen && (
-          <>
-            <motion.div
-              className="md:hidden fixed inset-0 z-40 bg-black/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMoreOpen(false)}
-            />
-            <MoreDrawerPanel
-              items={moreDrawerItems}
-              pathname={pathname}
-              onClose={() => setMoreOpen(false)}
-            />
-          </>
-        )}
-      </AnimatePresence>
+      {moreOpen && (
+        <>
+          <div
+            className="md:hidden fixed inset-0 z-40 bg-black/60 motion-backdrop-fade"
+            onClick={() => setMoreOpen(false)}
+          />
+          <MoreDrawerPanel
+            items={moreDrawerItems}
+            pathname={pathname}
+            onClose={() => setMoreOpen(false)}
+          />
+        </>
+      )}
 
       {/* Mobile Bottom Navigation Bar */}
       <nav
@@ -286,22 +280,18 @@ function MoreDrawerPanel({
   const { containerRef } = useModal(onClose)
 
   return (
-    <motion.div
+    <div
       ref={containerRef}
       role="dialog"
       aria-modal="true"
       aria-label="More navigation"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pt-4 pb-safe-bottom select-none"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pt-4 pb-safe-bottom select-none motion-sheet-up"
       style={{
         background: 'var(--glass-panel)',
         borderTop: '1px solid var(--border-subtle)',
         borderTopLeftRadius: 'var(--radius-2xl)',
         borderTopRightRadius: 'var(--radius-2xl)',
       }}
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
     >
       <div className="flex items-center justify-between mb-4 px-1">
         <span className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>More</span>
@@ -337,6 +327,6 @@ function MoreDrawerPanel({
           )
         })}
       </div>
-    </motion.div>
+    </div>
   )
 }

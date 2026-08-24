@@ -2,9 +2,28 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
+const root = join(__dirname, '..', '..')
 const source = (name: string) => readFileSync(join(__dirname, '..', name), 'utf8')
+const readSource = (relPath: string) => readFileSync(join(root, ...relPath.split('/')), 'utf8')
 
 describe('authenticated shell bundle boundaries', () => {
+  it('does not import framer-motion in synchronous signed-in routes and shell components', () => {
+    const synchronousFiles = [
+      'components/Sidebar.tsx',
+      'components/MultiSelectProvider.tsx',
+      'components/ui/BentoGrid.tsx',
+      'components/ui/SegmentedControl.tsx',
+      'components/CalendarClient.tsx',
+      'app/(app)/streaming/page.tsx',
+      'app/(app)/watchlist/page.tsx',
+    ]
+
+    for (const file of synchronousFiles) {
+      const content = readSource(file)
+      expect(content, `Expected ${file} not to import from framer-motion`).not.toContain("from 'framer-motion'")
+    }
+  })
+
   it('loads shortcut panels host through next/dynamic without framer or direct panel imports', () => {
     const value = source('KeyboardShortcuts.tsx')
     expect(value).toContain("from 'next/dynamic'")
@@ -30,5 +49,11 @@ describe('authenticated shell bundle boundaries', () => {
     expect(value).toMatch(/import\s+SearchOverlay\s+from\s+['"]@\/components\/SearchOverlay['"]/)
     expect(value).toMatch(/import\s+KeyboardHelp\s+from\s+['"]@\/components\/KeyboardHelp['"]/)
     expect(value).toMatch(/<AnimatePresence[\s\S]*<KeyboardHelp/)
+  })
+
+  it('lazy-loads TonightPickModal via next/dynamic at module scope in watchlist page', () => {
+    const content = readSource('app/(app)/watchlist/page.tsx')
+    expect(content).toContain("from 'next/dynamic'")
+    expect(content).toMatch(/dynamic\(\s*\(\)\s*=>\s*import\(['"]@\/components\/TonightPickModal['"]\)\s*\)/)
   })
 })

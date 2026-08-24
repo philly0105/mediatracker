@@ -1,8 +1,8 @@
 'use client'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 
 import { useCallback, useState, useEffect, useRef, Suspense } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices, Search, SearchX, ChevronDown } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
@@ -10,7 +10,6 @@ import { useMediaActions } from '@/lib/useMediaActions'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
-import TonightPickModal from '@/components/TonightPickModal'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ClearFilters } from '@/components/ui/ClearFilters'
@@ -21,6 +20,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
 import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
+
+const TonightPickModal = dynamic(() => import('@/components/TonightPickModal'))
 
 const PRIORITY_LABELS = {
   must_watch: 'Must Watch',
@@ -486,15 +487,13 @@ function WatchlistContent() {
       </div>
 
       {/* "Pick for me" modal */}
-      <AnimatePresence>
-        {showPick && (
-          <TonightPickModal
-            typeFilter={typeFilter}
-            genreFilter={genreFilter}
-            onClose={() => setShowPick(false)}
-          />
-        )}
-      </AnimatePresence>
+      {showPick && (
+        <TonightPickModal
+          typeFilter={typeFilter}
+          genreFilter={genreFilter}
+          onClose={() => setShowPick(false)}
+        />
+      )}
     </div>
   )
 }
@@ -572,22 +571,14 @@ function WatchlistSection({
         />
       ) : (
         <>
-          <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
-            <AnimatePresence mode="popLayout">
-              {items.map((item) => {
-                const isActioning = actioningId === item.id
-                const selectableItem = item.media ? mediaToResult(item.media) : null
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+            {items.map((item) => {
+              const isActioning = actioningId === item.id
+              const selectableItem = item.media ? mediaToResult(item.media) : null
 
-                return (
-                  <SelectableOverlay key={item.id} item={selectableItem}>
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.2 }}
-                    style={{ height: '100%' }}
-                  >
+              return (
+                <SelectableOverlay key={item.id} item={selectableItem}>
+                  <div className="motion-item-in" style={{ height: '100%' }}>
                     <Card
                       onClick={() => onOpen(item)}
                       aria-label={item.media?.title}
@@ -666,12 +657,11 @@ function WatchlistSection({
                         )}
                       </div>
                     </Card>
-                  </motion.div>
-                  </SelectableOverlay>
-                )
-              })}
-            </AnimatePresence>
-          </motion.div>
+                  </div>
+                </SelectableOverlay>
+              )
+            })}
+          </div>
 
           {/* An explicit expander, not a sentinel. Three infinite scrolls stacked
               vertically meant scrolling through all of Must Watch before Want to

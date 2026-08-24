@@ -1,4 +1,5 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import React, { Suspense } from 'react'
+import type { ComponentType, HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import WatchlistPage from '../(app)/watchlist/page'
@@ -12,7 +13,6 @@ type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
   animate?: unknown
   exit?: unknown
   transition?: unknown
-  layout?: unknown
 }
 
 function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
@@ -20,13 +20,35 @@ function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivE
   delete props.animate
   delete props.exit
   delete props.transition
-  delete props.layout
   return props
 }
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
   motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
+}))
+
+vi.mock('next/dynamic', () => ({
+  default: (
+    loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
+    options?: { loading?: ComponentType<any>; ssr?: boolean }
+  ) => {
+    const LazyComponent = React.lazy(async () => {
+      const mod = await loader()
+      if (mod && typeof mod === 'object' && 'default' in mod) {
+        return mod as { default: ComponentType<any> }
+      }
+      return { default: mod as ComponentType<any> }
+    })
+
+    return function DynamicComponent(props: any) {
+      return (
+        <Suspense fallback={options?.loading ? <options.loading /> : null}>
+          <LazyComponent {...props} />
+        </Suspense>
+      )
+    }
+  },
 }))
 
 // One object, not a fresh one per call: useUrlFilters derives setFilter's
@@ -237,5 +259,41 @@ describe('watchlist undo restores position (F-32)', () => {
 
     await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Undo' })) })
     expect(sectionTitles('Must Watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
+  })
+})
+
+describe('watchlist on-demand tonight pick modal', () => {
+  beforeEach(() => {
+    store = {
+      must_watch: [item('mw1', 'Inception', 'must_watch')],
+      want_to_watch: [],
+      someday: [],
+    }
+    mockFetch.mockReset()
+    mockFetch.mockImplementation(async (input: unknown, init?: { method?: string }) => {
+      const u = url(input)
+      if (!init?.method || init.method === 'GET') {
+        if (u.includes('group=priority')) return respondGrouped(u)
+        return respondPaged(u)
+      }
+      return { ok: true, json: async () => ({}) }
+    })
+    global.fetch = mockFetch as unknown as typeof fetch
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('mounts TonightPickModal on demand when Pick for me is clicked', async () => {
+    await loadPage()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Pick for me' }))
+    })
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText("Tonight's Pick")).toBeInTheDocument()
   })
 })

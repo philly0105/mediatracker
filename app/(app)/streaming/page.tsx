@@ -7,7 +7,6 @@ import { useUrlFilters } from '@/lib/useUrlFilters'
 import { FilterPills } from '@/components/FilterPills'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
-import { motion } from 'framer-motion'
 import { CheckCircle2, Bookmark, EyeOff, Loader2, Star, Tv } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -199,26 +198,24 @@ function StreamingContent() {
 
       {/* Provider pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
-        {PROVIDERS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => changeProvider(p.id)}
-            className={`relative px-4 py-2 rounded-full font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
-              provider === p.id
-                ? 'text-[var(--btn-primary-fg)]'
-                : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-            }`}
-          >
-            {provider === p.id && (
-              <motion.div
-                layoutId="activeProviderPill"
-                className="absolute inset-0 bg-[var(--accent)] rounded-full -z-10 shadow-lg shadow-green-600/20"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-            <span>{p.name}</span>
-          </button>
-        ))}
+        {PROVIDERS.map((p) => {
+          const isActive = provider === p.id
+          return (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => changeProvider(p.id)}
+              className={`px-4 py-2 rounded-full font-semibold text-xs transition-colors duration-200 whitespace-nowrap active:scale-95 ${
+                isActive
+                  ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] shadow-lg shadow-green-600/20'
+                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
+              }`}
+            >
+              <span>{p.name}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Type toggle */}

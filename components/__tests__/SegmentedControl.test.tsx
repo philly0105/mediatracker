@@ -43,4 +43,37 @@ describe('SegmentedControl', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'TV Shows' }))
     expect(onChange).toHaveBeenCalledWith('show')
   })
+
+  it('updates aria-checked when selection state changes', () => {
+    let current = 'movie'
+    const { rerender } = render(
+      <SegmentedControl
+        options={options}
+        value={current}
+        onChange={(val) => { current = val }}
+        label="Select media type"
+      />
+    )
+
+    const movieRadio = screen.getByRole('radio', { name: 'Movies' })
+    const showRadio = screen.getByRole('radio', { name: 'TV Shows' })
+
+    expect(movieRadio).toHaveAttribute('aria-checked', 'true')
+    expect(showRadio).toHaveAttribute('aria-checked', 'false')
+
+    fireEvent.click(showRadio)
+    expect(current).toBe('show')
+
+    rerender(
+      <SegmentedControl
+        options={options}
+        value="show"
+        onChange={(val) => { current = val }}
+        label="Select media type"
+      />
+    )
+
+    expect(movieRadio).toHaveAttribute('aria-checked', 'false')
+    expect(showRadio).toHaveAttribute('aria-checked', 'true')
+  })
 })

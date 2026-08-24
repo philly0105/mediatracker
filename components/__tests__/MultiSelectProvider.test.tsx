@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MultiSelectProvider, useMultiSelect, selectionKey } from '../MultiSelectProvider'
@@ -11,18 +11,6 @@ import type { TmdbSearchResult } from '@/types'
 // selection, and what the pooled batch write does with partial failure — the
 // two places where getting it wrong loses the user's work rather than just
 // looking wrong.
-
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
-}
-function strip({ ...p }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete p.initial; delete p.animate; delete p.exit; delete p.transition
-  return p
-}
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
-}))
 
 const refresh = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -173,5 +161,20 @@ describe('MultiSelectProvider batch actions', () => {
 
     const methods = fetchMock.mock.calls.map(([url, init]) => `${init?.method} ${url}`)
     expect(methods).toEqual(['POST /api/watch', 'DELETE /api/watchlist'])
+  })
+})
+
+describe('MultiSelectProvider action bar toolbar', () => {
+  it('renders the floating action bar with toolbar role when in select mode', () => {
+    mount(<Rig items={three} />)
+    expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).toBeNull()
+
+    fireEvent.click(screen.getByText('pick Heat'))
+    const toolbar = screen.getByRole('toolbar', { name: 'Bulk actions' })
+    expect(toolbar).toBeInTheDocument()
+    expect(toolbar).toHaveClass('motion-toolbar-up')
+
+    fireEvent.click(screen.getByLabelText('Clear selection'))
+    expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).toBeNull()
   })
 })

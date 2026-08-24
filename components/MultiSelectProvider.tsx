@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Check, CheckSquare, Plus, X, Loader2 } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useRouter } from 'next/navigation'
@@ -166,79 +165,71 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       {children}
       
       {/* Floating Action Bar */}
-      {mounted && createPortal(
-        <AnimatePresence>
-          {isSelectMode && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            role="toolbar"
-            aria-label="Bulk actions"
-            /* bottom-24 on mobile clears the fixed bottom nav, which the old
-               bottom-6 sat on top of — the toast stack already gets this right.
-               max-w + flex-wrap keeps five controls on a 320px screen. */
-            className="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex flex-wrap items-center justify-center gap-2 p-2 max-w-[calc(100vw-2rem)] bg-[var(--bg-void)]/95 border border-[var(--border-strong)] rounded-lg shadow-2xl shadow-black/50"
+      {mounted && isSelectMode && createPortal(
+        <div
+          role="toolbar"
+          aria-label="Bulk actions"
+          /* bottom-24 on mobile clears the fixed bottom nav, which the old
+             bottom-6 sat on top of — the toast stack already gets this right.
+             max-w + flex-wrap keeps five controls on a 320px screen. */
+          className="motion-toolbar-up fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex flex-wrap items-center justify-center gap-2 p-2 max-w-[calc(100vw-2rem)] bg-[var(--bg-void)]/95 border border-[var(--border-strong)] rounded-lg shadow-2xl shadow-black/50"
+        >
+          <div className="flex items-center gap-2 pl-4 pr-2">
+            <span aria-hidden="true" className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs border border-[var(--accent)]/30">
+              {selectedItems.size}
+            </span>
+            <span aria-live="polite" className="text-sm font-semibold text-white mr-2">
+              {progress ? `${progress.done} of ${progress.total} done` : `${selectedItems.size} selected`}
+            </span>
+          </div>
+
+          <div className="h-6 w-px bg-white/10" />
+
+          {selectedItems.size < selectableCount && (
+            <Button
+              disabled={loadingAction !== null}
+              onClick={selectAll}
+              variant="ghost"
+              size="sm"
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Select all {selectableCount}</span>
+              <span className="sm:hidden">All</span>
+            </Button>
+          )}
+
+          <Button
+            disabled={loadingAction !== null}
+            onClick={() => handleBatchAction('watchlist')}
+            variant="ghost"
+            size="sm"
           >
-            <div className="flex items-center gap-2 pl-4 pr-2">
-              <span aria-hidden="true" className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs border border-[var(--accent)]/30">
-                {selectedItems.size}
-              </span>
-              <span aria-live="polite" className="text-sm font-semibold text-white mr-2">
-                {progress ? `${progress.done} of ${progress.total} done` : `${selectedItems.size} selected`}
-              </span>
-            </div>
-            
-            <div className="h-6 w-px bg-white/10" />
+            {loadingAction === 'watchlist' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            <span className="hidden sm:inline">Add to Watchlist</span>
+            <span className="sm:hidden">Watchlist</span>
+          </Button>
 
-            {selectedItems.size < selectableCount && (
-              <Button
-                disabled={loadingAction !== null}
-                onClick={selectAll}
-                variant="ghost"
-                size="sm"
-              >
-                <CheckSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Select all {selectableCount}</span>
-                <span className="sm:hidden">All</span>
-              </Button>
-            )}
+          <Button
+            disabled={loadingAction !== null}
+            onClick={() => handleBatchAction('watched')}
+            variant="ghost"
+            size="sm"
+          >
+            {loadingAction === 'watched' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            <span className="hidden sm:inline">Mark as Watched</span>
+            <span className="sm:hidden">Watched</span>
+          </Button>
 
-            <Button
-              disabled={loadingAction !== null}
-              onClick={() => handleBatchAction('watchlist')}
-              variant="ghost"
-              size="sm"
-            >
-              {loadingAction === 'watchlist' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-              <span className="hidden sm:inline">Add to Watchlist</span>
-              <span className="sm:hidden">Watchlist</span>
-            </Button>
-            
-            <Button
-              disabled={loadingAction !== null}
-              onClick={() => handleBatchAction('watched')}
-              variant="ghost"
-              size="sm"
-            >
-              {loadingAction === 'watched' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              <span className="hidden sm:inline">Mark as Watched</span>
-              <span className="sm:hidden">Watched</span>
-            </Button>
+          <div className="h-6 w-px bg-white/10" />
 
-            <div className="h-6 w-px bg-white/10" />
-
-            <button
-              onClick={clearSelection}
-              aria-label="Clear selection"
-              className="p-2 rounded-sm hover:bg-[var(--live)]/20 text-zinc-400 hover:text-[var(--live)] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-        </AnimatePresence>,
+          <button
+            onClick={clearSelection}
+            aria-label="Clear selection"
+            className="p-2 rounded-sm hover:bg-[var(--live)]/20 text-zinc-400 hover:text-[var(--live)] transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>,
         document.body
       )}
     </Context.Provider>
