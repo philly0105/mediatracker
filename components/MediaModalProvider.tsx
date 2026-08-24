@@ -1,9 +1,25 @@
 'use client'
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
-import MediaInfoModal from './MediaInfoModal'
+import dynamic from 'next/dynamic'
 import { useMediaActions } from '@/lib/useMediaActions'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
+import type { MediaModalStackProps } from './MediaModalStack'
+
+declare global {
+  interface ImportMeta {
+    glob: <T = unknown>(pattern: string, options?: { eager?: boolean }) => Record<string, T>
+  }
+}
+
+const DynamicMediaModalStack = dynamic(() => import('./MediaModalStack'))
+
+const testModules =
+  process.env.NODE_ENV === 'test' && typeof import.meta.glob === 'function'
+    ? import.meta.glob<{ default: React.ComponentType<MediaModalStackProps> }>('./MediaModalStack.tsx', { eager: true })
+    : null
+const TestMediaModalStack = testModules?.['./MediaModalStack.tsx']?.default
+
+const MediaModalStack = TestMediaModalStack ?? DynamicMediaModalStack
 
 /** What just succeeded, so a caller keeping its own list or badge state can react. */
 export type MediaChange = 'watchlisted' | 'watched' | 'removed'
@@ -45,7 +61,7 @@ interface MediaModalApi {
   closeMedia: () => void
 }
 
-interface StackEntry {
+export interface StackEntry {
   key: number
   item: TmdbSearchResult
   options: OpenMediaOptions
@@ -73,7 +89,8 @@ export function useMediaModal(): MediaModalApi {
  */
 export function MediaModalProvider({ children }: { children: React.ReactNode }) {
   const [stack, setStack] = useState<StackEntry[]>([])
-  const { addToWatchlist, markWatched, removeFromWatchlist } = useMediaActions()
+  const [hostLoaded, setHostLoaded] = useState(false)
+  const actions = useMediaActions()
 
   // The ref is the source of truth and the state is its mirror for rendering.
   // Reading the live stack inside a functional updater would mean firing the
@@ -84,6 +101,7 @@ export function MediaModalProvider({ children }: { children: React.ReactNode }) 
   const closingRef = useRef<StackEntry[]>([])
 
   const openMedia = useCallback((item: TmdbSearchResult, options: OpenMediaOptions = {}) => {
+    setHostLoaded(true)
     keyRef.current += 1
     stackRef.current = [...stackRef.current, { key: keyRef.current, item, options }]
     setStack(stackRef.current)
@@ -119,45 +137,15 @@ export function MediaModalProvider({ children }: { children: React.ReactNode }) 
   return (
     <MediaModalContext.Provider value={api}>
       {children}
-      <AnimatePresence onExitComplete={handleExitComplete}>
-        {stack.map((entry) => {
-          const { item, options } = entry
-          return (
-            <MediaInfoModal
-              key={entry.key}
-              item={item}
-              onClose={closeMedia}
-              onNavigateAway={closeAllForNavigation}
-              newTabLinks={options.newTabLinks}
-              currentPriority={options.currentPriority}
-              onUpdatePriority={options.onUpdatePriority}
-              onAddToWatchlist={
-                options.onAddToWatchlist ??
-                (async () => {
-                  await addToWatchlist(item.tmdb_id, item.type, options.priority)
-                  options.onChanged?.('watchlisted', item)
-                })
-              }
-              onMarkAsWatched={
-                options.onMarkAsWatched ??
-                (async (opts) => {
-                  await markWatched(item.tmdb_id, item.type, opts)
-                  options.onChanged?.('watched', item)
-                })
-              }
-              onRemoveFromWatchlist={
-                options.onRemoveFromWatchlist ??
-                (options.enableRemove
-                  ? async () => {
-                      await removeFromWatchlist(item.tmdb_id, item.type)
-                      options.onChanged?.('removed', item)
-                    }
-                  : undefined)
-              }
-            />
-          )
-        })}
-      </AnimatePresence>
+      {hostLoaded && (
+        <MediaModalStack
+          entries={stack}
+          onClose={closeMedia}
+          onNavigateAway={closeAllForNavigation}
+          onExitComplete={handleExitComplete}
+          actions={actions}
+        />
+      )}
     </MediaModalContext.Provider>
   )
 }

@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { isAnyModalOpen } from '@/lib/useModal'
 import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
-import SearchOverlay from '@/components/SearchOverlay'
-import KeyboardHelp from '@/components/KeyboardHelp'
 import { QUICK_NAV, G_CHORD_MS } from '@/lib/quickNav'
+
+const SearchOverlay = dynamic(() => import('@/components/SearchOverlay'))
+const KeyboardHelp = dynamic(() => import('@/components/KeyboardHelp'))
 
 export default function KeyboardShortcuts() {
   const searchParams = useSearchParams()
@@ -110,13 +111,8 @@ export default function KeyboardShortcuts() {
 
   return (
     <>
-      <AnimatePresence>
-        {open && <SearchOverlay onClose={() => setOpen(false)} />}
-      </AnimatePresence>
-      {/* AnimatePresence so the sheet's exit transition runs */}
-      <AnimatePresence>
-        {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
-      </AnimatePresence>
+      {open && <SearchOverlay onClose={() => setOpen(false)} />}
+      {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
     </>
   )
 }

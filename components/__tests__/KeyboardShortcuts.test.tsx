@@ -67,16 +67,16 @@ describe('KeyboardShortcuts', () => {
     HTMLElement.prototype.scrollIntoView = vi.fn()
   })
 
-  it('opens the search overlay on Cmd/Ctrl+K', () => {
+  it('opens the search overlay on Cmd/Ctrl+K', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 
-  it('opens the search overlay on /', () => {
+  it('opens the search overlay on /', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: '/' })
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 
   it('does not open on / while typing in an input', () => {
@@ -105,10 +105,10 @@ describe('KeyboardShortcuts', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('closes the overlay on Escape', () => {
+  it('closes the overlay on Escape', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', metaKey: true })
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
@@ -126,18 +126,18 @@ describe('KeyboardShortcuts', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
   })
 
-  it('opens the search overlay via the window event and does not double-open', () => {
+  it('opens the search overlay via the window event and does not double-open', async () => {
     renderShortcuts()
     act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
     act(() => { window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT)) })
     expect(screen.getAllByRole('dialog')).toHaveLength(1)
   })
 
-  it('opens the overlay and strips the ?search=1 param', () => {
+  it('opens the overlay and strips the ?search=1 param', async () => {
     mockSearch = 'search=1'
     renderShortcuts()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(replace).toHaveBeenCalledWith('/', { scroll: false })
   })
 
@@ -147,61 +147,66 @@ describe('KeyboardShortcuts', () => {
     expect(replace).not.toHaveBeenCalled()
   })
 
-  it('shows the Go to quick-nav heading and a Dashboard row when opened', () => {
+  it('shows the Go to quick-nav heading and a Dashboard row when opened', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    expect(screen.getByText('Go to')).toBeInTheDocument()
+    expect(await screen.findByText('Go to')).toBeInTheDocument()
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
   })
 
-  it('navigates to /library on ArrowDown then Enter', () => {
+  it('navigates to /library on ArrowDown then Enter', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    const input = screen.getByPlaceholderText('Search movies and TV shows…')
+    const input = await screen.findByPlaceholderText('Search movies and TV shows…')
     fireEvent.keyDown(input, { key: 'ArrowDown' })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(push).toHaveBeenCalledWith('/library')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('navigates to /watchlist when the Watchlist row is clicked', () => {
+  it('navigates to /watchlist when the Watchlist row is clicked', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    fireEvent.click(screen.getByText('Watchlist'))
+    fireEvent.click(await screen.findByText('Watchlist'))
     expect(push).toHaveBeenCalledWith('/watchlist')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('shows a Pages group with a Stats row when typing sta and no "No matches" text', async () => {
-    vi.useFakeTimers()
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) })
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    const input = screen.getByPlaceholderText('Search movies and TV shows…')
-    fireEvent.change(input, { target: { value: 'sta' } })
-    await act(async () => { vi.advanceTimersByTime(350) })
-    expect(screen.getByText('Pages')).toBeInTheDocument()
-    expect(screen.getByText('Stats')).toBeInTheDocument()
-    expect(screen.queryByText(/No matches/)).not.toBeInTheDocument()
-    vi.useRealTimers()
+    const input = await screen.findByPlaceholderText('Search movies and TV shows…')
+    vi.useFakeTimers()
+    try {
+      fireEvent.change(input, { target: { value: 'sta' } })
+      await act(async () => { vi.advanceTimersByTime(350) })
+      expect(screen.getByText('Pages')).toBeInTheDocument()
+      expect(screen.getByText('Stats')).toBeInTheDocument()
+      expect(screen.queryByText(/No matches/)).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('navigates to /stats on Enter when sta is typed', async () => {
-    vi.useFakeTimers()
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) })
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    const input = screen.getByPlaceholderText('Search movies and TV shows…')
-    fireEvent.change(input, { target: { value: 'sta' } })
-    await act(async () => { vi.advanceTimersByTime(350) })
-    fireEvent.keyDown(input, { key: 'Enter' })
-    expect(push).toHaveBeenCalledWith('/stats')
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    vi.useRealTimers()
+    const input = await screen.findByPlaceholderText('Search movies and TV shows…')
+    vi.useFakeTimers()
+    try {
+      fireEvent.change(input, { target: { value: 'sta' } })
+      await act(async () => { vi.advanceTimersByTime(350) })
+      fireEvent.keyDown(input, { key: 'Enter' })
+      expect(push).toHaveBeenCalledWith('/stats')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('marks active title as watched on Cmd+Enter / Ctrl+Enter', async () => {
-    vi.useFakeTimers()
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes('/api/tmdb/search')) {
         return {
@@ -232,26 +237,28 @@ describe('KeyboardShortcuts', () => {
 
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    const input = screen.getByPlaceholderText('Search movies and TV shows…')
-    fireEvent.change(input, { target: { value: 'Fight' } })
-    await act(async () => { vi.advanceTimersByTime(350) })
+    const input = await screen.findByPlaceholderText('Search movies and TV shows…')
+    vi.useFakeTimers()
+    try {
+      fireEvent.change(input, { target: { value: 'Fight' } })
+      await act(async () => { vi.advanceTimersByTime(350) })
 
-    expect(screen.getByText('Fight Club')).toBeInTheDocument()
+      expect(screen.getByText('Fight Club')).toBeInTheDocument()
 
-    // Press Cmd+Enter (metaKey) on the search input
-    fireEvent.keyDown(input, { key: 'Enter', metaKey: true })
-    await act(async () => { vi.advanceTimersByTime(50) })
+      // Press Cmd+Enter (metaKey) on the search input
+      fireEvent.keyDown(input, { key: 'Enter', metaKey: true })
+      await act(async () => { vi.advanceTimersByTime(50) })
 
-    const watchPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watch') && opts?.method === 'POST')
-    expect(watchPost).toBeDefined()
-    expect(JSON.parse(watchPost![1].body)).toMatchObject({ tmdb_id: 550, type: 'movie' })
-    expect(screen.getByText('Logged Fight Club.')).toBeInTheDocument()
-
-    vi.useRealTimers()
+      const watchPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watch') && opts?.method === 'POST')
+      expect(watchPost).toBeDefined()
+      expect(JSON.parse(watchPost![1].body)).toMatchObject({ tmdb_id: 550, type: 'movie' })
+      expect(screen.getByText('Logged Fight Club.')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('adds active title to watchlist on Shift+Enter', async () => {
-    vi.useFakeTimers()
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes('/api/tmdb/search')) {
         return {
@@ -282,26 +289,28 @@ describe('KeyboardShortcuts', () => {
 
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    const input = screen.getByPlaceholderText('Search movies and TV shows…')
-    fireEvent.change(input, { target: { value: 'Pulp' } })
-    await act(async () => { vi.advanceTimersByTime(350) })
+    const input = await screen.findByPlaceholderText('Search movies and TV shows…')
+    vi.useFakeTimers()
+    try {
+      fireEvent.change(input, { target: { value: 'Pulp' } })
+      await act(async () => { vi.advanceTimersByTime(350) })
 
-    expect(screen.getByText('Pulp Fiction')).toBeInTheDocument()
+      expect(screen.getByText('Pulp Fiction')).toBeInTheDocument()
 
-    // Press Shift+Enter on the search input
-    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
-    await act(async () => { vi.advanceTimersByTime(50) })
+      // Press Shift+Enter on the search input
+      fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+      await act(async () => { vi.advanceTimersByTime(50) })
 
-    const watchlistPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watchlist') && opts?.method === 'POST')
-    expect(watchlistPost).toBeDefined()
-    expect(JSON.parse(watchlistPost![1].body)).toEqual({ tmdb_id: 680, type: 'movie', priority: 'want_to_watch' })
-    expect(screen.getByText('Added Pulp Fiction to your watchlist.')).toBeInTheDocument()
-
-    vi.useRealTimers()
+      const watchlistPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watchlist') && opts?.method === 'POST')
+      expect(watchlistPost).toBeDefined()
+      expect(JSON.parse(watchlistPost![1].body)).toEqual({ tmdb_id: 680, type: 'movie', priority: 'want_to_watch' })
+      expect(screen.getByText('Added Pulp Fiction to your watchlist.')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('renders chips on result row and clicking mark watched chip triggers watch API', async () => {
-    vi.useFakeTimers()
     const mockFetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes('/api/tmdb/search')) {
         return {
@@ -332,29 +341,32 @@ describe('KeyboardShortcuts', () => {
 
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
-    const input = screen.getByPlaceholderText('Search movies and TV shows…')
-    fireEvent.change(input, { target: { value: 'Thrones' } })
-    await act(async () => { vi.advanceTimersByTime(350) })
+    const input = await screen.findByPlaceholderText('Search movies and TV shows…')
+    vi.useFakeTimers()
+    try {
+      fireEvent.change(input, { target: { value: 'Thrones' } })
+      await act(async () => { vi.advanceTimersByTime(350) })
 
-    const markButton = screen.getByTitle('Mark as watched')
-    expect(markButton).toBeInTheDocument()
+      const markButton = screen.getByTitle('Mark as watched')
+      expect(markButton).toBeInTheDocument()
 
-    fireEvent.click(markButton)
-    await act(async () => { vi.advanceTimersByTime(50) })
+      fireEvent.click(markButton)
+      await act(async () => { vi.advanceTimersByTime(50) })
 
-    const watchPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watch') && opts?.method === 'POST')
-    expect(watchPost).toBeDefined()
-    expect(JSON.parse(watchPost![1].body)).toMatchObject({ tmdb_id: 1399, type: 'show' })
-    expect(screen.getByText('Logged Game of Thrones.')).toBeInTheDocument()
-
-    vi.useRealTimers()
+      const watchPost = mockFetch.mock.calls.find(([u, opts]) => u.includes('/api/watch') && opts?.method === 'POST')
+      expect(watchPost).toBeDefined()
+      expect(JSON.parse(watchPost![1].body)).toMatchObject({ tmdb_id: 1399, type: 'show' })
+      expect(screen.getByText('Logged Game of Thrones.')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it('renders combobox and listbox accessibility roles', () => {
+  it('renders combobox and listbox accessibility roles', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: 'k', ctrlKey: true })
 
-    const input = screen.getByRole('combobox')
+    const input = await screen.findByRole('combobox')
     expect(input).toBeInTheDocument()
     expect(input).toHaveAttribute('aria-autocomplete', 'list')
     expect(input).toHaveAttribute('aria-controls', 'search-overlay-results')
@@ -415,23 +427,25 @@ describe('KeyboardShortcuts g-navigation and help sheet (F-44)', () => {
     input.remove()
   })
 
-  it('opens the help sheet on ?', () => {
+  it('opens the help sheet on ?', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: '?' })
-    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
   })
 
   // The sheet registers as a modal, so the ? branch is gated out once it is up.
-  it('does not stack a second help sheet', () => {
+  it('does not stack a second help sheet', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: '?' })
+    await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
     fireEvent.keyDown(document, { key: '?' })
     expect(screen.getAllByRole('dialog', { name: 'Keyboard shortcuts' })).toHaveLength(1)
   })
 
-  it('does not jump on g while the help sheet is up', () => {
+  it('does not jump on g while the help sheet is up', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: '?' })
+    await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
     fireEvent.keyDown(document, { key: 'g' })
     fireEvent.keyDown(document, { key: 'l' })
     expect(push).not.toHaveBeenCalled()
@@ -444,10 +458,10 @@ describe('KeyboardShortcuts g-navigation and help sheet (F-44)', () => {
     expect(screen.queryByPlaceholderText(/Search movies/)).not.toBeInTheDocument()
   })
 
-  it('lists every quick-nav destination with its chord', () => {
+  it('lists every quick-nav destination with its chord', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: '?' })
-    const sheet = screen.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    const sheet = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
     for (const item of QUICK_NAV) {
       expect(within(sheet).getByText(item.name)).toBeInTheDocument()
     }

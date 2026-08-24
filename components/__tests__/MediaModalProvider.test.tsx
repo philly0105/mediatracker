@@ -236,11 +236,11 @@ describe('MediaInfoModal ownership', () => {
     return acc
   }
 
-  it('is imported by MediaModalProvider and nothing else', () => {
+  it('is imported by MediaModalStack and nothing else', () => {
     const root = join(__dirname, '..', '..')
     const offenders = ['app', 'components', 'lib']
       .flatMap((d) => sourceFiles(join(root, d)))
-      .filter((f) => !/components\/(MediaInfoModal|MediaModalProvider)\.tsx$/.test(f))
+      .filter((f) => !/[/\\]components[/\\](MediaInfoModal|MediaModalStack)\.tsx$/.test(f))
       .filter((f) => /^\s*import .*['"].*\/MediaInfoModal['"]/m.test(readFileSync(f, 'utf-8')))
       .map((f) => f.slice(root.length + 1))
 
@@ -248,7 +248,7 @@ describe('MediaInfoModal ownership', () => {
   })
 
   it('renders the modal stack inside an AnimatePresence', () => {
-    const src = readFileSync(join(__dirname, '..', 'MediaModalProvider.tsx'), 'utf-8')
+    const src = readFileSync(join(__dirname, '..', 'MediaModalStack.tsx'), 'utf-8')
     expect(src).toMatch(/<AnimatePresence[\s\S]*<MediaInfoModal[\s\S]*<\/AnimatePresence>/)
   })
 })
