@@ -16,7 +16,7 @@ export async function GET(
   // only ever uses `entry` from the result. Without this it pulled the media
   // row, every season and every episode-progress row to read back one value.
   if (request.nextUrl.searchParams.get('only') === 'entry') {
-    const { data: entry } = await supabase
+    const { data: entry, error } = await supabase
       .from('watch_entries')
       .select('*')
       .eq('user_id', user.id)
@@ -24,18 +24,31 @@ export async function GET(
       .order('watched_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     return NextResponse.json({ entry: (entry ?? null) as WatchEntry | null })
   }
 
-  const details = await loadShowDetails({
-    supabase,
-    userId: user.id,
-    mediaId: id,
-  })
+  try {
+    const details = await loadShowDetails({
+      supabase,
+      userId: user.id,
+      mediaId: id,
+    })
 
-  if (!details) {
-    return NextResponse.json({ error: 'Show not found' }, { status: 404 })
+    if (!details) {
+      return NextResponse.json({ error: 'Show not found' }, { status: 404 })
+    }
+
+    return NextResponse.json(details)
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? 'Failed to load show details'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-
-  return NextResponse.json(details)
 }

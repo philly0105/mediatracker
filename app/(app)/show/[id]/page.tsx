@@ -24,5 +24,5 @@ export default async function ShowDetailPage({
     notFound()
   }
 
-  return <ShowDetailClient mediaId={id} initialDetails={details} />
+  return <ShowDetailClient key={id} mediaId={id} initialDetails={details} />
 }

@@ -302,4 +302,30 @@ describe('loadShowDetails', () => {
 
     expect(fromSpy).not.toHaveBeenCalledWith('episode_progress')
   })
+
+  it.each([
+    { table: 'media', errorMsg: 'Failed to load media' },
+    { table: 'seasons', errorMsg: 'Failed to load seasons' },
+    { table: 'watch_entries', errorMsg: 'Failed to load watch entries' },
+    { table: 'episode_progress', errorMsg: 'Failed to load episode progress' },
+  ])('throws when $table query fails', async ({ table, errorMsg }) => {
+    const { client } = createMockSupabase((call) => {
+      if (call.table === table) {
+        return { data: null, error: { message: errorMsg } }
+      }
+      if (call.table === 'media') return { data: sampleMedia, error: null }
+      if (call.table === 'seasons') return { data: sampleSeasons, error: null }
+      if (call.table === 'watch_entries') return { data: sampleEntry, error: null }
+      if (call.table === 'episode_progress') return { data: sampleProgress, error: null }
+      return { data: null, error: null }
+    })
+
+    await expect(
+      loadShowDetails({
+        supabase: client,
+        userId: 'u1',
+        mediaId: 'm1',
+      })
+    ).rejects.toEqual({ message: errorMsg })
+  })
 })
