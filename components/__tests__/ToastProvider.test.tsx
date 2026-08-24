@@ -1,35 +1,9 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ToastProvider, useToast } from '../ToastProvider'
 import type { ToastOptions } from '../ToastProvider'
-
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown
-  animate?: unknown
-  exit?: unknown
-  transition?: unknown
-}
-
-// Framer-motion's AnimatePresence keeps exiting elements mounted while the exit
-// animation runs, which never completes under fake timers in jsdom. Stub it out
-// so a dismissed toast is removed from the DOM synchronously.
-// Strip the animation-only props so React does not warn about unknown DOM
-// attributes, and pass everything else (role, aria-*, className) straight on.
-function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial
-  delete props.animate
-  delete props.exit
-  delete props.transition
-  return props
-}
-
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: {
-    div: (props: MotionDivProps) => <div {...stripMotionProps(props)} />,
-  },
-}))
 
 type ToastFn = (message: string, options?: ToastOptions) => string
 
@@ -64,6 +38,11 @@ describe('ToastProvider', () => {
     // No manual `document.body.innerHTML = ''` here. Testing Library's automatic
     // cleanup unmounts the tree itself, and wiping the body first detaches the
     // portal container out from under React, which then throws NotFoundError.
+  })
+
+  it('does not put Framer Motion in the root provider graph', () => {
+    const source = readFileSync(join(__dirname, '..', 'ToastProvider.tsx'), 'utf8')
+    expect(source).not.toContain("from 'framer-motion'")
   })
 
   it('renders a toast message with a polite live region', () => {

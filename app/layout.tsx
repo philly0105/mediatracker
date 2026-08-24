@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import { Outfit } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/ToastProvider'
-import { MotionProvider } from '@/components/MotionProvider'
 
 const outfit = Outfit({ subsets: ['latin'] })
 
@@ -60,11 +59,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             style={{ background: 'var(--orb-orange)' }} />
         </div>
 
-        <MotionProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </MotionProvider>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )

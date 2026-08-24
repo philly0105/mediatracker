@@ -1,8 +1,7 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { UNDO_TOAST_MS } from '@/lib/useDeferredAction'
 
@@ -163,46 +162,40 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           in insertion order, which two separate containers could not. */}
       {mounted && createPortal(
         <div className="fixed left-4 right-4 md:left-auto md:right-6 bottom-24 md:bottom-20 z-[110] flex flex-col items-center md:items-end gap-2 pointer-events-none">
-          <AnimatePresence>
-            {toasts.map((t) => (
-              <motion.div
-                key={t.id}
-                role={t.tone === 'error' ? 'alert' : 'status'}
-                aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
-                aria-atomic="true"
-                onMouseEnter={() => pauseTimer(t.id)}
-                onMouseLeave={() => resumeTimer(t.id)}
-                onFocus={() => pauseTimer(t.id)}
-                onBlur={() => resumeTimer(t.id)}
-                initial={{ opacity: 0, y: 16, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 16, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                className={`pointer-events-auto flex items-center gap-3 w-full md:w-auto md:max-w-sm px-4 py-3 rounded-[var(--radius-md)] border shadow-2xl shadow-black/50 bg-[var(--bg-void)]/95 ${TONE_STYLES[t.tone].card}`}
-              >
-                <p className={`flex-1 text-sm font-medium leading-snug ${TONE_STYLES[t.tone].text}`}>
-                  {t.message}
-                </p>
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              role={t.tone === 'error' ? 'alert' : 'status'}
+              aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
+              aria-atomic="true"
+              onMouseEnter={() => pauseTimer(t.id)}
+              onMouseLeave={() => resumeTimer(t.id)}
+              onFocus={() => pauseTimer(t.id)}
+              onBlur={() => resumeTimer(t.id)}
+              className={`toast-enter pointer-events-auto flex items-center gap-3 w-full md:w-auto md:max-w-sm px-4 py-3 rounded-[var(--radius-md)] border shadow-2xl shadow-black/50 bg-[var(--bg-void)]/95 ${TONE_STYLES[t.tone].card}`}
+            >
+              <p className={`flex-1 text-sm font-medium leading-snug ${TONE_STYLES[t.tone].text}`}>
+                {t.message}
+              </p>
 
-                {t.action && (
-                  <button
-                    onClick={() => handleAction(t)}
-                    className="shrink-0 text-xs font-bold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
-                  >
-                    {t.action.label}
-                  </button>
-                )}
-
+              {t.action && (
                 <button
-                  onClick={() => dismiss(t.id)}
-                  aria-label="Dismiss notification"
-                  className="shrink-0 p-1 rounded-sm text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  onClick={() => handleAction(t)}
+                  className="shrink-0 text-xs font-bold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  {t.action.label}
                 </button>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+              )}
+
+              <button
+                onClick={() => dismiss(t.id)}
+                aria-label="Dismiss notification"
+                className="shrink-0 p-1 rounded-sm text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
         </div>,
         document.body
       )}
