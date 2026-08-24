@@ -110,4 +110,22 @@ describe('app layout provider order', () => {
     // reaches for has to be provided from above it.
     expect(multi).toBeLessThan(modal)
   })
+
+  it('wraps the authenticated application subtree in MotionProvider without placing it in root layout', () => {
+    const appLayout = readFileSync(
+      path.resolve(__dirname, '../../app/(app)/layout.tsx'), 'utf8',
+    ).replace(/\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+
+    const rootLayout = readFileSync(
+      path.resolve(__dirname, '../../app/layout.tsx'), 'utf8',
+    )
+
+    const motion = appLayout.indexOf('<MotionProvider>')
+    const multi = appLayout.indexOf('<MultiSelectProvider>')
+
+    expect(motion).toBeGreaterThan(-1)
+    expect(multi).toBeGreaterThan(-1)
+    expect(motion).toBeLessThan(multi)
+    expect(rootLayout).not.toContain('MotionProvider')
+  })
 })

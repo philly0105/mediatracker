@@ -117,4 +117,97 @@ describe('ToastProvider', () => {
     expect(screen.getByText('Something failed')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveAttribute('aria-live', 'assertive')
   })
+
+  it('pauses auto-dismiss timer on hover and resumes on mouse leave', () => {
+    const { trigger } = renderHarness()
+    trigger()
+
+    const toastElement = screen.getByRole('status')
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Advance 3000ms into the 5000ms auto-dismiss duration
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Hover over the toast (pauses timer with 2000ms remaining)
+    fireEvent.mouseEnter(toastElement)
+
+    // Advance time past the original 5000ms timeout
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+    // Toast must still be visible while hovered
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Mouse leaves (resumes timer with remaining 2000ms)
+    fireEvent.mouseLeave(toastElement)
+
+    // Advance 1000ms (1000ms remaining)
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Advance remaining 1000ms
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.queryByText('Hello there')).not.toBeInTheDocument()
+  })
+
+  it('pauses auto-dismiss timer on focus and resumes on blur', () => {
+    const { trigger } = renderHarness()
+    trigger()
+
+    const toastElement = screen.getByRole('status')
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Advance 3000ms into 5000ms
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+
+    // Focus toast
+    fireEvent.focus(toastElement)
+
+    // Advance past original timeout
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Blur toast
+    fireEvent.blur(toastElement)
+
+    // Advance 1000ms
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByText('Hello there')).toBeInTheDocument()
+
+    // Advance remaining 1000ms
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.queryByText('Hello there')).not.toBeInTheDocument()
+  })
+
+  it('defines .toast-enter animation in globals.css and disables it under prefers-reduced-motion', () => {
+    const css = readFileSync(join(__dirname, '..', '..', 'app', 'globals.css'), 'utf8')
+
+    // Verifies .toast-enter is defined with keyframe animation
+    expect(css).toContain('@keyframes toast-enter')
+    expect(css).toMatch(/\.toast-enter\s*\{[^}]*animation:\s*toast-enter/)
+
+    // Verifies prefers-reduced-motion media query exists and overrides animation duration
+    const reducedMotionMatch = css.match(/@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{([\s\S]*?)\n\}/)
+    expect(reducedMotionMatch).not.toBeNull()
+    const reducedMotionBlock = reducedMotionMatch![1]
+    expect(reducedMotionBlock).toMatch(/\*\s*,\s*\*::before\s*,\s*\*::after\s*\{[\s\S]*?animation-duration:\s*0\.01ms\s*!important/)
+
+    // Verifies .toast-enter definition precedes reduced-motion overrides
+    expect(css.indexOf('.toast-enter')).toBeLessThan(css.indexOf('@media (prefers-reduced-motion: reduce)'))
+  })
 })
