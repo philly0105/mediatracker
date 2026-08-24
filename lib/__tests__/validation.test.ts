@@ -6,6 +6,7 @@ import {
   parseDate,
   parsePriority,
   badRequest,
+  readJson,
 } from '@/lib/validation'
 
 describe('validation', () => {
@@ -120,6 +121,49 @@ describe('validation', () => {
       expect(response.status).toBe(400)
       const data = await response.json()
       expect(data).toEqual({ error: 'Test bad request' })
+    })
+  })
+
+  describe('readJson', () => {
+    it('successfully parses valid JSON objects', async () => {
+      const request = new Request('http://localhost/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tmdb_id: 550, type: 'movie' }),
+      })
+      const result = await readJson<{ tmdb_id: number; type: string }>(request)
+      expect(result).toEqual({ ok: true, value: { tmdb_id: 550, type: 'movie' } })
+    })
+
+    it('returns ok: false for malformed JSON syntax', async () => {
+      const request = new Request('http://localhost/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{ "invalid_json": ',
+      })
+      const result = await readJson(request)
+      expect(result.ok).toBe(false)
+      expect(result.error).toBe('Invalid or malformed JSON body')
+    })
+
+    it('returns ok: false for empty or non-object JSON values', async () => {
+      const requestNull = new Request('http://localhost/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'null',
+      })
+      const resultNull = await readJson(requestNull)
+      expect(resultNull.ok).toBe(false)
+      expect(resultNull.error).toBe('Invalid or malformed JSON body')
+
+      const requestPrimitive = new Request('http://localhost/api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '"just a string"',
+      })
+      const resultPrimitive = await readJson(requestPrimitive)
+      expect(resultPrimitive.ok).toBe(false)
+      expect(resultPrimitive.error).toBe('Invalid or malformed JSON body')
     })
   })
 })

@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { searchTmdb } from '@/lib/tmdb'
 import { upsertMedia } from '@/lib/media'
-import { parseRating, parseDate, parseMediaType, parseText, badRequest } from '@/lib/validation'
+import { parseRating, parseDate, parseMediaType, parseText, badRequest, readJson } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { title, year, type, rating, date, review, status } = await request.json()
+  const bodyRes = await readJson<{
+    title?: unknown
+    year?: unknown
+    type?: unknown
+    rating?: unknown
+    date?: unknown
+    review?: unknown
+    status?: unknown
+  }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { title, year, type, rating, date, review, status } = bodyRes.value
   const titleRes = parseText(title, 200, 'Title')
   if (!titleRes.ok || !titleRes.value?.trim()) return badRequest('Title is required')
 
@@ -45,9 +56,11 @@ export async function POST(request: NextRequest) {
   const typeMatches = results.filter(r => r.type === targetType)
   let match = typeMatches[0] ?? results[0]
   if (year) {
-    const yearNum = parseInt(year)
-    const yearMatch = (typeMatches.length > 0 ? typeMatches : results).find(r => r.release_year === yearNum)
-    if (yearMatch) match = yearMatch
+    const parsedYear = typeof year === 'number' ? year : parseInt(String(year), 10)
+    if (!isNaN(parsedYear)) {
+      const yearMatch = (typeMatches.length > 0 ? typeMatches : results).find(r => r.release_year === parsedYear)
+      if (yearMatch) match = yearMatch
+    }
   }
 
   const { media, seasons } = await upsertMedia(supabase, match.tmdb_id, match.type)

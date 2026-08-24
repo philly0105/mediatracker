@@ -1,0 +1,9 @@
+# Set default behavior to automatically normalize line endings
+* text=auto eol=lf
+
+# Explicitly ensure CSS and code files are checked out with LF line endings
+*.css text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf

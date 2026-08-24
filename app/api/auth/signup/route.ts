@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isValidInviteCode, safeNextPath } from '@/lib/auth'
+import { badRequest, readJson } from '@/lib/validation'
 
 // Signup, gated on an invite code.
 //
@@ -43,12 +44,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  let body: Record<string, unknown>
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  const bodyRes = await readJson<Record<string, unknown>>(request)
+  if (!bodyRes.ok) {
+    return badRequest('Invalid request')
   }
+
+  const body = bodyRes.value
 
   const email = typeof body.email === 'string' ? body.email.trim() : ''
   const password = typeof body.password === 'string' ? body.password : ''

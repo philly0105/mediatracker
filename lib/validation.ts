@@ -124,3 +124,19 @@ export function parseText(v: unknown, maxLen = 5000, fieldName = 'Text'): Valida
   }
   return { ok: true, value: v }
 }
+
+/**
+ * Safely parses the JSON body of a Request.
+ * Returns `{ ok: true, value }` on success, or `{ ok: false, error: 'Invalid or malformed JSON body' }` if body is malformed or invalid JSON.
+ */
+export async function readJson<T = Record<string, unknown>>(request: Request): Promise<ValidationResult<T>> {
+  try {
+    const value = await request.json()
+    if (value === null || typeof value !== 'object') {
+      return { ok: false, error: 'Invalid or malformed JSON body' }
+    }
+    return { ok: true, value: value as T }
+  } catch {
+    return { ok: false, error: 'Invalid or malformed JSON body' }
+  }
+}

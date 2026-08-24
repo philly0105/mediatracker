@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
 import { fetchWatchEntries } from '@/lib/watchEntries'
-import { parseRating, parseMediaType, parseTmdbId, parseDate, parseUuid, parseText, badRequest } from '@/lib/validation'
+import { parseRating, parseMediaType, parseTmdbId, parseDate, parseUuid, parseText, badRequest, readJson } from '@/lib/validation'
 
 // GET: fetch watch entries (with media) for the authenticated user
 export async function GET(request: NextRequest) {
@@ -29,7 +29,17 @@ export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tmdb_id, type, rating, review, watched_at, rewatch } = await request.json()
+  const bodyRes = await readJson<{
+    tmdb_id?: unknown
+    type?: unknown
+    rating?: unknown
+    review?: unknown
+    watched_at?: unknown
+    rewatch?: unknown
+  }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { tmdb_id, type, rating, review, watched_at, rewatch } = bodyRes.value
   const tmdbRes = parseTmdbId(tmdb_id)
   if (!tmdbRes.ok) return badRequest(tmdbRes.error)
 
@@ -92,7 +102,15 @@ export async function PATCH(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, rating, review, watched_at } = await request.json()
+  const bodyRes = await readJson<{
+    id?: unknown
+    rating?: unknown
+    review?: unknown
+    watched_at?: unknown
+  }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { id, rating, review, watched_at } = bodyRes.value
   const idRes = parseUuid(id)
   if (!idRes.ok) return badRequest(idRes.error)
   
@@ -132,7 +150,10 @@ export async function DELETE(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id } = await request.json()
+  const bodyRes = await readJson<{ id?: unknown }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { id } = bodyRes.value
   const idRes = parseUuid(id)
   if (!idRes.ok) return badRequest(idRes.error)
 

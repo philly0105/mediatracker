@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
-import { badRequest } from '@/lib/validation'
+import { badRequest, readJson } from '@/lib/validation'
 
 const MAX_EPISODES_PER_REQUEST = 500
 
@@ -49,8 +49,10 @@ export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json()
-  const parsed = parseEpisodes(body)
+  const bodyRes = await readJson<Record<string, unknown>>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const parsed = parseEpisodes(bodyRes.value)
   if (!parsed) {
     return badRequest('season_id and at least one episode required')
   }
@@ -81,8 +83,10 @@ export async function DELETE(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json()
-  const parsed = parseEpisodes(body)
+  const bodyRes = await readJson<Record<string, unknown>>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const parsed = parseEpisodes(bodyRes.value)
   if (!parsed) {
     return badRequest('season_id and at least one episode required')
   }

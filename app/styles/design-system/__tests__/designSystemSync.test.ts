@@ -9,6 +9,8 @@ import path from 'path'
 const skill = path.resolve(__dirname, '../../../../.agents/skills/dorfmovies-design')
 const vendored = path.resolve(__dirname, '..')
 
+const normalizeEol = (s: string) => s.replace(/\r\n/g, '\n')
+
 describe('design system vendored copy', () => {
   it('ships the same token files as the skill', () => {
     const inSkill = readdirSync(path.join(skill, 'tokens')).filter(f => f.endsWith('.css')).sort()
@@ -19,14 +21,14 @@ describe('design system vendored copy', () => {
   it.each(
     readdirSync(path.join(skill, 'tokens')).filter(f => f.endsWith('.css')).sort(),
   )('tokens/%s is byte-identical to the skill', file => {
-    expect(readFileSync(path.join(vendored, 'tokens', file), 'utf8')).toBe(
-      readFileSync(path.join(skill, 'tokens', file), 'utf8'),
+    expect(normalizeEol(readFileSync(path.join(vendored, 'tokens', file), 'utf8'))).toBe(
+      normalizeEol(readFileSync(path.join(skill, 'tokens', file), 'utf8')),
     )
   })
 
   it('styles.css is byte-identical to the skill', () => {
-    expect(readFileSync(path.join(vendored, 'styles.css'), 'utf8')).toBe(
-      readFileSync(path.join(skill, 'styles.css'), 'utf8'),
+    expect(normalizeEol(readFileSync(path.join(vendored, 'styles.css'), 'utf8'))).toBe(
+      normalizeEol(readFileSync(path.join(skill, 'styles.css'), 'utf8')),
     )
   })
 })

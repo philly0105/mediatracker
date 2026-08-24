@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
 import { collectGenres } from '@/lib/libraryFilters'
-import { parsePriority, parseTmdbId, parseMediaType, badRequest } from '@/lib/validation'
+import { parsePriority, parseTmdbId, parseMediaType, badRequest, readJson } from '@/lib/validation'
 
 // The buckets the watchlist page renders, in the order it renders them.
 const GROUPED_PRIORITIES = ['must_watch', 'want_to_watch', 'someday'] as const
@@ -160,7 +160,14 @@ export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tmdb_id, type, priority } = await request.json()
+  const bodyRes = await readJson<{
+    tmdb_id?: unknown
+    type?: unknown
+    priority?: unknown
+  }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { tmdb_id, type, priority } = bodyRes.value
   const tmdbRes = parseTmdbId(tmdb_id)
   if (!tmdbRes.ok) return badRequest(tmdbRes.error)
 
@@ -187,7 +194,13 @@ export async function PATCH(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, priority } = await request.json()
+  const bodyRes = await readJson<{
+    id?: unknown
+    priority?: unknown
+  }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { id, priority } = bodyRes.value
   if (!id || typeof id !== 'string') return badRequest('Invalid or missing id')
 
   const priorityRes = parsePriority(priority)
@@ -210,7 +223,14 @@ export async function DELETE(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, tmdb_id, type } = await request.json()
+  const bodyRes = await readJson<{
+    id?: unknown
+    tmdb_id?: unknown
+    type?: unknown
+  }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { id, tmdb_id, type } = bodyRes.value
 
   if (id) {
     if (typeof id !== 'string') return badRequest('Invalid id')

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
-import { parseTmdbId, badRequest } from '@/lib/validation'
+import { parseTmdbId, badRequest, readJson } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -32,7 +32,10 @@ export async function POST(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tmdb_id } = await request.json()
+  const bodyRes = await readJson<{ tmdb_id?: unknown }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { tmdb_id } = bodyRes.value
   const tmdbRes = parseTmdbId(tmdb_id)
   if (!tmdbRes.ok) return badRequest(tmdbRes.error)
 
@@ -49,7 +52,10 @@ export async function DELETE(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { tmdb_id } = await request.json()
+  const bodyRes = await readJson<{ tmdb_id?: unknown }>(request)
+  if (!bodyRes.ok) return badRequest(bodyRes.error)
+
+  const { tmdb_id } = bodyRes.value
   const tmdbRes = parseTmdbId(tmdb_id)
   if (!tmdbRes.ok) return badRequest(tmdbRes.error)
 
