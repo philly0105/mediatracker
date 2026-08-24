@@ -9,21 +9,22 @@ import { ToastProvider } from '../ToastProvider'
 import type { TmdbSearchResult } from '@/types'
 
 vi.mock('next/dynamic', () => ({
-  default: (
-    loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
-    options?: { loading?: ComponentType<any>; ssr?: boolean }
+  default: <P extends object>(
+    loader: () => Promise<{ default: ComponentType<P> } | ComponentType<P>>,
+    options?: { loading?: ComponentType<unknown>; ssr?: boolean }
   ) => {
     const LazyComponent = React.lazy(async () => {
       const mod = await loader()
       if (mod && typeof mod === 'object' && 'default' in mod) {
-        return mod as { default: ComponentType<any> }
+        return mod as { default: ComponentType<P> }
       }
-      return { default: mod as ComponentType<any> }
+      return { default: mod as ComponentType<P> }
     })
 
-    return function DynamicComponent(props: any) {
+    return function DynamicComponent(props: P) {
+      const Loading = options?.loading
       return (
-        <Suspense fallback={options?.loading ? <options.loading /> : null}>
+        <Suspense fallback={Loading ? <Loading /> : null}>
           <LazyComponent {...props} />
         </Suspense>
       )

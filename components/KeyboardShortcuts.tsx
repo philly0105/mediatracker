@@ -15,10 +15,18 @@ export default function KeyboardShortcuts() {
   const [open, setOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [panelsLoaded, setPanelsLoaded] = useState(false)
+  const searchParamTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // When `g` was last pressed. A chord rather than a modifier, so it has to
   // expire — otherwise a `g` typed and abandoned turns the next `l` into a
   // navigation an hour later.
   const gPressedAt = useRef(0)
+
+  useEffect(() => () => {
+    if (searchParamTimer.current !== null) {
+      clearTimeout(searchParamTimer.current)
+      searchParamTimer.current = null
+    }
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -101,19 +109,23 @@ export default function KeyboardShortcuts() {
   // open, then strip it from the URL so refresh/back don't reopen.
   useEffect(() => {
     if (searchParams.get('search') !== '1') return
-    // Opening on a param is the one intentional setState-in-effect; the effect
-    // is keyed to searchParams so it re-runs exactly when the param appears.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!isAnyModalOpen() && !open) {
-      setPanelsLoaded(true)
-      setOpen(true)
+
+    // Let sibling modal effects register before reusing the overlay's event
+    // boundary. URL replacement may rerender this effect, so the timer is owned
+    // by an unmount-only cleanup above rather than cancelled by param changes.
+    if (searchParamTimer.current === null) {
+      searchParamTimer.current = setTimeout(() => {
+        searchParamTimer.current = null
+        window.dispatchEvent(new Event(SEARCH_OVERLAY_EVENT))
+      }, 0)
     }
+
     const params = new URLSearchParams(searchParams)
     params.delete('search')
     const qs = params.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+
+  }, [pathname, router, searchParams])
 
   return (
     <>

@@ -25,21 +25,22 @@ function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivE
 }
 
 vi.mock('next/dynamic', () => ({
-  default: (
-    loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
-    options?: { loading?: ComponentType<any>; ssr?: boolean }
+  default: <P extends object>(
+    loader: () => Promise<{ default: ComponentType<P> } | ComponentType<P>>,
+    options?: { loading?: ComponentType<unknown>; ssr?: boolean }
   ) => {
     const LazyComponent = React.lazy(async () => {
       const mod = await loader()
       if (mod && typeof mod === 'object' && 'default' in mod) {
-        return mod as { default: ComponentType<any> }
+        return mod as { default: ComponentType<P> }
       }
-      return { default: mod as ComponentType<any> }
+      return { default: mod as ComponentType<P> }
     })
 
-    return function DynamicComponent(props: any) {
+    return function DynamicComponent(props: P) {
+      const Loading = options?.loading
       return (
-        <Suspense fallback={options?.loading ? <options.loading /> : null}>
+        <Suspense fallback={Loading ? <Loading /> : null}>
           <LazyComponent {...props} />
         </Suspense>
       )
@@ -186,6 +187,74 @@ describe('KeyboardShortcuts', () => {
     renderShortcuts()
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(replace).toHaveBeenCalledWith('/', { scroll: false })
+  })
+
+  it('strips the ?search=1 param while preserving other query parameters', async () => {
+    mockSearch = 'search=1&filter=movies&sort=year'
+    renderShortcuts()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(replace).toHaveBeenCalledWith('/?filter=movies&sort=year', { scroll: false })
+  })
+
+  it('does not open the search overlay via ?search=1 when another modal is already open', async () => {
+    mockSearch = 'search=1'
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <KeyboardShortcuts />
+          <TestModal onClose={vi.fn()} />
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+    expect(await screen.findByText('modal button')).toBeInTheDocument()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(screen.queryByPlaceholderText('Search movies and TV shows…')).not.toBeInTheDocument()
+    expect(replace).toHaveBeenCalledWith('/', { scroll: false })
+  })
+
+  it('cancels the compatibility event when unmounted before it runs', () => {
+    vi.useFakeTimers()
+    try {
+      mockSearch = 'search=1'
+      const dispatch = vi.spyOn(window, 'dispatchEvent')
+      const { unmount } = renderShortcuts()
+      unmount()
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: SEARCH_OVERLAY_EVENT }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('opens once from ?search=1 during Strict Mode effect replay', async () => {
+    vi.useFakeTimers()
+    try {
+      mockSearch = 'search=1'
+      const dispatch = vi.spyOn(window, 'dispatchEvent')
+      render(
+        <React.StrictMode>
+          <ToastProvider>
+            <MediaModalProvider>
+              <KeyboardShortcuts />
+            </MediaModalProvider>
+          </ToastProvider>
+        </React.StrictMode>
+      )
+
+      await act(async () => {
+        vi.runAllTimers()
+      })
+
+      const overlayEvents = dispatch.mock.calls.filter(([event]) => event.type === SEARCH_OVERLAY_EVENT)
+      expect(overlayEvents).toHaveLength(1)
+      vi.useRealTimers()
+      expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not open the overlay when the param is absent', () => {
