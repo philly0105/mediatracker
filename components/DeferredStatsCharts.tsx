@@ -91,8 +91,15 @@ export default function DeferredStatsCharts(props: DeferredStatsChartsProps) {
     if (!node) return
 
     if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true)
-      return
+      let cancelled = false
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setIsVisible(true)
+        }
+      })
+      return () => {
+        cancelled = true
+      }
     }
 
     let disconnected = false

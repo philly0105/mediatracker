@@ -8,28 +8,29 @@ import DeferredStatsCharts, { ChartsSkeleton } from '../DeferredStatsCharts'
 import type StatsCharts from '../StatsCharts'
 
 const dynamicMockState = vi.hoisted(() => ({
-  capturedOptions: undefined as { loading?: ComponentType<any>; ssr?: boolean } | undefined,
-  capturedLoader: undefined as (() => Promise<any>) | undefined,
+  capturedOptions: undefined as { loading?: ComponentType<unknown>; ssr?: boolean } | undefined,
+  capturedLoader: undefined as (() => Promise<unknown>) | undefined,
 }))
 
 vi.mock('next/dynamic', () => ({
-  default: (
-    loader: () => Promise<{ default: ComponentType<any> } | ComponentType<any>>,
-    options?: { loading?: ComponentType<any>; ssr?: boolean }
+  default: <P extends object>(
+    loader: () => Promise<{ default: ComponentType<P> } | ComponentType<P>>,
+    options?: { loading?: ComponentType<unknown>; ssr?: boolean }
   ) => {
     dynamicMockState.capturedLoader = loader
     dynamicMockState.capturedOptions = options
     const LazyComponent = React.lazy(async () => {
       const mod = await loader()
       if (mod && typeof mod === 'object' && 'default' in mod) {
-        return mod as { default: ComponentType<any> }
+        return mod as { default: ComponentType<P> }
       }
-      return { default: mod as ComponentType<any> }
+      return { default: mod as ComponentType<P> }
     })
 
-    return function DynamicComponent(props: any) {
+    return function DynamicComponent(props: P) {
+      const Loading = options?.loading
       return (
-        <Suspense fallback={options?.loading ? <options.loading /> : null}>
+        <Suspense fallback={Loading ? <Loading /> : null}>
           <LazyComponent {...props} />
         </Suspense>
       )
@@ -181,6 +182,22 @@ describe('DeferredStatsCharts', () => {
     render(<DeferredStatsCharts data={sampleStatsData} />)
 
     expect(await screen.findByText('loaded charts - Last 12 months')).toBeInTheDocument()
+  })
+
+  it('does not update visibility if unmounted before fallback microtask runs when IntersectionObserver is unavailable', async () => {
+    // @ts-expect-error test environment override
+    delete window.IntersectionObserver
+
+    const { unmount } = render(<DeferredStatsCharts data={sampleStatsData} />)
+    unmount()
+
+    await new Promise<void>((resolve) => {
+      queueMicrotask(() => {
+        resolve()
+      })
+    })
+
+    expect(screen.queryByText(/loaded charts/)).not.toBeInTheDocument()
   })
 
   it('renders accessible loading state with role="status" and visually hidden label without noisy nested announcements', () => {
