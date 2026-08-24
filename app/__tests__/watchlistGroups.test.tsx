@@ -25,6 +25,7 @@ function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivE
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
   motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
 }))
 

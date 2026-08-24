@@ -52,6 +52,7 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children?: ReactNode }) => (
     <div data-testid="animate-presence-host">{children}</div>
   ),
+  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
   motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
 }))
 

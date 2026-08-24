@@ -26,6 +26,7 @@ function strip({ ...p }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
 }
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
   motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
 }))
 
@@ -112,21 +113,17 @@ describe('app layout provider order', () => {
     expect(multi).toBeLessThan(modal)
   })
 
-  it('wraps the authenticated application subtree in MotionProvider without placing it in root layout', () => {
+  it('keeps MotionProvider and framer-motion out of both root and authenticated layouts', () => {
     const appLayout = readFileSync(
       path.resolve(__dirname, '../../app/(app)/layout.tsx'), 'utf8',
-    ).replace(/\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
-
+    )
     const rootLayout = readFileSync(
       path.resolve(__dirname, '../../app/layout.tsx'), 'utf8',
     )
 
-    const motion = appLayout.indexOf('<MotionProvider>')
-    const multi = appLayout.indexOf('<MultiSelectProvider>')
-
-    expect(motion).toBeGreaterThan(-1)
-    expect(multi).toBeGreaterThan(-1)
-    expect(motion).toBeLessThan(multi)
+    expect(appLayout).not.toContain('MotionProvider')
+    expect(appLayout).not.toContain('framer-motion')
     expect(rootLayout).not.toContain('MotionProvider')
+    expect(rootLayout).not.toContain('framer-motion')
   })
 })

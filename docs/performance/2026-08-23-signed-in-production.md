@@ -77,47 +77,47 @@ Common client chunks referenced by all authenticated routes under `app/(app)`:
 
 ## 6. Before and after
 
-Final source commit measured: `b23bda7`.
-Final build: Next.js 16.2.6 (Turbopack), exit 0, 13,258 ms wall clock; compile 3.8s, TypeScript 6.0s, static generation 360ms (46/46). No workspace-root warning was emitted.
+Final source commit measured: `f6eae5b`.
+Final build: Next.js 16.2.6 (Turbopack), exit 0, 13,523 ms wall clock; compile 3.8s, TypeScript 6.2s, static generation 335ms (46/46). No workspace-root warning was emitted.
 
 All byte counts below are uncompressed production JavaScript from the route client-reference manifests and `.next/static/chunks`.
 
 | Metric | Before | After | Reduction |
 | --- | ---: | ---: | ---: |
-| Authenticated common shell | 304,739 B (297.6 KiB) | 107,159 B (104.6 KiB) | 64.8% |
-| Dashboard initial route | 321,287 B (313.8 KiB) | 142,690 B (139.3 KiB) | 55.6% |
-| Stats initial route | 675,408 B (659.6 KiB) | 112,144 B (109.5 KiB) | 83.4% |
-| Production build wall clock | 14,626 ms | 13,258 ms | 9.4% |
+| Authenticated common shell | 304,739 B (297.6 KiB) | 104,862 B (102.4 KiB) | 65.6% |
+| Dashboard initial route | 321,287 B (313.8 KiB) | 140,393 B (137.1 KiB) | 56.3% |
+| Stats initial route | 675,408 B (659.6 KiB) | 109,847 B (107.3 KiB) | 83.7% |
+| Production build wall clock | 14,626 ms | 13,523 ms | 7.5% |
 
-The 64.8% shell reduction exceeds the plan's 30% acceptance target.
+The 65.6% shell reduction exceeds the plan's 30% acceptance target.
 
 ### Final initial chunks
 
-Authenticated common shell (six chunks, 107,159 B):
+Authenticated common shell (six chunks, 104,862 B):
 
 - `01gm6slae8eh7.js` — 1,263 B
+- `01lp0mqj5806u.js` — 37,840 B
 - `01xlw8hd842-c.js` — 3,377 B
 - `06._p59qxe-5..js` — 54,646 B
 - `0hcxb~uxqj2is.js` — 2,166 B
-- `0jf5~u2--m18j.js` — 40,137 B
 - `178g1xm4gt5v7.js` — 5,570 B
 
-Dashboard adds `018jtk~ub0qcw.js` (35,531 B), for 142,690 B total across seven chunks.
+Dashboard adds `018jtk~ub0qcw.js` (35,531 B), for 140,393 B total across seven chunks.
 
-Library adds `0_w6-09o3jrfg.js` (1,477 B), `0w6qb8_op42j~.js` (51,502 B), and `16ty2921ivfs3.js` (9,091 B), for 169,229 B total across nine chunks. No comparable Library baseline was captured in Task 1.
+Library adds `0_w6-09o3jrfg.js` (1,477 B), `0.t_7dz4w6scc.js` (51,697 B), and `16ty2921ivfs3.js` (9,091 B), for 167,127 B total across nine chunks. No comparable Library baseline was captured in Task 1.
 
-Stats adds `0kdgida49udqh.js` (1,491 B) and `185txroaf81l3.js` (3,494 B), for 112,144 B total across eight chunks.
+Stats adds `0kdgida49udqh.js` (1,491 B) and `185txroaf81l3.js` (3,494 B), for 109,847 B total across eight chunks.
 
-The Dashboard manifest's initial `clientModules` graph contains no `SearchOverlay`, `MediaInfoModal`, or `recharts` implementation module. Deferred interaction bundles measured after the final build are:
+The Dashboard manifest's initial `clientModules` graph contains no `MotionProvider`, `framer-motion`, `SearchOverlay`, `MediaInfoModal`, or `recharts` implementation module. Deferred interaction bundles measured after the final build are:
 
-- Search and keyboard panels: `122ke~g61~1pq.js` — 34,049 B
-- Media information modal: `14o_.3m-k_r17.js` — 45,656 B
-- Framer Motion runtime boundaries: two 137,532 B chunks, loaded by separate deferred interaction graphs
+- Search and keyboard panels: `0eucyich37-.-.js` — 34,087 B
+- Media information modal: `0.0too_ofkpxj.js` — 45,727 B
+- Framer Motion runtime boundaries: two 140,852 B chunks, loaded by separate deferred interaction graphs and carrying their local reduced-motion configuration
 - Recharts and Stats charts: `0.qj2k9tzs4n-.js` — 368,591 B (359.95 KiB), absent from Stats' initial graph
 
 ## 7. Server data and interaction work
 
-- Library now receives its first watch-entry page from the authenticated Server Component. Hydration no longer immediately repeats `GET /api/watch`; filter refreshes remain abortable, stale responses are ignored, and background refreshes coalesce.
+- Library now receives its first watch-entry page from the authenticated Server Component. Hydration no longer immediately repeats `GET /api/watch`; filter refreshes remain generation-gated, stale responses are ignored, and background refreshes coalesce.
 - Show detail now loads media, seasons, the latest watch entry, and episode progress on the server and seeds `ShowDetailClient`. Hydration no longer immediately repeats `GET /api/shows/:id`. The `only=entry` mutation refresh path remains narrow.
 - Supabase query failures are distinct from confirmed absence: server pages propagate failures, API routes return 500, and only a successful missing media row becomes 404.
 
@@ -132,12 +132,13 @@ The Dashboard manifest's initial `clientModules` graph contains no `SearchOverla
 
 Fresh completion-gate commands on 2026-08-24:
 
-- `npm run test:run` — 58 files, 480 tests passed, 0 failed.
+- `npm run test:run` — 58 files, 486 tests passed, 0 failed.
 - `npx tsc --noEmit` — exit 0.
 - `npm run lint` — exit 0, no errors or warnings.
 - `npm run build` — exit 0, all 46 routes generated, no workspace-root warning.
 - Focused image policy — 5 tests passed, including a demonstrated red/green check for collection grid `sizes`.
 - Focused shortcut/modal/watchlist boundary suite — 45 tests passed; Strict Mode shortcut regression — 32 tests passed.
+- Final-review motion and Library resilience suite — 78 tests passed, including red/green HTTP 500 refresh coverage.
 
 ### Browser verification
 

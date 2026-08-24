@@ -68,6 +68,7 @@ function FakeAnimatePresence({
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: FakeAnimatePresence,
+  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
   motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
 }))
 

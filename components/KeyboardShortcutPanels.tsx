@@ -1,5 +1,5 @@
 'use client'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, MotionConfig } from 'framer-motion'
 import SearchOverlay from '@/components/SearchOverlay'
 import KeyboardHelp from '@/components/KeyboardHelp'
 
@@ -17,11 +17,11 @@ export default function KeyboardShortcutPanels({
   onCloseHelp,
 }: KeyboardShortcutPanelsProps) {
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       {searchOpen && <SearchOverlay onClose={onCloseSearch} />}
       <AnimatePresence>
         {helpOpen && <KeyboardHelp onClose={onCloseHelp} />}
       </AnimatePresence>
-    </>
+    </MotionConfig>
   )
 }

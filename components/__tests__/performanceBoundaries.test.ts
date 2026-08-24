@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -7,8 +7,10 @@ const source = (name: string) => readFileSync(join(__dirname, '..', name), 'utf8
 const readSource = (relPath: string) => readFileSync(join(root, ...relPath.split('/')), 'utf8')
 
 describe('authenticated shell bundle boundaries', () => {
-  it('does not import framer-motion in synchronous signed-in routes and shell components', () => {
+  it('does not import framer-motion or MotionProvider in synchronous signed-in routes and shell components', () => {
     const synchronousFiles = [
+      'app/layout.tsx',
+      'app/(app)/layout.tsx',
       'components/Sidebar.tsx',
       'components/MultiSelectProvider.tsx',
       'components/ui/BentoGrid.tsx',
@@ -21,6 +23,7 @@ describe('authenticated shell bundle boundaries', () => {
     for (const file of synchronousFiles) {
       const content = readSource(file)
       expect(content, `Expected ${file} not to import from framer-motion`).not.toContain("from 'framer-motion'")
+      expect(content, `Expected ${file} not to reference MotionProvider`).not.toContain('MotionProvider')
     }
   })
 
@@ -43,17 +46,40 @@ describe('authenticated shell bundle boundaries', () => {
     expect(value).not.toContain('TestMediaModalStack')
   })
 
-  it('owns AnimatePresence and panel imports inside KeyboardShortcutPanels', () => {
+  it('owns AnimatePresence, MotionConfig, and panel imports inside KeyboardShortcutPanels', () => {
     const value = source('KeyboardShortcutPanels.tsx')
     expect(value).toContain("from 'framer-motion'")
+    expect(value).toContain('MotionConfig')
+    expect(value).toContain('reducedMotion="user"')
     expect(value).toMatch(/import\s+SearchOverlay\s+from\s+['"]@\/components\/SearchOverlay['"]/)
     expect(value).toMatch(/import\s+KeyboardHelp\s+from\s+['"]@\/components\/KeyboardHelp['"]/)
-    expect(value).toMatch(/<AnimatePresence[\s\S]*<KeyboardHelp/)
+    expect(value).toMatch(/<MotionConfig[\s\S]*<AnimatePresence[\s\S]*<KeyboardHelp/)
+  })
+
+  it('owns AnimatePresence, MotionConfig, and MediaInfoModal inside MediaModalStack', () => {
+    const value = source('MediaModalStack.tsx')
+    expect(value).toContain("from 'framer-motion'")
+    expect(value).toContain('MotionConfig')
+    expect(value).toContain('reducedMotion="user"')
+    expect(value).toContain('MediaInfoModal')
+    expect(value).toMatch(/<MotionConfig[\s\S]*<AnimatePresence[\s\S]*<MediaInfoModal/)
+  })
+
+  it('wraps TonightPickModal with MotionConfig reducedMotion="user"', () => {
+    const value = source('TonightPickModal.tsx')
+    expect(value).toContain("from 'framer-motion'")
+    expect(value).toContain('MotionConfig')
+    expect(value).toContain('reducedMotion="user"')
   })
 
   it('lazy-loads TonightPickModal via next/dynamic at module scope in watchlist page', () => {
     const content = readSource('app/(app)/watchlist/page.tsx')
     expect(content).toContain("from 'next/dynamic'")
     expect(content).toMatch(/dynamic\(\s*\(\)\s*=>\s*import\(['"]@\/components\/TonightPickModal['"]\)\s*\)/)
+  })
+
+  it('removes components/MotionProvider.tsx since no production import remains', () => {
+    const motionProviderPath = join(__dirname, '..', 'MotionProvider.tsx')
+    expect(existsSync(motionProviderPath)).toBe(false)
   })
 })

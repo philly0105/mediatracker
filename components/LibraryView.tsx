@@ -154,12 +154,16 @@ export default function LibraryView({
   const { toast } = useToast()
 
   const fetchEntries = useCallback(
-    () =>
+    async () => {
       // A bare /api/watch returns both types, so the type param is only added
       // when a specific filter is active.
-      fetch(`/api/watch${typeFilter !== 'all' ? `?type=${typeFilter}` : ''}`)
-        .then((r) => r.json())
-        .then((data) => (data.entries ?? []) as WatchEntry[]),
+      const res = await fetch(`/api/watch${typeFilter !== 'all' ? `?type=${typeFilter}` : ''}`)
+      if (!res.ok) {
+        throw new Error(`Failed to fetch library entries: ${res.status}`)
+      }
+      const data = await res.json()
+      return (data.entries ?? []) as WatchEntry[]
+    },
     [typeFilter]
   )
 
@@ -179,6 +183,9 @@ export default function LibraryView({
         loadedTypeRef.current = targetType
         lastFetchedAt.current = fetchTime
         setEntries(data)
+      })
+      .catch(() => {
+        // Failed load / filter switch must not unhandled-reject or corrupt state.
       })
       .finally(() => {
         if (inFlightRef.current?.gen === gen) {
@@ -222,13 +229,17 @@ export default function LibraryView({
         lastFetchedAt.current = fetchTime
         setEntries(data)
       })
+      .catch(() => {
+        if (gen !== requestGenRef.current || targetType !== typeFilter) return
+        toast('Could not refresh library.', { tone: 'error' })
+      })
       .finally(() => {
         if (inFlightRef.current?.gen === gen) {
           inFlightRef.current = null
         }
         setRefreshing(false)
       })
-  }, [fetchEntries, typeFilter])
+  }, [fetchEntries, typeFilter, toast])
 
   // The list is fetched once into client state, so router.refresh() cannot
   // reach it: an entry edited on a show page, in another tab, or on a phone
@@ -330,6 +341,9 @@ export default function LibraryView({
         loadedTypeRef.current = targetType
         lastFetchedAt.current = fetchTime
         setEntries(data)
+      })
+      .catch(() => {
+        // Handled: no unhandled promise rejection if re-pull after edit fails
       })
       .finally(() => {
         if (inFlightRef.current?.gen === gen) {

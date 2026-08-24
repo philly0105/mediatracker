@@ -26,6 +26,7 @@ function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivE
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
   motion: {
     div: (props: MotionDivProps) => <div {...stripMotionProps(props)} />,
   },
@@ -877,5 +878,160 @@ describe('LibraryView', () => {
     })
 
     expect(screen.getByText('Movie Data')).toBeInTheDocument()
+  })
+
+  it('preserves seeded entries and displays error toast without stranding controls when manual refresh fails with HTTP 500', async () => {
+    vi.stubGlobal('IntersectionObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+
+    const seededAll = [entry('1', 'Good Seed Film')]
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'Internal Server Error' }),
+    })
+
+    render(
+      <ToastProvider>
+        <MediaModalProvider>
+          <MultiSelectProvider>
+            <LibraryView
+              initialEntries={seededAll}
+              initialType="all"
+              initialFetchedAt={Date.now()}
+            />
+          </MultiSelectProvider>
+        </MediaModalProvider>
+      </ToastProvider>
+    )
+
+    expect(screen.getByText('Good Seed Film')).toBeInTheDocument()
+    expect(screen.getByText('1 watched')).toBeInTheDocument()
+
+    const refreshBtn = screen.getByRole('button', { name: 'Refresh library' })
+    await act(async () => {
+      fireEvent.click(refreshBtn)
+    })
+
+    // Seeded entry must remain visible and not be replaced with empty array
+    expect(screen.getByText('Good Seed Film')).toBeInTheDocument()
+    expect(screen.getByText('1 watched')).toBeInTheDocument()
+
+    // Concise error toast should be shown
+    expect(await screen.findByText('Could not refresh library.')).toBeInTheDocument()
+
+    // Refresh control must not be stranded in disabled/spinning state
+    expect(screen.getByRole('button', { name: 'Refresh library' })).not.toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Refreshing library' })).not.toBeInTheDocument()
+  })
+
+  it('preserves seeded entries quietly without toast and without updating cache when background refresh fails with HTTP 500', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('IntersectionObserver', class {
+        observe() {}
+        disconnect() {}
+      })
+
+      const initialTime = 1700000000000
+      vi.setSystemTime(initialTime)
+
+      const seededAll = [entry('1', 'Good Seed Film')]
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Internal Server Error' }),
+      })
+
+      render(
+        <ToastProvider>
+          <MediaModalProvider>
+            <MultiSelectProvider>
+              <LibraryView
+                initialEntries={seededAll}
+                initialType="all"
+                initialFetchedAt={initialTime}
+              />
+            </MultiSelectProvider>
+          </MediaModalProvider>
+        </ToastProvider>
+      )
+
+      expect(screen.getByText('Good Seed Film')).toBeInTheDocument()
+
+      // Advance time past stale threshold
+      vi.setSystemTime(initialTime + 35_000)
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+
+      await act(async () => {
+        fireEvent(document, new Event('visibilitychange'))
+      })
+
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(mockFetch).toHaveBeenCalledWith('/api/watch')
+
+      // Seeded entries must stay visible
+      expect(screen.getByText('Good Seed Film')).toBeInTheDocument()
+      expect(screen.getByText('1 watched')).toBeInTheDocument()
+
+      // Background failure must remain quiet (no toast)
+      expect(screen.queryByText('Could not refresh library.')).not.toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('preserves existing entries and avoids unhandled rejection when post-mutation refresh fails with HTTP 500', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.stubGlobal('IntersectionObserver', class {
+        observe() {}
+        disconnect() {}
+      })
+
+      const initialTime = 1700000000000
+      vi.setSystemTime(initialTime)
+
+      const seededAll = [entry('1', 'Pre-Mutation Film')]
+      mockFetch.mockImplementation(async (url, init) => {
+        if (init?.method === 'PATCH') {
+          return { ok: true, json: async () => ({}) }
+        }
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ error: 'Internal Server Error' }),
+        }
+      })
+
+      render(
+        <ToastProvider>
+          <MediaModalProvider>
+            <MultiSelectProvider>
+              <LibraryView
+                initialEntries={seededAll}
+                initialType="all"
+                initialFetchedAt={initialTime}
+              />
+            </MultiSelectProvider>
+          </MediaModalProvider>
+        </ToastProvider>
+      )
+
+      expect(screen.getByText('Pre-Mutation Film')).toBeInTheDocument()
+
+      // Open edit modal and save
+      fireEvent.click(screen.getByTitle('Edit entry'))
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+      })
+
+      // The mutation fetch fired and failed with 500, but pre-existing row remains in UI
+      expect(screen.getByText('Pre-Mutation Film')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
