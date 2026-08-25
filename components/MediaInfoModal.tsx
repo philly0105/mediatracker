@@ -21,7 +21,8 @@ import {
   Play,
   Bell,
   BellOff,
-  ListVideo
+  ListVideo,
+  ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
@@ -355,6 +356,11 @@ export default function MediaInfoModal({
       ? `${iptvBase}/?q=${encodeURIComponent(item.title)}#movies`
       : null
 
+  // Cinejoy keys everything off TMDB ids, so the bare id is enough — the site
+  // redirects it to its own slugged URL. Its path segment for shows is `tv`,
+  // not the `show` this app uses internally.
+  const cinejoyUrl = `https://cinejoy.to/${item.type === 'movie' ? 'movie' : 'tv'}/${item.tmdb_id}`
+
   // F-36: the footer used to render up to five solid pine buttons, every one of
   // them Button's default `primary`, with no hierarchy at all. Exactly one solid
   // button now: the contextual next action, which is tracking episodes when the
@@ -481,32 +487,39 @@ export default function MediaInfoModal({
               )}
               
               {/* Watch Trailer Button */}
-              {(details?.trailer_url || iptvUrl) && (
-                <div className="pt-3 flex flex-wrap gap-2">
-                  {details?.trailer_url && (
-                    <a
-                      href={details.trailer_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--live)]/10 hover:bg-[var(--live)]/20 text-[var(--live)] font-bold text-xs transition-colors border border-[var(--live)]/20"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-[var(--live)]" />
-                      Watch Trailer
-                    </a>
-                  )}
-                  {iptvUrl && (
-                    <a
-                      href={iptvUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs transition-colors border border-[var(--accent)]/20"
-                    >
-                      <Tv className="w-3.5 h-3.5" />
-                      Watch on IPTV
-                    </a>
-                  )}
-                </div>
-              )}
+              <div className="pt-3 flex flex-wrap gap-2">
+                {details?.trailer_url && (
+                  <a
+                    href={details.trailer_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--live)]/10 hover:bg-[var(--live)]/20 text-[var(--live)] font-bold text-xs transition-colors border border-[var(--live)]/20"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-[var(--live)]" />
+                    Watch Trailer
+                  </a>
+                )}
+                {iptvUrl && (
+                  <a
+                    href={iptvUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs transition-colors border border-[var(--accent)]/20"
+                  >
+                    <Tv className="w-3.5 h-3.5" />
+                    Watch on IPTV
+                  </a>
+                )}
+                <a
+                  href={cinejoyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm bg-white/[0.03] hover:bg-white/[0.07] text-zinc-400 hover:text-zinc-200 font-bold text-xs transition-colors border border-white/5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Cinejoy
+                </a>
+              </div>
             </div>
           </div>
 
