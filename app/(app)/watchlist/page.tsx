@@ -548,7 +548,7 @@ function WatchlistSection({
       </div>
 
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
           {[0, 1, 2, 3].map((j) => (
             <div key={j} className="bg-[var(--glass-card)] border border-[var(--border-subtle)] rounded-lg p-3.5 flex gap-4 animate-pulse">
               <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-[var(--bg-void)] shrink-0" />
@@ -571,7 +571,7 @@ function WatchlistSection({
         />
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
             {items.map((item) => {
               const isActioning = actioningId === item.id
               const selectableItem = item.media ? mediaToResult(item.media) : null

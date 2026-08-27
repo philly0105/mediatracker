@@ -42,23 +42,29 @@ function ChartFigure({
   return (
     <>
       <div role="img" aria-label={summary}>{children}</div>
-      <table className="sr-only">
-        <caption>{summary}</caption>
-        <thead>
-          <tr>{columns.map((col) => <th key={col} scope="col">{col}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={String(row[0])}>
-              {row.map((cell, i) => (
-                i === 0
-                  ? <th key={i} scope="row">{cell}</th>
-                  : <td key={i}>{cell}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* sr-only clips a wrapping block, not the <table> itself: applied
+          directly to a table the rule leaves its intrinsic width and
+          white-space: nowrap intact, and the absolutely positioned table
+          stretched the document past the viewport on /stats. */}
+      <div className="sr-only">
+        <table>
+          <caption>{summary}</caption>
+          <thead>
+            <tr>{columns.map((col) => <th key={col} scope="col">{col}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={String(row[0])}>
+                {row.map((cell, i) => (
+                  i === 0
+                    ? <th key={i} scope="row">{cell}</th>
+                    : <td key={i}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

@@ -7,7 +7,7 @@ const outfit = Outfit({ subsets: ['latin'] })
 
 // `metadataBase` resolves the relative OG image paths below into absolute URLs;
 // without it Next warns and social cards fall back to no image at all.
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mediatracker-ebon.vercel.app'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://dorfmovies.vercel.app'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

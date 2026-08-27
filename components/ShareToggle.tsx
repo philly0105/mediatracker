@@ -59,6 +59,7 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
           <Input
             readOnly
             value={url}
+            aria-label={`${label} public share URL`}
             className="text-xs"
           />
           <Button
@@ -66,6 +67,7 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
             size="sm"
             variant="ghost"
             onClick={copyUrl}
+            aria-label={`Copy ${label} public share URL`}
             className="shrink-0"
           >
             {copied ? 'Copied!' : 'Copy'}

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Download, Upload } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -73,7 +73,6 @@ export default function ImportExportPanel() {
   const [done, setDone] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [mode, setMode] = useState<'csv' | 'watchlist'>('csv')
-  const fileRef = useRef<HTMLInputElement>(null)
 
   function loadFile(file: File) {
     if (!file.name.endsWith('.csv')) return
@@ -218,17 +217,21 @@ export default function ImportExportPanel() {
         />
 
         {/* Drop zone */}
-        <div
+        {/* A <label> rather than a click-handling div: the input stays a real
+            focusable file input (sr-only, not `hidden`, which would drop it out
+            of the tab order and the a11y tree), so the picker opens from the
+            keyboard as well as the pointer. No onClick — clicking the label
+            already activates the input, and both would open two pickers. */}
+        <label
           onDragOver={e => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) loadFile(f) }}
-          onClick={() => fileRef.current?.click()}
-          className="rounded-lg p-8 text-center cursor-pointer transition-colors"
+          className="relative block rounded-lg p-8 text-center cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]"
           style={{
             background: dragging ? 'rgba(124, 154, 106, 0.08)' : 'var(--btn-ghost-bg)',
             border: `1px dashed ${dragging ? 'var(--accent)' : 'var(--border-default)'}`,
           }}>
-          <input ref={fileRef} type="file" accept=".csv" className="hidden"
+          <input type="file" accept=".csv" className="sr-only"
             onChange={e => { const f = e.target.files?.[0]; if (f) loadFile(f) }} />
           <Upload className="w-5 h-5 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
           <p className="text-zinc-400 text-sm">
@@ -236,7 +239,7 @@ export default function ImportExportPanel() {
               ? <span className="text-white font-medium">{rows.length} rows loaded — click or drop to replace</span>
               : <>Drop your CSV here or <span className="text-white underline underline-offset-2">click to browse</span></>}
           </p>
-        </div>
+        </label>
 
         {/* Preview table */}
         {rows.length > 0 && results.length === 0 && (
