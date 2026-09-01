@@ -194,6 +194,7 @@ function StreamingContent() {
         eyebrow="Available now"
         title="Streaming"
         sub={<>Browse what&rsquo;s streaming now on your services.</>}
+        selectable
       />
 
       {/* Provider pills */}

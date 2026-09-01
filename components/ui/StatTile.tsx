@@ -6,14 +6,13 @@ interface StatTileProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: React.ReactNode
 }
 
-export function StatTile({ label, value, icon, style, ...rest }: StatTileProps) {
+export function StatTile({ label, value, icon, style, className, ...rest }: StatTileProps) {
   return (
     <div
+      className={['glass-card', className].filter(Boolean).join(' ')}
       style={{
         padding: '18px 20px',
         borderRadius: 'var(--radius-lg)',
-        background: 'var(--glass-card)',
-        border: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

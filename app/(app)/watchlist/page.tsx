@@ -412,6 +412,7 @@ function WatchlistContent() {
           eyebrow="Up next"
           title="Watchlist"
           sub="Prioritize movies and shows you want to watch next."
+          selectable
         />
 
         <div className="flex flex-wrap items-center gap-3 pb-6 border-b border-[var(--border-subtle)]">

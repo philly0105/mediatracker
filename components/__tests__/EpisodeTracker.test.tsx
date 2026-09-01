@@ -204,3 +204,27 @@ describe('EpisodeTracker unaired episodes', () => {
     expect(screen.queryByText('0/3')).not.toBeInTheDocument()
   })
 })
+
+describe('EpisodeTracker default open season', () => {
+  const season1: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 2 }
+  const season2: Season = { id: 's2', media_id: 'm1', season_number: 2, episode_count: 2 }
+
+  it('defaults to opening the season containing the nextUp unwatched episode', () => {
+    const progress: EpisodeProgress[] = [
+      { id: 'p1', user_id: 'u1', season_id: 's1', episode_number: 1, watched_at: '2026-01-01' },
+      { id: 'p2', user_id: 'u1', season_id: 's1', episode_number: 2, watched_at: '2026-01-02' },
+    ]
+
+    render(
+      <EpisodeTracker
+        seasons={[season1, season2]}
+        progress={progress}
+        onProgressChange={onProgressChange}
+      />
+    )
+
+    // Season 1 is fully watched, so Season 2 should be open by default.
+    // In Season 2, episodes are not watched, so "Mark whole season watched" is visible for Season 2.
+    expect(screen.getByText('Mark whole season watched')).toBeInTheDocument()
+  })
+})

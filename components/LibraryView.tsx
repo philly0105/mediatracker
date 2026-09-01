@@ -9,6 +9,7 @@ import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard, SearchX } f
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ClearFilters } from '@/components/ui/ClearFilters'
+import { SectionError } from '@/components/ui/SectionError'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
 import {
@@ -132,6 +133,7 @@ export default function LibraryView({
     if (isMatchingSeed) return false
     return !readCache(typeFilter)
   })
+  const [loadError, setLoadError] = useState<Error | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -182,10 +184,12 @@ export default function LibraryView({
         if (gen !== requestGenRef.current || targetType !== typeFilter) return
         loadedTypeRef.current = targetType
         lastFetchedAt.current = fetchTime
+        setLoadError(null)
         setEntries(data)
       })
-      .catch(() => {
-        // Failed load / filter switch must not unhandled-reject or corrupt state.
+      .catch((err) => {
+        if (gen !== requestGenRef.current || targetType !== typeFilter) return
+        setLoadError(err instanceof Error ? err : new Error('Failed to load library'))
       })
       .finally(() => {
         if (inFlightRef.current?.gen === gen) {
@@ -216,6 +220,7 @@ export default function LibraryView({
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true)
+    setLoadError(null)
     const gen = ++requestGenRef.current
     const targetType = typeFilter
     const fetchTime = Date.now()
@@ -227,10 +232,14 @@ export default function LibraryView({
         if (gen !== requestGenRef.current || targetType !== typeFilter) return
         loadedTypeRef.current = targetType
         lastFetchedAt.current = fetchTime
+        setLoadError(null)
         setEntries(data)
       })
-      .catch(() => {
+      .catch((err) => {
         if (gen !== requestGenRef.current || targetType !== typeFilter) return
+        if (entries.length === 0) {
+          setLoadError(err instanceof Error ? err : new Error('Failed to load library'))
+        }
         toast('Could not refresh library.', { tone: 'error' })
       })
       .finally(() => {
@@ -239,7 +248,7 @@ export default function LibraryView({
         }
         setRefreshing(false)
       })
-  }, [fetchEntries, typeFilter, toast])
+  }, [fetchEntries, typeFilter, toast, entries.length])
 
   // The list is fetched once into client state, so router.refresh() cannot
   // reach it: an entry edited on a show page, in another tab, or on a phone
@@ -419,6 +428,7 @@ export default function LibraryView({
               ? `${filteredEntries.length} of ${entries.length} watched`
               : `${entries.length} watched`
           )}
+          selectable
         />
         {/* The type pills must survive an empty result set: filtering to a type
             with nothing in it would otherwise remove the only way back. */}
@@ -511,7 +521,17 @@ export default function LibraryView({
         )}
       </div>
 
-      {loading ? (
+      {loadError && entries.length === 0 ? (
+        <SectionError
+          error={loadError}
+          reset={() => {
+            setLoadError(null)
+            handleRefresh()
+          }}
+          title="Could not load library"
+          message="We couldn't fetch your library entries. Check your connection and try again."
+        />
+      ) : loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
           {[0, 1, 2].map((i) => (
             <div

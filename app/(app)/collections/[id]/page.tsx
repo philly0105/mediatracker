@@ -75,7 +75,7 @@ export default async function CollectionDetailPage({
 
   return (
     <div className="space-y-8">
-      <BackButton label="Collections" fallback="/collections" />
+      <BackButton label="Franchises" fallback="/collections" />
 
       {/* Hero */}
       <div className="relative rounded-[var(--radius-2xl)] overflow-hidden border border-white/5">

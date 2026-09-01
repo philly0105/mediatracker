@@ -52,6 +52,7 @@ export default function CalendarClient({ releases }: Props) {
         eyebrow="Next three months"
         title="Upcoming Releases"
         sub="Premieres and release dates for the movies and shows you follow."
+        selectable
       />
 
       {/* Type filter */}

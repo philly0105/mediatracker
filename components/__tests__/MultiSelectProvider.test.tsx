@@ -23,12 +23,27 @@ function item(id: number, title: string): TmdbSearchResult {
 
 /** Registers and selects through the context directly, without a card tree. */
 function Rig({ items, registered }: { items: TmdbSearchResult[]; registered?: TmdbSearchResult[] }) {
-  const { selectedItems, toggleSelection, register, unregister, selectAll, selectableCount } = useMultiSelect()
+  const {
+    selectedItems,
+    toggleSelection,
+    register,
+    unregister,
+    selectAll,
+    selectableCount,
+    isSelectMode,
+    toggleSelectMode,
+    enterSelectMode,
+    exitSelectMode,
+  } = useMultiSelect()
   const toRegister = registered ?? items
   return (
     <div>
       <div data-testid="selected">{selectedItems.size}</div>
       <div data-testid="registerable">{selectableCount}</div>
+      <div data-testid="is-select-mode">{isSelectMode ? 'true' : 'false'}</div>
+      <button onClick={toggleSelectMode}>toggle select mode</button>
+      <button onClick={enterSelectMode}>enter select mode</button>
+      <button onClick={exitSelectMode}>exit select mode</button>
       <button onClick={() => toRegister.forEach(i => register(selectionKey(i), i))}>register</button>
       <button onClick={() => items.forEach(i => unregister(selectionKey(i)))}>unregister all</button>
       <button onClick={selectAll}>select all rows</button>
@@ -176,5 +191,22 @@ describe('MultiSelectProvider action bar toolbar', () => {
 
     fireEvent.click(screen.getByLabelText('Clear selection'))
     expect(screen.queryByRole('toolbar', { name: 'Bulk actions' })).toBeNull()
+  })
+
+  it('can explicitly enter, exit, and toggle select mode', () => {
+    mount(<Rig items={three} />)
+    expect(screen.getByTestId('is-select-mode')).toHaveTextContent('false')
+
+    fireEvent.click(screen.getByText('enter select mode'))
+    expect(screen.getByTestId('is-select-mode')).toHaveTextContent('true')
+
+    fireEvent.click(screen.getByText('exit select mode'))
+    expect(screen.getByTestId('is-select-mode')).toHaveTextContent('false')
+
+    fireEvent.click(screen.getByText('toggle select mode'))
+    expect(screen.getByTestId('is-select-mode')).toHaveTextContent('true')
+
+    fireEvent.click(screen.getByText('toggle select mode'))
+    expect(screen.getByTestId('is-select-mode')).toHaveTextContent('false')
   })
 })

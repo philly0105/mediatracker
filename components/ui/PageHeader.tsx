@@ -1,5 +1,9 @@
+'use client'
 import React from 'react'
 import { Eyebrow } from './Eyebrow'
+import { useOptionalMultiSelect } from '@/components/MultiSelectProvider'
+import { Button } from './Button'
+import { CheckSquare } from 'lucide-react'
 
 interface PageHeaderProps {
   /** Tiny tracked uppercase label above the title — the system's signature cue. */
@@ -9,6 +13,8 @@ interface PageHeaderProps {
   sub?: React.ReactNode
   /** Right-aligned slot for a primary action, filter, or search field. */
   action?: React.ReactNode
+  /** Show a visible Select / Done button wired to the multi-select provider. */
+  selectable?: boolean
 }
 
 /**
@@ -16,7 +22,10 @@ interface PageHeaderProps {
  * seven different h1 recipes across fourteen pages, half of them fading into
  * a cold grey that fights the warm canvas.
  */
-export function PageHeader({ eyebrow, title, sub, action }: PageHeaderProps) {
+export function PageHeader({ eyebrow, title, sub, action, selectable }: PageHeaderProps) {
+  const multiSelect = useOptionalMultiSelect()
+  const showSelectButton = selectable && multiSelect != null
+
   return (
     <header className="flex flex-col gap-4 mb-8 md:mb-10 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
@@ -49,7 +58,22 @@ export function PageHeader({ eyebrow, title, sub, action }: PageHeaderProps) {
           </p>
         )}
       </div>
-      {action && <div className="flex-shrink-0 flex items-center gap-2">{action}</div>}
+      {(action || showSelectButton) && (
+        <div className="flex-shrink-0 flex items-center gap-2">
+          {showSelectButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={multiSelect.toggleSelectMode}
+              className={multiSelect.isSelectMode ? 'text-[var(--accent)] font-semibold' : 'text-zinc-400 hover:text-white'}
+            >
+              <CheckSquare className="w-3.5 h-3.5" />
+              <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+            </Button>
+          )}
+          {action}
+        </div>
+      )}
     </header>
   )
 }

@@ -319,6 +319,7 @@ export default function RecommendationsPage() {
         sub={fallback
           ? 'We compiled this week\'s overall trending items to get you started!'
           : 'Personalized recommendations based on similar titles from your watch history.'}
+        selectable
         action={
           <Button
             onClick={() => loadRecommendations(true)}

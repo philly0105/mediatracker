@@ -3,6 +3,7 @@ import { useId, useState } from 'react'
 import type { Season, Episode, EpisodeProgress } from '@/types'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatAirDate, isUnaired } from '@/lib/formatDate'
+import { findNextUp } from '@/lib/nextUp'
 
 interface Props {
   seasons: Season[]
@@ -43,7 +44,10 @@ const glassCard = {
 }
 
 export default function EpisodeTracker({ seasons, progress, episodes, onProgressChange }: Props) {
-  const [open, setOpen] = useState<string | null>(seasons[0]?.id ?? null)
+  const [open, setOpen] = useState<string | null>(() => {
+    const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
+    return findNextUp(seasons, watchedKeys)?.season_id ?? seasons[0]?.id ?? null
+  })
   const panelIdBase = useId()
 
   const watchedSet = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))

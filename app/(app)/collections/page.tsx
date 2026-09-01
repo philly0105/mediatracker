@@ -93,10 +93,10 @@ export default async function CollectionsPage() {
         )}
       </section>
 
-      {/* Popular Collections */}
+      {/* Popular Franchises */}
       <section className="space-y-5">
         <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-          <h2 className="text-lg font-bold tracking-tight text-white">Popular Collections</h2>
+          <h2 className="text-lg font-bold tracking-tight text-white">Popular Franchises</h2>
         </div>
         <PopularCollectionsFeed />
       </section>

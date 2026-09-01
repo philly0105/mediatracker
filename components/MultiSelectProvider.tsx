@@ -15,6 +15,9 @@ interface MultiSelectContextType {
   toggleSelection: (item: TmdbSearchResult) => void
   clearSelection: () => void
   isSelectMode: boolean
+  enterSelectMode: () => void
+  exitSelectMode: () => void
+  toggleSelectMode: () => void
   // SelectableOverlay wraps every selectable card in the app, so having each one
   // register itself is what lets the action bar offer "select all" without any
   // page needing to hand over its list.
@@ -44,7 +47,27 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
     setMounted(true)
   }, [])
 
-  const isSelectMode = selectedItems.size > 0
+  const [selectModeForced, setSelectModeForced] = useState(false)
+  const isSelectMode = selectModeForced || selectedItems.size > 0
+
+  const enterSelectMode = useCallback(() => {
+    setSelectModeForced(true)
+  }, [])
+
+  const exitSelectMode = useCallback(() => {
+    setSelectModeForced(false)
+    setSelectedItems(new Map())
+  }, [])
+
+  const toggleSelectMode = useCallback(() => {
+    setSelectModeForced((prev) => {
+      if (prev || selectedItems.size > 0) {
+        setSelectedItems(new Map())
+        return false
+      }
+      return true
+    })
+  }, [selectedItems.size])
 
   // Escape clears a bulk selection. It lives here rather than in
   // KeyboardShortcuts because this is what holds the selection — and it defers
@@ -56,6 +79,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
       if (isAnyModalOpen()) return
       event.preventDefault()
       setSelectedItems(new Map())
+      setSelectModeForced(false)
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
@@ -92,6 +116,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
 
   function clearSelection() {
     setSelectedItems(new Map())
+    setSelectModeForced(false)
   }
 
   async function handleBatchAction(action: 'watched' | 'watchlist') {
@@ -161,7 +186,19 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Context.Provider value={{ selectedItems, toggleSelection, clearSelection, isSelectMode, register, unregister, selectableCount, selectAll }}>
+    <Context.Provider value={{
+      selectedItems,
+      toggleSelection,
+      clearSelection,
+      isSelectMode,
+      enterSelectMode,
+      exitSelectMode,
+      toggleSelectMode,
+      register,
+      unregister,
+      selectableCount,
+      selectAll,
+    }}>
       {children}
       
       {/* Floating Action Bar */}
@@ -240,4 +277,8 @@ export function useMultiSelect() {
   const ctx = useContext(Context)
   if (!ctx) throw new Error('useMultiSelect must be used within MultiSelectProvider')
   return ctx
+}
+
+export function useOptionalMultiSelect() {
+  return useContext(Context)
 }

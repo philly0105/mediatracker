@@ -94,7 +94,7 @@ export default function PopularCollectionsFeed() {
   }
 
   if (collections.length === 0) {
-    return <p className="text-zinc-500 text-sm italic pl-1">No popular collections found.</p>
+    return <p className="text-zinc-500 text-sm italic pl-1">No popular franchises found.</p>
   }
 
   return (
