@@ -92,7 +92,7 @@ export function MediaRow({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ transform: 'scale(0.9)', transformOrigin: 'left' }}>
+          <div onClick={(e) => e.stopPropagation()}>
             <RatingStars value={rating} onChange={onRate} readOnly={!onRate} />
           </div>
           {review && (

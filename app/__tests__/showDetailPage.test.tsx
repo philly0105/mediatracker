@@ -183,7 +183,7 @@ describe('ShowDetailPage server page & cross-show navigation', () => {
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Breaking Bad')
     expect(screen.getByText(/5\/5 episodes/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Rated 5 out of 5')).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Rating' })).toHaveAttribute('aria-valuetext', '5 stars')
     expect(screen.queryByText('Mark show as watched')).not.toBeInTheDocument()
 
     // Navigate to Show 2 (Better Call Saul - 0/10 watched, no rating / entry)
@@ -203,7 +203,7 @@ describe('ShowDetailPage server page & cross-show navigation', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Better Call Saul')
     expect(screen.getByText(/0\/10 episodes/)).toBeInTheDocument()
     expect(screen.getByText('Mark show as watched')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Rated 5 out of 5')).not.toBeInTheDocument()
+    expect(screen.queryByRole('slider', { name: 'Rating' })).not.toBeInTheDocument()
     expect(screen.queryByText('Breaking Bad')).not.toBeInTheDocument()
   })
 })

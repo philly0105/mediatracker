@@ -102,13 +102,21 @@ export default function ShowDetailClient({
 
   const handleRatingChange = useCallback(async (newRating: number | null) => {
     if (!entry) return
+    const previous = rating
     setRating(newRating)
-    await fetch('/api/watch', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: entry.id, rating: newRating }),
-    })
-  }, [entry])
+    try {
+      const res = await fetch('/api/watch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: entry.id, rating: newRating }),
+      })
+      if (!res.ok) throw new Error('Failed to save rating')
+    } catch (err) {
+      console.error(err)
+      setRating(previous)
+      toast('Could not save your rating.', { tone: 'error' })
+    }
+  }, [entry, rating, toast])
 
   // Re-add rows without duplicating any the user has since re-checked by hand.
   const restoreEpisodes = useCallback((rows: EpisodeProgress[]) => {

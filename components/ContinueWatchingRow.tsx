@@ -248,7 +248,7 @@ export default function ContinueWatchingRow({ shows }: Props) {
                     entirely. Sits below the dashboard stat grid, so it does
                     not preload. */}
                 <div
-                  className="relative h-24 w-16 shrink-0 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-void)] shadow-md shadow-black/30 transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-void)] shadow-md shadow-black/30 transition-transform duration-500 group-hover:scale-[1.03]"
                   aria-hidden={Boolean(show.media.poster_url)}
                 >
                   {show.media.poster_url ? (

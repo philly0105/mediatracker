@@ -80,7 +80,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
             <Input id={`${fieldId}-date`} type="date" value={watchedAt} onChange={e => setWatchedAt(e.target.value)} className="mt-2" />
           </div>
           <div>
-            {/* RatingStars is a row of buttons, so a <label> cannot own it —
+            {/* RatingStars owns its own slider and the label that names it, so
                 the group takes its name from the same text instead. */}
             <span id={`${fieldId}-rating-label`} className="text-xs text-zinc-500 uppercase tracking-wider">Rating</span>
             <div role="group" aria-labelledby={`${fieldId}-rating-label`} className="mt-2">

@@ -115,7 +115,7 @@ export default function CalendarClient({ releases }: Props) {
                           ? 'bg-teal-400 shadow-teal-400/20'
                           : item.type === 'show'
                           ? 'bg-rust-400 shadow-rust-400/20'
-                          : 'bg-green-500 shadow-green-500/20'
+                          : 'bg-green-500 shadow-black/30'
                       }`} />
 
                       {/* Card Container */}

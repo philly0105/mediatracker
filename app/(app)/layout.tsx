@@ -9,15 +9,11 @@ import { MediaModalProvider } from '@/components/MediaModalProvider'
 // group, so the auth read happens once here instead of in the root layout —
 // where it made /login and the public /share pages dynamic too.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  let user = null
-  try {
-    // The cached helper, not a bare getUser(): every page under this layout
-    // resolves the user too, and react.cache() collapses the two calls into one
-    // round-trip per render rather than one each.
-    user = await getAuthenticatedUser()
-  } catch {
-    // Supabase unavailable — render without auth nav
-  }
+  // getAuthenticatedUser returns null for "no session" and only throws on
+  // genuine infrastructure failure; every page under this group awaits the
+  // same react.cache'd call uncaught, so swallowing it here only produced a
+  // nav-less error page. Let it throw to the error boundary.
+  const user = await getAuthenticatedUser()
 
   return (
     /* MultiSelectProvider has to be the outer one. MediaModalProvider renders

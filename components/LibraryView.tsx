@@ -4,11 +4,10 @@ import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
 import { FilterPills } from '@/components/FilterPills'
-import { Select } from '@/components/ui/Select'
-import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard, SearchX } from 'lucide-react'
+import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard, SearchX, SlidersHorizontal } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ClearFilters } from '@/components/ui/ClearFilters'
+import LibraryFilterDrawer from '@/components/LibraryFilterDrawer'
 import { SectionError } from '@/components/ui/SectionError'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
@@ -136,6 +135,7 @@ export default function LibraryView({
   const [loadError, setLoadError] = useState<Error | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const lastFetchedAt = useRef(
     isMatchingSeed
@@ -378,11 +378,13 @@ export default function LibraryView({
     return sortWatchEntries(filtered, sortBy)
   }, [entries, searchQuery, sortBy, genreFilter, ratingFilter, decadeFilter])
 
-  const hasActiveFilters =
-    genreFilter !== 'All' ||
-    ratingFilter !== 'All' ||
-    decadeFilter !== 'All' ||
-    searchQuery.trim() !== ''
+  const activeFilterCount =
+    (searchQuery.trim() !== '' ? 1 : 0) +
+    (genreFilter !== 'All' ? 1 : 0) +
+    (ratingFilter !== 'All' ? 1 : 0) +
+    (decadeFilter !== 'All' ? 1 : 0)
+
+  const hasActiveFilters = activeFilterCount > 0
 
   // Render in pages rather than all at once. The fetch stays whole-library on
   // purpose — every filter above is client-side and needs the full set — so the
@@ -439,30 +441,24 @@ export default function LibraryView({
               active={typeFilter}
               onSelect={(id) => setFilter('type', id)}
             />
-            <FilterPills options={sortOptions} active={sortBy} onSelect={(id) => setFilter('sort', id)} />
-            <FilterPills options={ratingOptions} active={ratingFilter} onSelect={(id) => setFilter('rating', id)} />
-            <Select
-              label="Filter by genre"
-              value={genreFilter}
-              onChange={(e) => setFilter('genre', e.target.value)}
-              className="min-w-[140px]"
+            <button
+              type="button"
+              onClick={() => setFilterDrawerOpen(true)}
+              aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : 'Filters'}
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
+                activeFilterCount > 0
+                  ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] border border-transparent shadow-md shadow-black/30'
+                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
+              }`}
             >
-              <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
-              {genres.map((g) => (
-                <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>
-              ))}
-            </Select>
-            <Select
-              label="Filter by decade"
-              value={decadeFilter}
-              onChange={(e) => setFilter('decade', e.target.value)}
-              className="min-w-[120px]"
-            >
-              <option value="All" className="bg-[var(--bg-void)]">All Years</option>
-              {decades.map((d) => (
-                <option key={d} value={String(d)} className="bg-[var(--bg-void)]">{d}s</option>
-              ))}
-            </Select>
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold bg-black/25 text-inherit">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
             <div className="w-full sm:w-64">
               <Input
                 icon={<Search className="w-4 h-4 text-zinc-500" />}
@@ -473,13 +469,6 @@ export default function LibraryView({
                 className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
               />
             </div>
-            {/* Resets exactly the controls hasActiveFilters reports on, so the
-                chip's presence and its effect stay in step. Type, sort and the
-                grid/list toggle are view preferences, not narrowing filters,
-                and survive the clear. */}
-            {hasActiveFilters && (
-              <ClearFilters onClear={() => resetFilters(['q', 'genre', 'rating', 'decade'])} />
-            )}
             <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] self-start">
               <button
                 type="button"
@@ -520,6 +509,23 @@ export default function LibraryView({
           </div>
         )}
       </div>
+
+      {filterDrawerOpen && (
+        <LibraryFilterDrawer
+          onClose={() => setFilterDrawerOpen(false)}
+          sortBy={sortBy}
+          ratingFilter={ratingFilter}
+          genreFilter={genreFilter}
+          decadeFilter={decadeFilter}
+          genres={genres}
+          decades={decades}
+          hasActiveFilters={hasActiveFilters}
+          setFilter={setFilter}
+          resetFilters={resetFilters}
+          sortOptions={sortOptions}
+          ratingOptions={ratingOptions}
+        />
+      )}
 
       {loadError && entries.length === 0 ? (
         <SectionError

@@ -11,6 +11,7 @@ import SelectableOverlay from './SelectableOverlay'
 import { MediaRow } from './ui/MediaRow'
 import { PosterCard } from './ui/PosterCard'
 import { useTmdbRating } from '@/lib/tmdbRatings'
+import { useToast } from '@/components/ToastProvider'
 
 interface Props {
   entry: WatchEntry
@@ -28,6 +29,7 @@ interface Props {
 export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }: Props) {
   const media = entry.media!
   const router = useRouter()
+  const { toast } = useToast()
   const [rating, setRating] = useState<number | null>(entry.rating ?? null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -47,12 +49,20 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
   const mediaAsResult = mediaToResult(media, { vote_average: tmdbRating })
 
   async function handleRatingChange(newRating: number | null) {
+    const previous = rating
     setRating(newRating)
-    await fetch('/api/watch', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: entry.id, rating: newRating }),
-    })
+    try {
+      const res = await fetch('/api/watch', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: entry.id, rating: newRating }),
+      })
+      if (!res.ok) throw new Error('Failed to save rating')
+    } catch (err) {
+      console.error(err)
+      setRating(previous)
+      toast('Could not save your rating.', { tone: 'error' })
+    }
   }
 
   // The owner performs the delete so it can defer it behind an Undo. There is

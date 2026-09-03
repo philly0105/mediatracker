@@ -200,8 +200,11 @@ describe('episode tracker cascade undo and client interactions', () => {
     renderShowDetailClient(detailsWithEntry)
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
 
-    const star5 = screen.getByLabelText('Rate 5 stars')
-    await act(async () => { fireEvent.click(star5) })
+    const slider = screen.getByRole('slider', { name: 'Rating' })
+    await act(async () => {
+      fireEvent.change(slider, { target: { value: '5' } })
+      fireEvent.blur(slider)
+    })
 
     const patchCalls = mockFetch.mock.calls.filter(
       ([url, init]) => String(url).includes('/api/watch') && init?.method === 'PATCH'

@@ -165,7 +165,7 @@ describe('MediaInfoModal rewatch flow', () => {
 
     await screen.findByText('Your Rating')
     expect(screen.getByText('3.5 / 5')).toBeInTheDocument()
-    expect(document.querySelectorAll('[data-half]')).toHaveLength(10)
+    expect(screen.getByRole('slider', { name: 'Rating' })).toBeInTheDocument()
   })
 
   it('PATCHes /api/watch with the entry id when a star is clicked', async () => {
@@ -174,7 +174,9 @@ describe('MediaInfoModal rewatch flow', () => {
 
     await screen.findByText('Your Rating')
     await act(async () => {
-      fireEvent.click(document.querySelector('[data-half="3.0"]')!)
+      const slider = screen.getByRole('slider')
+      fireEvent.change(slider, { target: { value: '3' } })
+      fireEvent.blur(slider)
     })
 
     expect(mockFetch).toHaveBeenCalledWith(

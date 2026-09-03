@@ -257,8 +257,8 @@ describe('LibraryView', () => {
       json: async () => ({ entries: [entry('1', 'Heat')] }),
     })
 
-    // Movies and All both appear as pills (rating also has an All), and the type
-    // row is rendered first, so the leading All is the type filter.
+    // Type is the only pill row left on the toolbar — rating moved into the
+    // filter drawer — but getAllByRole keeps this robust if that changes again.
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
     })
@@ -1033,5 +1033,30 @@ describe('LibraryView', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  // The card writes the new rating locally before the PATCH resolves. It used
+  // to ignore the response entirely, so a 401 or a dropped connection left the
+  // card showing a rating the database never received.
+  it('rolls a rating back and says so when the PATCH fails', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ entries: [entry('1', 'Heat')] }),
+    })
+
+    renderLibrary()
+    await screen.findByText('Heat')
+
+    const slider = screen.getByRole('slider', { name: 'Rating' })
+    expect(slider).toHaveAttribute('aria-valuetext', '4 stars')
+
+    mockFetch.mockResolvedValue({ ok: false, status: 401, json: async () => ({}) })
+    await act(async () => {
+      fireEvent.change(slider, { target: { value: '5' } })
+      fireEvent.blur(slider)
+    })
+
+    expect(screen.getByRole('slider', { name: 'Rating' })).toHaveAttribute('aria-valuetext', '4 stars')
+    expect(screen.getByText('Could not save your rating.')).toBeInTheDocument()
   })
 })

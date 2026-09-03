@@ -209,7 +209,7 @@ function StreamingContent() {
               onClick={() => changeProvider(p.id)}
               className={`px-4 py-2 rounded-full font-semibold text-xs transition-colors duration-200 whitespace-nowrap active:scale-95 ${
                 isActive
-                  ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] shadow-lg shadow-green-600/20'
+                  ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] shadow-md shadow-black/30'
                   : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
               }`}
             >
@@ -241,7 +241,7 @@ function StreamingContent() {
           aria-pressed={hideWatched}
           className={`inline-flex w-fit items-center gap-2 px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
             hideWatched
-              ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] border border-transparent shadow-lg shadow-green-600/20'
+              ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] border border-transparent shadow-md shadow-black/30'
               : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
           }`}
         >

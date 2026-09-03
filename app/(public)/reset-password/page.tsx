@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -17,11 +17,21 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
   const [hasSession, setHasSession] = useState<boolean | null>(null)
+  const [checkFailed, setCheckFailed] = useState(false)
   const router = useRouter()
 
-  useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => setHasSession(Boolean(data.user)))
+  // getUser() rejects on a dropped connection rather than resolving with a null
+  // user, so the failure needs its own state: reporting it as "link expired"
+  // would tell people their working link is dead.
+  const checkSession = useCallback(() => {
+    createClient().auth.getUser()
+      .then(({ data }) => setHasSession(Boolean(data.user)))
+      .catch(() => setCheckFailed(true))
   }, [])
+
+  useEffect(() => {
+    checkSession()
+  }, [checkSession])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,6 +55,29 @@ export default function ResetPasswordPage() {
             Request a new one
           </Link>
         </p>
+      </AuthShell>
+    )
+  }
+
+  if (checkFailed) {
+    return (
+      <AuthShell title="Could not verify link" subtitle="Your reset link could not be verified.">
+        <AuthError>The link could not be verified. Please check your connection and try again.</AuthError>
+        <Button
+          type="button"
+          onClick={() => { setCheckFailed(false); checkSession() }}
+          fullWidth
+        >
+          Try again
+        </Button>
+      </AuthShell>
+    )
+  }
+
+  if (hasSession === null) {
+    return (
+      <AuthShell title="Verifying link" subtitle="Checking your reset link…">
+        <p className="text-sm text-zinc-400 text-center">Loading…</p>
       </AuthShell>
     )
   }

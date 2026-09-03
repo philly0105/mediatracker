@@ -3,22 +3,37 @@ import { describe, it, expect, vi } from 'vitest'
 import RatingStars from '@/components/RatingStars'
 
 describe('RatingStars', () => {
-  it('renders 10 half-star click zones', () => {
+  it('renders a single native range slider across the star row', () => {
     render(<RatingStars value={null} onChange={vi.fn()} />)
-    expect(document.querySelectorAll('[data-half]')).toHaveLength(10)
+    const slider = screen.getByRole('slider', { name: 'Rating' })
+    expect(slider).toBeInTheDocument()
+    expect(slider).toHaveAttribute('min', '0')
+    expect(slider).toHaveAttribute('max', '5')
+    expect(slider).toHaveAttribute('step', '0.5')
   })
 
-  it('calls onChange with 0.5 when first half clicked', () => {
+  it('calls onChange with 0.5 when first half selected', () => {
     const onChange = vi.fn()
     render(<RatingStars value={null} onChange={onChange} />)
-    fireEvent.click(document.querySelector('[data-half="0.5"]')!)
+    const slider = screen.getByRole('slider')
+
+    fireEvent.change(slider, { target: { value: '0.5' } })
+    // Drag-spam guard: changing local preview must not commit immediately
+    expect(onChange).not.toHaveBeenCalled()
+
+    fireEvent.blur(slider)
     expect(onChange).toHaveBeenCalledWith(0.5)
   })
 
-  it('calls onChange with 3.5 when correct half clicked', () => {
+  it('calls onChange with 3.5 when correct rating selected', () => {
     const onChange = vi.fn()
     render(<RatingStars value={null} onChange={onChange} />)
-    fireEvent.click(document.querySelector('[data-half="3.5"]')!)
+    const slider = screen.getByRole('slider')
+
+    fireEvent.change(slider, { target: { value: '3.5' } })
+    expect(onChange).not.toHaveBeenCalled()
+
+    fireEvent.blur(slider)
     expect(onChange).toHaveBeenCalledWith(3.5)
   })
 
@@ -34,52 +49,63 @@ describe('RatingStars', () => {
     expect(filled).toHaveLength(4)
   })
 
-  it('does not call onChange when readOnly', () => {
+  it('does not call onChange when readOnly and renders no interactive control', () => {
     const onChange = vi.fn()
     render(<RatingStars value={4} onChange={onChange} readOnly />)
-    // Read-only renders no hit areas at all, so there is nothing to click.
-    expect(document.querySelectorAll('[data-half]')).toHaveLength(0)
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(onChange).not.toHaveBeenCalled()
   })
 
-  it('hit areas are labeled buttons', () => {
-    render(<RatingStars value={null} onChange={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Rate 0.5 stars' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Rate 5 stars' })).toBeInTheDocument()
+  it('slider has accessible label and natural aria-valuetext', () => {
+    const { rerender } = render(<RatingStars value={null} onChange={vi.fn()} />)
+    const slider = screen.getByRole('slider', { name: 'Rating' })
+    expect(slider).toHaveAttribute('aria-valuetext', 'Not rated')
+
+    rerender(<RatingStars value={1} onChange={vi.fn()} />)
+    expect(slider).toHaveAttribute('aria-valuetext', '1 star')
+
+    rerender(<RatingStars value={3.5} onChange={vi.fn()} />)
+    expect(slider).toHaveAttribute('aria-valuetext', '3.5 stars')
   })
 
-  it('clears rating to null when clicking the currently-selected rating', () => {
+  it('reports null to onChange when set to 0', () => {
     const onChange = vi.fn()
     render(<RatingStars value={4.0} onChange={onChange} />)
+    const slider = screen.getByRole('slider')
 
-    // The hit area for 4.0 should have clear label
-    const button4 = screen.getByRole('button', { name: 'Clear rating (currently 4 stars)' })
-    expect(button4).toBeInTheDocument()
+    fireEvent.change(slider, { target: { value: '0' } })
+    expect(onChange).not.toHaveBeenCalled()
 
-    fireEvent.click(button4)
+    fireEvent.blur(slider)
     expect(onChange).toHaveBeenCalledWith(null)
   })
 
-  it('clears half-star rating to null when clicking currently-selected half star', () => {
+  it('clears rating to null when clicking clear rating button', () => {
     const onChange = vi.fn()
-    render(<RatingStars value={2.5} onChange={onChange} />)
+    const { rerender } = render(<RatingStars value={null} onChange={onChange} />)
+    expect(screen.queryByRole('button', { name: 'Clear rating' })).not.toBeInTheDocument()
 
-    const button25 = screen.getByRole('button', { name: 'Clear rating (currently 2.5 stars)' })
-    expect(button25).toBeInTheDocument()
+    rerender(<RatingStars value={2.5} onChange={onChange} />)
+    const clearButton = screen.getByRole('button', { name: 'Clear rating' })
+    expect(clearButton).toBeInTheDocument()
 
-    fireEvent.click(button25)
+    fireEvent.click(clearButton)
     expect(onChange).toHaveBeenCalledWith(null)
   })
 
-  it('updates live star preview on focus and resets on blur', () => {
-    const { container } = render(<RatingStars value={null} onChange={vi.fn()} />)
-    const button3 = screen.getByRole('button', { name: 'Rate 3 stars' })
+  it('updates live star preview on change and resets on blur', () => {
+    const onChange = vi.fn()
+    const { container } = render(<RatingStars value={null} onChange={onChange} />)
+    const slider = screen.getByRole('slider')
 
-    fireEvent.focus(button3)
+    fireEvent.change(slider, { target: { value: '3' } })
     let filled = container.querySelectorAll('svg[style*="--amber-400"]')
     expect(filled).toHaveLength(3)
+    expect(onChange).not.toHaveBeenCalled()
 
-    fireEvent.blur(button3)
+    fireEvent.blur(slider)
+    expect(onChange).toHaveBeenCalledWith(3)
     filled = container.querySelectorAll('svg[style*="--amber-400"]')
     expect(filled).toHaveLength(0)
   })
