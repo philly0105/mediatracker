@@ -74,12 +74,41 @@
 /* The canvas lives here rather than on a `bg-[var(--…)]` utility in layout.tsx:
    this rule is unlayered and would win over any Tailwind utility anyway, so
    putting the real value here is the honest place for it. */
+/* No background image here, and nothing pinned to the viewport. A body
+   background pinned that way is repainted against the viewport on every scroll frame and
+   opts the page out of the compositor's scroll fast path — on mobile it is the
+   single most expensive thing a stylesheet can ask for. The page radial now
+   rides on .ambient-layer below, which is a real fixed element the compositor
+   can promote once and then leave alone. */
 body {
   background-color: var(--surface-page);
-  background-image: var(--page-radial);
-  background-attachment: fixed;
   color: var(--text-primary);
   overflow-x: hidden;
+}
+
+/* Ambient wash: the page radial plus the three colour orbs, in one layer.
+   Those orbs used to be three absolutely-positioned 500-700px divs under
+   filter: blur(120-150px). A blur that wide makes the browser allocate a layer
+   inflated by the blur radius on every side and run a multi-pass gaussian over
+   it, and it redoes that work whenever the layer is invalidated. A blurred
+   solid circle is a radial gradient — so this draws the gradient directly and
+   the filter pass disappears entirely.
+
+   The per-orb opacities (0.2 / 0.2 / 0.1) are folded into the stops with
+   color-mix so the tokens stay the source of truth for the hues. */
+.ambient-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle 575px at 158px 158px,
+      color-mix(in srgb, var(--orb-violet) 20%, transparent), transparent 70%),
+    radial-gradient(circle 500px at calc(100% - 172px) calc(100% - 172px),
+      color-mix(in srgb, var(--orb-rose) 20%, transparent), transparent 70%),
+    radial-gradient(circle 425px at calc(33.33% + 250px) calc(50% + 250px),
+      color-mix(in srgb, var(--orb-orange) 10%, transparent), transparent 70%),
+    var(--page-radial);
 }
 
 /* Film grain — the only texture in the system. Fixed and non-interactive; the
@@ -470,6 +499,35 @@ body::after {
 .motion-item-in { animation: fade-up .2s var(--ease-out-expo) both; }
 .motion-backdrop-fade { animation: backdrop-fade .2s var(--ease-standard) both; }
 
+/* Dialog enter/exit. Every framer-motion animation in this app was one of
+   these two — opacity plus a small translate and scale, spring 350/28 — and
+   the library cost 140KB of JS, duplicated into two async chunks, so the
+   first ⌘K and the first poster click each paid a download before anything
+   appeared. Compositor-only properties, so this runs off the main thread.
+   The prefers-reduced-motion block above already flattens both, which is what
+   framer's MotionConfig reducedMotion="user" was there for. */
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate3d(0, 15px, 0) scale(.95); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes dialog-out {
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  to { opacity: 0; transform: translate3d(0, 15px, 0) scale(.95); }
+}
+
+.dialog-in { animation: dialog-in .26s var(--ease-out-expo) both; }
+.dialog-out { animation: dialog-out .18s var(--ease-standard) both; }
+
+/* The ⌘K overlay drops from above rather than rising, and never animates out —
+   it is replaced by whatever it opened. */
+@keyframes overlay-in {
+  from { opacity: 0; transform: translate3d(0, -8px, 0) scale(.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.overlay-in { animation: overlay-in .24s var(--ease-out-expo) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -496,11 +554,16 @@ body::after {
   }
 }
 
-/* Ambient background orbs: reduce blur radius and opacity on mobile viewports
-   to trim expensive fixed-element rasterization and paint costs. */
+/* The orbs are gradients now, so there is no blur radius left to trim on
+   mobile. The wash is still dialled back there — a 700px orb on a 390px
+   viewport reads as a colour cast rather than a gradient. */
 @media (max-width: 640px) {
-  .ambient-orb {
-    filter: blur(60px);
-    opacity: 0.1;
+  .ambient-layer {
+    background-image:
+      radial-gradient(circle 420px at 120px 120px,
+        color-mix(in srgb, var(--orb-violet) 10%, transparent), transparent 70%),
+      radial-gradient(circle 380px at calc(100% - 130px) calc(100% - 130px),
+        color-mix(in srgb, var(--orb-rose) 10%, transparent), transparent 70%),
+      var(--page-radial);
   }
 }

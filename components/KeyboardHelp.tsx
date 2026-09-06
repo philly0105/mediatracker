@@ -1,7 +1,6 @@
 'use client'
 import { useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useModal } from '@/lib/useModal'
 import { Kbd } from '@/components/ui/Kbd'
@@ -9,6 +8,8 @@ import { QUICK_NAV } from '@/lib/quickNav'
 
 interface Props {
   onClose: () => void
+  /** Set by <Presence> while the sheet plays its exit animation. */
+  exiting?: boolean
 }
 
 /** One key cap. `mod` prefixes the platform's ⌘ / Ctrl — see components/ui/Kbd. */
@@ -60,7 +61,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-export default function KeyboardHelp({ onClose }: Props) {
+export default function KeyboardHelp({ onClose, exiting = false }: Props) {
   // Same portal gate MediaInfoModal uses: read-only, so no state is set during
   // the render pass and nothing is portalled during SSR.
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
@@ -72,17 +73,13 @@ export default function KeyboardHelp({ onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[12dvh]" style={{ background: 'var(--scrim)' }}>
       <div className="absolute inset-0" onClick={onClose} />
 
-      <motion.div
+      <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="keyboard-help-title"
-        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 10 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         style={{ background: 'var(--surface-modal)' }}
-        className="relative w-full max-w-lg rounded-[var(--radius-2xl)] border border-white/15 p-6 shadow-2xl max-h-[76dvh] overflow-y-auto"
+        className={`${exiting ? 'dialog-out' : 'dialog-in'} relative w-full max-w-lg rounded-[var(--radius-2xl)] border border-white/15 p-6 shadow-2xl max-h-[76dvh] overflow-y-auto`}
       >
         <button
           onClick={onClose}
@@ -111,7 +108,7 @@ export default function KeyboardHelp({ onClose }: Props) {
             {IN_SEARCH.map((s) => <Row key={s.label + s.chord.map((c) => c.keys).join()} {...s} />)}
           </Section>
         </div>
-      </motion.div>
+      </div>
     </div>,
     document.body
   )

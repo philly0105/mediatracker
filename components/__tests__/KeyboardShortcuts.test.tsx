@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react'
-import type { HTMLAttributes, ReactNode, ComponentType } from 'react'
-import { render, screen, fireEvent, act, within } from '@testing-library/react'
+import type { ComponentType } from 'react'
+import { render, screen, fireEvent, act, within, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import KeyboardShortcuts from '../KeyboardShortcuts'
 import { ToastProvider } from '../ToastProvider'
@@ -9,20 +9,7 @@ import { SEARCH_OVERLAY_EVENT } from '@/lib/searchOverlayBus'
 import { QUICK_NAV, G_CHORD_MS } from '@/lib/quickNav'
 import { useModal } from '@/lib/useModal'
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown
-  animate?: unknown
-  exit?: unknown
-  transition?: unknown
-}
 
-function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial
-  delete props.animate
-  delete props.exit
-  delete props.transition
-  return props
-}
 
 vi.mock('next/dynamic', () => ({
   default: <P extends object>(
@@ -48,13 +35,6 @@ vi.mock('next/dynamic', () => ({
   },
 }))
 
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => (
-    <div data-testid="animate-presence-host">{children}</div>
-  ),
-  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
-}))
 
 // SearchOverlay refreshes the route after logging an item; shortcut wiring just
 // needs the call to exist, not to do anything. The ?search=1 param path reads
@@ -584,17 +564,20 @@ describe('KeyboardShortcuts g-navigation and help sheet (F-44)', () => {
     }
   })
 
-  it('renders KeyboardHelp inside AnimatePresence and keeps host mounted across close', async () => {
+  it('keeps the help sheet mounted through its exit animation, then drops it', async () => {
     renderShortcuts()
     fireEvent.keyDown(document, { key: '?' })
     const sheet = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
     expect(sheet).toBeInTheDocument()
 
-    const presenceHost = screen.getByTestId('animate-presence-host')
-    expect(presenceHost).toBeInTheDocument()
-
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument()
-    expect(presenceHost).toBeInTheDocument()
+    // Closed, but still on screen playing .dialog-out — the whole point of
+    // <Presence>.
+    expect(sheet).toHaveClass('dialog-out')
+    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBe(sheet)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument()
+    })
   })
 })

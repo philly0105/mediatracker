@@ -1,6 +1,6 @@
-import React, { Suspense, useEffect, useRef, Children } from 'react'
-import type { HTMLAttributes, ReactNode, ComponentType } from 'react'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import React, { Suspense, useEffect } from 'react'
+import type { ComponentType } from 'react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -30,46 +30,6 @@ vi.mock('next/dynamic', () => ({
       )
     }
   },
-}))
-
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown
-  animate?: unknown
-  exit?: unknown
-  transition?: unknown
-}
-
-function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial
-  delete props.animate
-  delete props.exit
-  delete props.transition
-  return props
-}
-
-// A stand-in for AnimatePresence that models the one behaviour these tests care
-// about: onExitComplete fires *after* a child has gone, not when close is
-// called. Real framer-motion drives that off rAF, which jsdom makes flaky.
-function FakeAnimatePresence({
-  children,
-  onExitComplete,
-}: {
-  children?: ReactNode
-  onExitComplete?: () => void
-}) {
-  const count = Children.count(children)
-  const prev = useRef(count)
-  useEffect(() => {
-    if (count < prev.current) onExitComplete?.()
-    prev.current = count
-  })
-  return <>{children}</>
-}
-
-vi.mock('framer-motion', () => ({
-  AnimatePresence: FakeAnimatePresence,
-  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
 }))
 
 vi.mock('next/navigation', () => ({
@@ -160,7 +120,8 @@ describe('MediaModalProvider', () => {
     expect(await screen.findByText('Heat')).toBeTruthy()
 
     await act(async () => { fireEvent.click(screen.getByLabelText('Close')) })
-    expect(screen.queryByText('Heat')).toBeNull()
+    // Held on screen while .dialog-out plays, then dropped.
+    await waitFor(() => expect(screen.queryByText('Heat')).toBeNull())
   })
 
   // SimilarModal opens a MediaInfoModal from inside a MediaInfoModal. A single
@@ -180,7 +141,7 @@ describe('MediaModalProvider', () => {
     const closes = screen.getAllByLabelText('Close')
     await act(async () => { fireEvent.click(closes[closes.length - 1]) })
 
-    expect(dialogs().length).toBe(1)
+    await waitFor(() => expect(dialogs().length).toBe(1))
     expect(screen.queryByText('Breaking Bad')).toBeNull()
     expect(screen.queryByText('Heat')).toBeTruthy()
   })
@@ -198,7 +159,11 @@ describe('MediaModalProvider', () => {
     expect(onClosed).not.toHaveBeenCalled()
 
     await act(async () => { fireEvent.click(screen.getByLabelText('Close')) })
-    expect(onClosed).toHaveBeenCalledTimes(1)
+    // Closed, but still mounted playing .dialog-out.
+    expect(onClosed).not.toHaveBeenCalled()
+    expect(dialogs().length).toBe(1)
+
+    await waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1))
     expect(dialogsWhenCalled).toBe(0)
   })
 
@@ -246,10 +211,10 @@ describe('MediaModalProvider', () => {
   })
 })
 
-// F-37/F-38. Twelve of the thirteen hand-wired call sites forgot the
-// AnimatePresence that MediaInfoModal's `exit` prop needs, so the modal cut out
-// instead of animating. The fix only holds while the provider stays the sole
-// owner — a new direct import quietly reintroduces the bug.
+// F-37/F-38. Twelve of the thirteen hand-wired call sites forgot the wrapper
+// MediaInfoModal's exit animation needs, so the modal cut out instead of
+// animating. The fix only holds while the provider stays the sole owner — a new
+// direct import quietly reintroduces the bug.
 describe('MediaInfoModal ownership', () => {
   function sourceFiles(dir: string, acc: string[] = []): string[] {
     for (const name of readdirSync(dir)) {
@@ -272,8 +237,9 @@ describe('MediaInfoModal ownership', () => {
     expect(offenders).toEqual([])
   })
 
-  it('renders the modal stack inside an AnimatePresence', () => {
+  it('renders the modal stack through Presence', () => {
     const src = readFileSync(join(__dirname, '..', 'MediaModalStack.tsx'), 'utf-8')
-    expect(src).toMatch(/<AnimatePresence[\s\S]*<MediaInfoModal[\s\S]*<\/AnimatePresence>/)
+    expect(src).toContain('<MediaInfoModal')
+    expect(src).toMatch(/<Presence[^>]*onExitComplete/)
   })
 })

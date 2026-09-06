@@ -2,7 +2,6 @@
 import Image from 'next/image'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
 import {
   Calendar,
   Clock,
@@ -53,6 +52,9 @@ interface Props {
   // away. Layered hosts (the search overlay) use it to tear down the whole
   // stack rather than just this modal, which onClose alone would leave behind.
   onNavigateAway?: () => void
+  /** Set by <Presence> once this modal has been closed: swap the enter
+   *  animation for the exit one for as long as it stays mounted. */
+  exiting?: boolean
 }
 
 interface FullDetails {
@@ -89,7 +91,8 @@ export default function MediaInfoModal({
   onUpdatePriority,
   onRemoveFromWatchlist,
   newTabLinks = false,
-  onNavigateAway
+  onNavigateAway,
+  exiting = false
 }: Props) {
   const cacheKey = `${item.type}-${item.tmdb_id}`
   const cachedDetails = detailsCache.get(cacheKey) ?? null
@@ -380,17 +383,13 @@ export default function MediaInfoModal({
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
-      <motion.div
+      <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="media-info-title"
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         style={{ background: 'var(--surface-modal)' }}
-        className="glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[calc(100dvh-2rem)] md:max-h-[90vh] flex flex-col shadow-2xl"
+        className={`${exiting ? 'dialog-out' : 'dialog-in'} glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[calc(100dvh-2rem)] md:max-h-[90vh] flex flex-col shadow-2xl`}
       >
         {/* Close Button */}
         <button
@@ -799,7 +798,7 @@ export default function MediaInfoModal({
             <span>Similar {item.type === 'movie' ? 'Movies' : 'TV Shows'}</span>
           </Button>
         </div>
-      </motion.div>
+      </div>
 
       {showSimilar && (
         <SimilarModal

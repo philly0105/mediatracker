@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 // Security response headers applied to every route. CSP is deliberately omitted:
-// the app relies heavily on inline styles (framer-motion, style props), and a
-// strict policy would break the shell. Permissions are locked down to the ones the
+// the app relies heavily on inline styles (style props, CSS custom properties),
+// and a strict policy would break the shell. Permissions are locked down to the ones the
 // app never uses; HSTS is left out so local HTTP dev is unaffected.
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // TMDB image paths are content-addressed — /t/p/w500/<hash>.jpg never
+    // changes contents — so the optimizer re-encoding them every 4 hours (the
+    // Next 16 default) is pure waste on a page that is mostly posters.
+    minimumCacheTTL: 2678400, // 31 days
     // Only allow TMDB's image CDN for next/image optimization.
     remotePatterns: [
       {

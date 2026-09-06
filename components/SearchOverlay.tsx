@@ -2,7 +2,6 @@
 import Image from 'next/image'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { Search, CheckCircle2, Bookmark, Check, Plus, Loader2, User, Clock } from 'lucide-react'
 import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
@@ -258,17 +257,14 @@ export default function SearchOverlay({ onClose }: Props) {
       style={{ background: 'var(--scrim)', paddingTop: '12dvh' }}
       onClick={handleClose}
     >
-      <motion.div
+      <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Search movies and TV shows"
-        initial={{ opacity: 0, scale: 0.98, y: -8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
         style={{ background: 'var(--surface-modal)', width: 'min(640px, calc(100vw - 32px))' }}
-        className="rounded-[var(--radius-2xl)] border border-white/15 shadow-2xl overflow-hidden"
+        className="overlay-in rounded-[var(--radius-2xl)] border border-white/15 shadow-2xl overflow-hidden"
       >
         {/* Input row */}
         <div className="px-5 py-4 flex items-center gap-3 border-b border-white/5">
@@ -544,7 +540,7 @@ export default function SearchOverlay({ onClose }: Props) {
           )}
           <span>Esc Close</span>
         </div>
-      </motion.div>
+      </div>
 
     </div>
 

@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import type { ComponentType, HTMLAttributes, ReactNode } from 'react'
+import type { ComponentType } from 'react'
 import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import WatchlistPage from '../(app)/watchlist/page'
@@ -8,26 +8,8 @@ import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 import { MediaModalProvider } from '@/components/MediaModalProvider'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown
-  animate?: unknown
-  exit?: unknown
-  transition?: unknown
-}
 
-function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial
-  delete props.animate
-  delete props.exit
-  delete props.transition
-  return props
-}
 
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...stripMotionProps(props)} /> },
-}))
 
 vi.mock('next/dynamic', () => ({
   default: <P extends object>(

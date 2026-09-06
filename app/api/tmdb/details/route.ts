@@ -16,36 +16,42 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const details = await fetchTmdbDetails(Number(id), type)
+    // This route backs the most-opened surface in the app, and it used to walk
+    // four round trips end to end: TMDB, then the media lookup, then the
+    // watch/watchlist pair, then — for a show — the follow check on its own.
+    // The TMDB call and the media lookup share no inputs, and the follow check
+    // needs the same media.id the other two do, so it is two rounds.
+    const [details, { data: media }] = await Promise.all([
+      fetchTmdbDetails(Number(id), type),
+      supabase
+        .from('media')
+        .select('id')
+        .eq('tmdb_id', Number(id))
+        .eq('type', type)
+        .maybeSingle(),
+    ])
 
     // Check user status
     let isWatched = false
     let isWatchlisted = false
     let isFollowed = false
     let watch_entry: { id: string; rating: number | null } | null = null
-    
-    const { data: media } = await supabase
-      .from('media')
-      .select('id')
-      .eq('tmdb_id', Number(id))
-      .eq('type', type)
-      .maybeSingle()
 
     if (media) {
-      const [watchRes, watchlistRes] = await Promise.all([
+      const [watchRes, watchlistRes, followRes] = await Promise.all([
         // The latest row (rewatches included) is what the modal rates in place.
         supabase.from('watch_entries').select('id, rating').eq('user_id', user.id).eq('media_id', media.id).order('watched_at', { ascending: false }).limit(1),
         supabase.from('watchlist_items').select('id').eq('user_id', user.id).eq('media_id', media.id).limit(1),
+        type === 'show'
+          ? supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).maybeSingle()
+          : Promise.resolve({ data: null }),
       ])
       isWatched = !!(watchRes.data && watchRes.data.length > 0)
       if (watchRes.data && watchRes.data.length > 0) {
         watch_entry = { id: watchRes.data[0].id, rating: watchRes.data[0].rating ?? null }
       }
       isWatchlisted = !!(watchlistRes.data && watchlistRes.data.length > 0)
-      if (type === 'show') {
-        const { data: followData } = await supabase.from('followed_shows').select('id').eq('user_id', user.id).eq('media_id', media.id).maybeSingle()
-        isFollowed = !!followData
-      }
+      isFollowed = !!followRes.data
     }
 
     // media_id lets the client link to /show/[id] for episode tracking without

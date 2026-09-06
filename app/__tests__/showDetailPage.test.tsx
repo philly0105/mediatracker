@@ -1,4 +1,3 @@
-import type { HTMLAttributes, ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import ShowDetailPage from '@/app/(app)/show/[id]/page'
@@ -12,17 +11,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ShowDetails } from '@/lib/showDetails'
 import type { ReactElement } from 'react'
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
-}
-function strip({ ...p }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete p.initial; delete p.animate; delete p.exit; delete p.transition
-  return p
-}
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
-}))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(),

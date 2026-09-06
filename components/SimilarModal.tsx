@@ -1,7 +1,6 @@
 'use client'
 import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { useMediaModal } from '@/components/MediaModalProvider'
@@ -107,15 +106,12 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)]" onClick={onClose}>
-      <motion.div
+      <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="similar-modal-title"
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-        className="rounded-[var(--radius-2xl)] w-full max-w-lg overflow-hidden relative border border-white/5 bg-[var(--surface-modal)] max-h-[calc(100dvh-2rem)] md:max-h-[80vh] flex flex-col shadow-2xl"
+        className="dialog-in rounded-[var(--radius-2xl)] w-full max-w-lg overflow-hidden relative border border-white/5 bg-[var(--surface-modal)] max-h-[calc(100dvh-2rem)] md:max-h-[80vh] flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
@@ -205,7 +201,7 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
     </div>
     </>

@@ -129,12 +129,19 @@ describe('loadShowDetails', () => {
     { id: 'p2', user_id: 'u1', season_id: 's1', episode_number: 2, watched_at: '2026-08-21' },
   ]
 
+  // What PostgREST actually returns for the `seasons!inner(media_id)` embed:
+  // the progress row plus the joined column that did the filtering.
+  const sampleProgressRows = sampleProgress.map((row) => ({
+    ...row,
+    seasons: { media_id: 'm1' },
+  }))
+
   it('loads full show details when media, seasons, entry, and progress exist', async () => {
     const { client, tableCalls } = createMockSupabase((call) => {
       if (call.table === 'media') return { data: sampleMedia, error: null }
       if (call.table === 'seasons') return { data: sampleSeasons, error: null }
       if (call.table === 'watch_entries') return { data: sampleEntry, error: null }
-      if (call.table === 'episode_progress') return { data: sampleProgress, error: null }
+      if (call.table === 'episode_progress') return { data: sampleProgressRows, error: null }
       return { data: null, error: null }
     })
 
@@ -174,14 +181,19 @@ describe('loadShowDetails', () => {
     expect(entryCall?.limitVal).toBe(1)
     expect(entryCall?.maybeSingleCalled).toBe(true)
 
+    // Filtered through the seasons join rather than by the ids the seasons
+    // query returns, which is what lets it run in the same round as the rest.
     const progressCall = tableCalls.find((c) => c.table === 'episode_progress')
     expect(progressCall).toBeDefined()
-    expect(progressCall?.select).toBe('*')
-    expect(progressCall?.eqs).toEqual([['user_id', 'u1']])
-    expect(progressCall?.ins).toEqual([['season_id', ['s1', 's2']]])
+    expect(progressCall?.select).toBe('*, seasons!inner(media_id)')
+    expect(progressCall?.eqs).toEqual([
+      ['user_id', 'u1'],
+      ['seasons.media_id', 'm1'],
+    ])
+    expect(progressCall?.ins).toEqual([])
   })
 
-  it('starts media, seasons, and latest-entry reads concurrently, and defers progress until season ids arrive', async () => {
+  it('starts all four reads concurrently', async () => {
     const mediaDeferred = createDeferred<QueryResult>()
     const seasonsDeferred = createDeferred<QueryResult>()
     const entryDeferred = createDeferred<QueryResult>()
@@ -201,24 +213,17 @@ describe('loadShowDetails', () => {
       mediaId: 'm1',
     })
 
-    // All three independent queries must be initiated concurrently
+    // Progress used to wait for the season ids, which cost the show page a
+    // second serial round trip. Nothing here waits on anything else.
     expect(fromSpy).toHaveBeenCalledWith('media')
     expect(fromSpy).toHaveBeenCalledWith('seasons')
     expect(fromSpy).toHaveBeenCalledWith('watch_entries')
-    // Episode progress must NOT be initiated yet because seasons have not resolved
-    expect(fromSpy).not.toHaveBeenCalledWith('episode_progress')
+    expect(fromSpy).toHaveBeenCalledWith('episode_progress')
 
-    // Resolve initial parallel queries
     mediaDeferred.resolve({ data: sampleMedia, error: null })
     seasonsDeferred.resolve({ data: sampleSeasons, error: null })
     entryDeferred.resolve({ data: sampleEntry, error: null })
-
-    // Allow promise microtasks to run so seasons resolve and progress query is started
-    await new Promise((r) => setTimeout(r, 0))
-
-    expect(fromSpy).toHaveBeenCalledWith('episode_progress')
-
-    progressDeferred.resolve({ data: sampleProgress, error: null })
+    progressDeferred.resolve({ data: sampleProgressRows, error: null })
 
     const result = await loadPromise
     expect(result).toEqual({
@@ -229,12 +234,12 @@ describe('loadShowDetails', () => {
     })
   })
 
-  it('returns null when media row is missing without querying episode_progress', async () => {
+  it('returns null when media row is missing', async () => {
     const { client, fromSpy } = createMockSupabase((call) => {
       if (call.table === 'media') return { data: null, error: null }
       if (call.table === 'seasons') return { data: sampleSeasons, error: null }
       if (call.table === 'watch_entries') return { data: null, error: null }
-      if (call.table === 'episode_progress') return { data: sampleProgress, error: null }
+      if (call.table === 'episode_progress') return { data: sampleProgressRows, error: null }
       return { data: null, error: null }
     })
 
@@ -246,17 +251,15 @@ describe('loadShowDetails', () => {
 
     expect(result).toBeNull()
     expect(fromSpy).toHaveBeenCalledWith('media')
-    expect(fromSpy).toHaveBeenCalledWith('seasons')
-    expect(fromSpy).toHaveBeenCalledWith('watch_entries')
-    expect(fromSpy).not.toHaveBeenCalledWith('episode_progress')
   })
 
-  it('returns empty progress array without querying episode_progress when show has no seasons', async () => {
+  it('returns an empty progress array when the show has no seasons', async () => {
     const { client, fromSpy } = createMockSupabase((call) => {
       if (call.table === 'media') return { data: sampleMedia, error: null }
       if (call.table === 'seasons') return { data: [], error: null }
       if (call.table === 'watch_entries') return { data: sampleEntry, error: null }
-      if (call.table === 'episode_progress') return { data: sampleProgress, error: null }
+      // No seasons means the inner join matches nothing.
+      if (call.table === 'episode_progress') return { data: [], error: null }
       return { data: null, error: null }
     })
 
@@ -276,11 +279,10 @@ describe('loadShowDetails', () => {
     expect(fromSpy).toHaveBeenCalledWith('media')
     expect(fromSpy).toHaveBeenCalledWith('seasons')
     expect(fromSpy).toHaveBeenCalledWith('watch_entries')
-    expect(fromSpy).not.toHaveBeenCalledWith('episode_progress')
   })
 
-  it('handles null seasons query result gracefully without querying episode_progress', async () => {
-    const { client, fromSpy } = createMockSupabase((call) => {
+  it('handles a null seasons query result gracefully', async () => {
+    const { client } = createMockSupabase((call) => {
       if (call.table === 'media') return { data: sampleMedia, error: null }
       if (call.table === 'seasons') return { data: null, error: null }
       if (call.table === 'watch_entries') return { data: null, error: null }
@@ -299,8 +301,6 @@ describe('loadShowDetails', () => {
       entry: null,
       progress: [],
     })
-
-    expect(fromSpy).not.toHaveBeenCalledWith('episode_progress')
   })
 
   it.each([
@@ -316,7 +316,7 @@ describe('loadShowDetails', () => {
       if (call.table === 'media') return { data: sampleMedia, error: null }
       if (call.table === 'seasons') return { data: sampleSeasons, error: null }
       if (call.table === 'watch_entries') return { data: sampleEntry, error: null }
-      if (call.table === 'episode_progress') return { data: sampleProgress, error: null }
+      if (call.table === 'episode_progress') return { data: sampleProgressRows, error: null }
       return { data: null, error: null }
     })
 

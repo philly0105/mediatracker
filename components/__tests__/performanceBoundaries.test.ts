@@ -1,10 +1,25 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const root = join(__dirname, '..', '..')
 const source = (name: string) => readFileSync(join(__dirname, '..', name), 'utf8')
 const readSource = (relPath: string) => readFileSync(join(root, ...relPath.split('/')), 'utf8')
+
+/** Every shipped .ts/.tsx under app, components and lib, repo-relative. */
+function sourceFiles(): string[] {
+  const found: string[] = []
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules' || name === '__tests__' || name.startsWith('.')) continue
+      const full = join(dir, name)
+      if (statSync(full).isDirectory()) walk(full)
+      else if (/\.tsx?$/.test(name)) found.push(relative(root, full).split(sep).join('/'))
+    }
+  }
+  for (const dir of ['app', 'components', 'lib']) walk(join(root, dir))
+  return found
+}
 
 describe('authenticated shell bundle boundaries', () => {
   it('does not import framer-motion or MotionProvider in synchronous signed-in routes and shell components', () => {
@@ -27,7 +42,7 @@ describe('authenticated shell bundle boundaries', () => {
     }
   })
 
-  it('loads shortcut panels host through next/dynamic without framer or direct panel imports', () => {
+  it('loads shortcut panels host through next/dynamic without direct panel imports', () => {
     const value = source('KeyboardShortcuts.tsx')
     expect(value).toContain("from 'next/dynamic'")
     expect(value).toContain("import('@/components/KeyboardShortcutPanels')")
@@ -46,30 +61,32 @@ describe('authenticated shell bundle boundaries', () => {
     expect(value).not.toContain('TestMediaModalStack')
   })
 
-  it('owns AnimatePresence, MotionConfig, and panel imports inside KeyboardShortcutPanels', () => {
+  it('owns the help sheet and its exit inside KeyboardShortcutPanels', () => {
     const value = source('KeyboardShortcutPanels.tsx')
-    expect(value).toContain("from 'framer-motion'")
-    expect(value).toContain('MotionConfig')
-    expect(value).toContain('reducedMotion="user"')
     expect(value).toMatch(/import\s+SearchOverlay\s+from\s+['"]@\/components\/SearchOverlay['"]/)
     expect(value).toMatch(/import\s+KeyboardHelp\s+from\s+['"]@\/components\/KeyboardHelp['"]/)
-    expect(value).toMatch(/<MotionConfig[\s\S]*<AnimatePresence[\s\S]*<KeyboardHelp/)
+    expect(value).toMatch(/<Presence[\s\S]*<\/Presence>/)
   })
 
-  it('owns AnimatePresence, MotionConfig, and MediaInfoModal inside MediaModalStack', () => {
+  it('renders the modal stack through Presence so closing still animates out', () => {
     const value = source('MediaModalStack.tsx')
-    expect(value).toContain("from 'framer-motion'")
-    expect(value).toContain('MotionConfig')
-    expect(value).toContain('reducedMotion="user"')
     expect(value).toContain('MediaInfoModal')
-    expect(value).toMatch(/<MotionConfig[\s\S]*<AnimatePresence[\s\S]*<MediaInfoModal/)
+    expect(value).toMatch(/<Presence[^>]*onExitComplete/)
   })
 
-  it('wraps TonightPickModal with MotionConfig reducedMotion="user"', () => {
-    const value = source('TonightPickModal.tsx')
-    expect(value).toContain("from 'framer-motion'")
-    expect(value).toContain('MotionConfig')
-    expect(value).toContain('reducedMotion="user"')
+  it('keeps framer-motion out of the app entirely', () => {
+    // Every animation here was opacity + translate + scale, which CSS does for
+    // free and off the main thread. The library was 140KB, duplicated into two
+    // async chunks, so the first ⌘K and the first poster click each waited on a
+    // download before anything moved.
+    const pkg = JSON.parse(readSource('package.json'))
+    expect(pkg.dependencies).not.toHaveProperty('framer-motion')
+    expect(pkg.devDependencies ?? {}).not.toHaveProperty('framer-motion')
+
+    for (const file of sourceFiles()) {
+      expect(readSource(file), `Expected ${file} not to import framer-motion`)
+        .not.toMatch(/(from|import\()\s*['"]framer-motion['"]/)
+    }
   })
 
   it('lazy-loads TonightPickModal via next/dynamic at module scope in watchlist page', () => {

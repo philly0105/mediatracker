@@ -1,4 +1,3 @@
-import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '../ContinueWatchingRow'
@@ -7,17 +6,6 @@ import { ToastProvider } from '../ToastProvider'
 // Framer-motion's AnimatePresence keeps exiting toasts mounted while the exit
 // animation runs, which never completes in jsdom. Stub it out, and strip the
 // animation-only props so React does not warn about unknown DOM attributes.
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
-}
-function strip({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial; delete props.animate; delete props.exit; delete props.transition
-  return props
-}
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
-}))
 
 const fetchMock = vi.fn()
 function callsFor(method: string) {

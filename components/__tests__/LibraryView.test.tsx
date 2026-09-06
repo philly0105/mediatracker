@@ -1,4 +1,4 @@
-import { StrictMode, type HTMLAttributes, type ReactNode } from 'react'
+import { StrictMode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import LibraryView, { __resetEntryCache } from '../LibraryView'
@@ -7,30 +7,8 @@ import { MultiSelectProvider } from '../MultiSelectProvider'
 import { MediaModalProvider } from '../MediaModalProvider'
 import type { WatchEntry } from '@/types'
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown
-  animate?: unknown
-  exit?: unknown
-  transition?: unknown
-  layout?: unknown
-}
 
-function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial
-  delete props.animate
-  delete props.exit
-  delete props.transition
-  delete props.layout
-  return props
-}
 
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: {
-    div: (props: MotionDivProps) => <div {...stripMotionProps(props)} />,
-  },
-}))
 
 const refresh = vi.fn()
 const replace = vi.fn()

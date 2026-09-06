@@ -1,4 +1,3 @@
-import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import MediaInfoModal from '../MediaInfoModal'
@@ -6,27 +5,8 @@ import { ToastProvider } from '../ToastProvider'
 import { MediaActionError } from '@/lib/useMediaActions'
 import type { TmdbSearchResult } from '@/types'
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown
-  animate?: unknown
-  exit?: unknown
-  transition?: unknown
-}
 
-function stripMotionProps({ ...props }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete props.initial
-  delete props.animate
-  delete props.exit
-  delete props.transition
-  return props
-}
 
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: {
-    div: (props: MotionDivProps) => <div {...stripMotionProps(props)} />,
-  },
-}))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), back: vi.fn() }),

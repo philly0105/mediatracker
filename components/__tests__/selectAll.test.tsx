@@ -1,4 +1,3 @@
-import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MultiSelectProvider, useMultiSelect } from '../MultiSelectProvider'
@@ -6,17 +5,6 @@ import SelectableOverlay from '../SelectableOverlay'
 import { ToastProvider } from '../ToastProvider'
 import type { TmdbSearchResult } from '@/types'
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
-}
-function strip({ ...p }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete p.initial; delete p.animate; delete p.exit; delete p.transition
-  return p
-}
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
-}))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), back: vi.fn() }),

@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
@@ -17,18 +17,6 @@ import type { TmdbSearchResult } from '@/types'
 //
 // The nesting is the fix, so the nesting is what these tests pin.
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
-}
-function strip({ ...p }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete p.initial; delete p.animate; delete p.exit; delete p.transition
-  return p
-}
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  MotionConfig: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
-}))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), back: vi.fn() }),

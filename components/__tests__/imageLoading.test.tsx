@@ -183,14 +183,18 @@ describe('image loading policy (Next.js 16)', () => {
     expect(source.split(`sizes="${expectedSizes}"`)).toHaveLength(3)
   })
 
-  it('applies ambient-orb class to ambient layout orbs and configures mobile-only blur/opacity reduction', () => {
+  it('paints the ambient wash as one gradient layer with no blur filter and no fixed body background', () => {
     const layoutContent = readFileSync(path.join(ROOT, 'app/layout.tsx'), 'utf8')
     const globalsContent = readFileSync(path.join(ROOT, 'app/globals.css'), 'utf8')
 
-    const ambientOrbMatches = layoutContent.match(/className="[^"]*ambient-orb[^"]*"/g)
-    expect(ambientOrbMatches).not.toBeNull()
-    expect(ambientOrbMatches?.length).toBe(3)
+    // One element, not four layers. blur() on a 700px orb and a
+    // fixed-attachment body background are both per-scroll-frame paint costs.
+    expect(layoutContent).toContain('className="ambient-layer"')
+    expect(layoutContent).not.toMatch(/blur-\[\d+px\]/)
+    expect(globalsContent).not.toContain('background-attachment: fixed')
+    expect(globalsContent).toMatch(/\.ambient-layer\s*\{[^}]*radial-gradient/)
 
-    expect(globalsContent).toMatch(/@media\s*\(\s*max-width:\s*640px\s*\)\s*\{[\s\S]*\.ambient-orb[\s\S]*\}/)
+    // Still dialled back on mobile, just without a filter to dial back.
+    expect(globalsContent).toMatch(/@media\s*\(\s*max-width:\s*640px\s*\)\s*\{[\s\S]*\.ambient-layer[\s\S]*\}/)
   })
 })

@@ -1,4 +1,3 @@
-import type { HTMLAttributes, ReactNode } from 'react'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import SearchOverlay from '../SearchOverlay'
@@ -13,17 +12,6 @@ import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 // where an off-by-one hides. These tests pin the mapping from both ends: the
 // index the keyboard is on, and the row the screen reader is told about.
 
-type MotionDivProps = HTMLAttributes<HTMLDivElement> & {
-  initial?: unknown; animate?: unknown; exit?: unknown; transition?: unknown
-}
-function strip({ ...p }: MotionDivProps): HTMLAttributes<HTMLDivElement> {
-  delete p.initial; delete p.animate; delete p.exit; delete p.transition
-  return p
-}
-vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  motion: { div: (props: MotionDivProps) => <div {...strip(props)} /> },
-}))
 
 const push = vi.fn()
 const refresh = vi.fn()
