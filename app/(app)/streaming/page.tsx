@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { mediaKey } from '@/lib/mediaKey'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 import { FilterPills } from '@/components/FilterPills'
 import { useMediaModal } from '@/components/MediaModalProvider'
@@ -67,13 +68,13 @@ function StreamingContent() {
     openMedia(result, {
       enableRemove: true,
       onChanged: (change, changedItem) => {
-        const id = changedItem.tmdb_id
-        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(id))
-        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(id))
+        const key = mediaKey(changedItem.type, changedItem.tmdb_id)
+        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(key))
+        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(key))
         if (change === 'removed') {
           setWatchlistIds((prev) => {
             const next = new Set(prev)
-            next.delete(id)
+            next.delete(key)
             return next
           })
         }
@@ -140,7 +141,7 @@ function StreamingContent() {
   }, [loading, loadingMore, page, totalPages, results.length])
 
   const visibleResults = useMemo(
-    () => (hideWatched ? results.filter((item) => !watchedIds.has(item.tmdb_id)) : results),
+    () => (hideWatched ? results.filter((item) => !watchedIds.has(mediaKey(item.type, item.tmdb_id))) : results),
     [hideWatched, results, watchedIds]
   )
 
@@ -281,8 +282,9 @@ function StreamingContent() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
           {visibleResults.map((item) => {
-            const watched = watchedIds.has(item.tmdb_id)
-            const listed = watchlistIds.has(item.tmdb_id)
+            const key = mediaKey(item.type, item.tmdb_id)
+            const watched = watchedIds.has(key)
+            const listed = watchlistIds.has(key)
             return (
               <SelectableOverlay key={item.tmdb_id} item={item}>
                 <button

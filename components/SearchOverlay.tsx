@@ -8,6 +8,7 @@ import { useModal } from '@/lib/useModal'
 import { useIsMac } from '@/components/ui/Kbd'
 import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { mediaKey } from '@/lib/mediaKey'
 import { readRecentSearches, recordRecentSearch, clearRecentSearches } from '@/lib/recentSearches'
 // Shared with the g-prefixed shortcuts and the help sheet — see lib/quickNav.
 import { QUICK_NAV } from '@/lib/quickNav'
@@ -83,9 +84,9 @@ export default function SearchOverlay({ onClose }: Props) {
       // can keep typing without reaching for the mouse.
       onClosed: () => inputRef.current?.focus(),
       onChanged: (change: MediaChange, changedItem: TmdbSearchResult) => {
-        const id = changedItem.tmdb_id
-        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(id))
-        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(id))
+        const key = mediaKey(changedItem.type, changedItem.tmdb_id)
+        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(key))
+        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(key))
         // Recently Watched on the dashboard reads from the route.
         router.refresh()
       },
@@ -127,11 +128,12 @@ export default function SearchOverlay({ onClose }: Props) {
   // /api/tmdb/details, find the footer button, click, Escape twice. Everything
   // these need is already in scope, so the palette can just do it.
   async function logWatched(r: TmdbSearchResult) {
-    if (watchedIds.has(r.tmdb_id) || actioningId !== null) return
+    const key = mediaKey(r.type, r.tmdb_id)
+    if (watchedIds.has(key) || actioningId !== null) return
     try {
       setActioningId(r.tmdb_id)
       await markWatched(r.tmdb_id, r.type)
-      setWatchedIds((prev) => new Set(prev).add(r.tmdb_id))
+      setWatchedIds((prev) => new Set(prev).add(key))
       toast(`Logged ${r.title}.`, { tone: 'success' })
     } catch (err) {
       console.error(err)
@@ -147,11 +149,12 @@ export default function SearchOverlay({ onClose }: Props) {
   }
 
   async function listForLater(r: TmdbSearchResult) {
-    if (watchlistIds.has(r.tmdb_id) || actioningId !== null) return
+    const key = mediaKey(r.type, r.tmdb_id)
+    if (watchlistIds.has(key) || actioningId !== null) return
     try {
       setActioningId(r.tmdb_id)
       await addToWatchlist(r.tmdb_id, r.type)
-      setWatchlistIds((prev) => new Set(prev).add(r.tmdb_id))
+      setWatchlistIds((prev) => new Set(prev).add(key))
       toast(`Added ${r.title} to your watchlist.`, { tone: 'success' })
     } catch (err) {
       console.error(err)
@@ -448,8 +451,9 @@ export default function SearchOverlay({ onClose }: Props) {
           ))}
           {titleResults.map((r, i) => {
             const listIndex = i + matchedPages.length
-            const watched = watchedIds.has(r.tmdb_id)
-            const listed = watchlistIds.has(r.tmdb_id)
+            const key = mediaKey(r.type, r.tmdb_id)
+            const watched = watchedIds.has(key)
+            const listed = watchlistIds.has(key)
             return (
               <div
                 key={`${r.type}-${r.tmdb_id}`}

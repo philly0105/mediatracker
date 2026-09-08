@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { mediaKey } from '@/lib/mediaKey'
 
 export default function PersonPage() {
   const params = useParams()
@@ -67,14 +68,16 @@ export default function PersonPage() {
         )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
+        {items.map((item) => {
+          const key = mediaKey(item.type, item.tmdb_id)
+          return (
           <SelectableOverlay key={`${item.tmdb_id}-${item.type}`} item={item}>
           <Card
             onClick={() => openMedia(item, {
               priority: 'must_watch',
               onChanged: (change) => {
-                if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(item.tmdb_id))
-                if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(item.tmdb_id))
+                if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(key))
+                if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(key))
               },
             })}
             aria-label={item.title}
@@ -120,11 +123,11 @@ export default function PersonPage() {
                 )}
                 {/* Same chip treatment as the streaming grid, so "already seen"
                     reads the same wherever TMDB results are listed. */}
-                {watchedIds.has(item.tmdb_id) ? (
+                {watchedIds.has(key) ? (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] text-[var(--teal-300)] bg-black/40 border border-[var(--teal-tint-border)]">
                     <CheckCircle2 className="w-3 h-3" /> Watched
                   </span>
-                ) : watchlistIds.has(item.tmdb_id) ? (
+                ) : watchlistIds.has(key) ? (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] text-zinc-300 bg-black/40 border border-white/10">
                     <Bookmark className="w-3 h-3" /> Watchlist
                   </span>
@@ -133,7 +136,7 @@ export default function PersonPage() {
             </div>
           </Card>
           </SelectableOverlay>
-        ))}
+        )})}
         {items.length === 0 && (
           <EmptyState size="compact" icon={SearchX} title="No items found" />
         )}

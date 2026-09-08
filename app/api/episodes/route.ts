@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
-import { badRequest, readJson } from '@/lib/validation'
+import { badRequest, parseUuid, readJson } from '@/lib/validation'
 
 const MAX_EPISODES_PER_REQUEST = 500
 
@@ -57,6 +57,27 @@ export async function POST(request: NextRequest) {
     return badRequest('season_id and at least one episode required')
   }
 
+  const seasonUuidRes = parseUuid(parsed.season_id)
+  if (!seasonUuidRes.ok) return badRequest(seasonUuidRes.error)
+
+  const { data: season, error: seasonError } = await supabase
+    .from('seasons')
+    .select('episode_count')
+    .eq('id', parsed.season_id)
+    .maybeSingle()
+
+  if (seasonError) return NextResponse.json({ error: seasonError.message }, { status: 500 })
+  if (!season) {
+    return NextResponse.json({ error: 'Season not found' }, { status: 404 })
+  }
+
+  if (
+    typeof season.episode_count === 'number' &&
+    parsed.episodes.some((ep) => ep > season.episode_count)
+  ) {
+    return badRequest(`Episode number must be between 1 and ${season.episode_count}`)
+  }
+
   const watchedAt = new Date().toISOString().split('T')[0]
   const rows = parsed.episodes.map(episode_number => ({
     user_id: user.id,
@@ -91,6 +112,12 @@ export async function DELETE(request: NextRequest) {
     return badRequest('season_id and at least one episode required')
   }
 
+  const seasonUuidRes = parseUuid(parsed.season_id)
+  if (!seasonUuidRes.ok) return badRequest(seasonUuidRes.error)
+
+  // Deliberately no episode_count bound here: TMDB can revise an episode_count
+  // downward, and a user must always be able to delete progress rows that now
+  // sit above the new count.
   const { error } = await supabase
     .from('episode_progress')
     .delete()

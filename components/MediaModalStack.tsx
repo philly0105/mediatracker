@@ -2,6 +2,7 @@
 import { Presence, type PresenceChild } from './Presence'
 import MediaInfoModal from './MediaInfoModal'
 import type { StackEntry } from './MediaModalProvider'
+import { readCreatedEntry } from '@/lib/useMediaActions'
 import type { useMediaActions } from '@/lib/useMediaActions'
 
 export interface MediaModalStackProps {
@@ -47,8 +48,9 @@ export default function MediaModalStack({
           onMarkAsWatched={
             options.onMarkAsWatched ??
             (async (opts) => {
-              await markWatched(item.tmdb_id, item.type, opts)
+              const res = await markWatched(item.tmdb_id, item.type, opts)
               options.onChanged?.('watched', item)
+              return readCreatedEntry(res)
             })
           }
           onRemoveFromWatchlist={

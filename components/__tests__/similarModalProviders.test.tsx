@@ -24,8 +24,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/useLibraryIds', () => ({
   useLibraryIds: () => ({
-    watchedIds: new Set<number>(),
-    watchlistIds: new Set<number>(),
+    watchedIds: new Set<string>(),
+    watchlistIds: new Set<string>(),
     setWatchedIds: vi.fn(),
     setWatchlistIds: vi.fn(),
   }),

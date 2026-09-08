@@ -33,7 +33,7 @@ export interface OpenMediaOptions {
   onUpdatePriority?: (priority: WatchlistPriority) => Promise<void>
   /** Each of these replaces the default handler outright. */
   onAddToWatchlist?: () => Promise<void>
-  onMarkAsWatched?: (opts?: { rewatch?: boolean }) => Promise<void>
+  onMarkAsWatched?: (opts?: { rewatch?: boolean }) => Promise<{ id: string; rating: number | null } | void>
   onRemoveFromWatchlist?: () => Promise<void>
   /** Tear down whatever host opened this when a link navigates the tab away. */
   onNavigateAway?: () => void

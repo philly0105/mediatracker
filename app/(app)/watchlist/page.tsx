@@ -6,7 +6,7 @@ import { useCallback, useState, useEffect, useRef, Suspense } from 'react'
 import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices, Search, SearchX, ChevronDown } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
-import { useMediaActions } from '@/lib/useMediaActions'
+import { useMediaActions, readCreatedEntry } from '@/lib/useMediaActions'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -362,7 +362,7 @@ function WatchlistContent() {
     if (!item.media) return
     try {
       setActioningId(item.id)
-      await markWatched(item.media.tmdb_id, item.media.type, opts)
+      const res = await markWatched(item.media.tmdb_id, item.media.type, opts)
       await fetch('/api/watchlist', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -370,6 +370,8 @@ function WatchlistContent() {
       })
       removeFromGroup(item.priority, item.id)
       closeIfOpen(item.id)
+
+      return readCreatedEntry(res)
     } catch (err) {
       // Rethrow rather than reporting here. This is only ever reached through
       // MediaInfoModal, which owns the messaging — including turning a 409 into

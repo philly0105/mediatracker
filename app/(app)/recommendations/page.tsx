@@ -12,7 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { useMediaModal } from '@/components/MediaModalProvider'
-import { useMediaActions, isAlreadyWatchedError } from '@/lib/useMediaActions'
+import { useMediaActions, isAlreadyWatchedError, readCreatedEntry } from '@/lib/useMediaActions'
 import { FilterPills } from '@/components/FilterPills'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { Button } from '@/components/ui/Button'
@@ -141,10 +141,12 @@ export default function RecommendationsPage() {
   async function handleMarkAsWatched(tmdbId: number, type: 'movie' | 'show', opts?: { rewatch?: boolean }) {
     try {
       setActioningId(tmdbId)
-      await markWatched(tmdbId, type, opts)
+      const res = await markWatched(tmdbId, type, opts)
 
       // Animate card removal
       setItems((prev) => prev.filter((item) => item.tmdb_id !== tmdbId))
+
+      return readCreatedEntry(res)
     } finally {
       setActioningId(null)
     }

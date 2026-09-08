@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { useLibraryIds } from '@/lib/useLibraryIds'
+import { mediaKey } from '@/lib/mediaKey'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import { useModal } from '@/lib/useModal'
 import type { TmdbSearchResult, MediaType } from '@/types'
@@ -41,9 +42,9 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
     openMedia(result, {
       onNavigateAway,
       onChanged: (change, changedItem) => {
-        const id = changedItem.tmdb_id
-        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(id))
-        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(id))
+        const key = mediaKey(changedItem.type, changedItem.tmdb_id)
+        if (change === 'watched') setWatchedIds((prev) => new Set(prev).add(key))
+        if (change === 'watchlisted') setWatchlistIds((prev) => new Set(prev).add(key))
       },
     })
   }
@@ -141,7 +142,9 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
             <p className="text-sm text-zinc-500 text-center py-8">No similar titles found.</p>
           ) : (
             <div className="grid grid-cols-4 gap-3">
-              {items.slice(0, visibleCount).map(item => (
+              {items.slice(0, visibleCount).map(item => {
+                const key = mediaKey(item.type, item.tmdb_id)
+                return (
                 <SelectableOverlay key={item.tmdb_id} item={item}>
                 <button
                   onClick={() => { if (!isSelectMode) openDetails(item) }}
@@ -164,12 +167,12 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
                     )}
                     
                     <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
-                      {watchedIds.has(item.tmdb_id) && (
+                      {watchedIds.has(key) && (
                         <div className="bg-[var(--teal-tint-bg)] p-1 rounded-sm shadow-md border border-[var(--teal-tint-border)]">
                           <CheckCircle2 className="w-3 h-3 text-[var(--teal-300)]" />
                         </div>
                       )}
-                      {!watchedIds.has(item.tmdb_id) && watchlistIds.has(item.tmdb_id) && (
+                      {!watchedIds.has(key) && watchlistIds.has(key) && (
                         <div className="bg-[var(--green-tint-bg)] p-1 rounded-sm shadow-md border border-[var(--green-tint-border)]">
                           <Bookmark className="w-3 h-3 text-[var(--accent)]" />
                         </div>
@@ -192,7 +195,7 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
                   </div>
                 </button>
                 </SelectableOverlay>
-              ))}
+              )})}
             </div>
           )}
           {!loading && (visibleCount < items.length || hasMore) && (

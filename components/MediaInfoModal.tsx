@@ -43,7 +43,7 @@ interface Props {
   item: TmdbSearchResult
   onClose: () => void
   onAddToWatchlist: () => Promise<void>
-  onMarkAsWatched: (opts?: { rewatch?: boolean }) => Promise<void>
+  onMarkAsWatched: (opts?: { rewatch?: boolean }) => Promise<{ id: string; rating: number | null } | void>
   currentPriority?: WatchlistPriority
   onUpdatePriority?: (priority: WatchlistPriority) => Promise<void>
   onRemoveFromWatchlist?: () => Promise<void>
@@ -211,14 +211,27 @@ export default function MediaInfoModal({
   async function handleWatchedClick(opts?: { rewatch?: boolean }) {
     try {
       setActioning('watched')
-      await onMarkAsWatched(opts)
+      const entry = await onMarkAsWatched(opts)
       if (details) applyDetails({ ...details, isWatched: true })
-      // The refetch is awaited so the fresh watch_entry (and its id, for Undo)
-      // exists before the toast points the user at the rating row.
-      const fresh = await loadDetails(true)
       if (opts?.rewatch) {
+        // Rewatches still refetch full details: details.watch_entry is what
+        // handleRatingChange PATCHes and must keep pointing at whatever
+        // /api/tmdb/details considers the primary entry for this title, not at
+        // the newly created rewatch row. Rewatches are also never offered Undo.
+        await loadDetails(true)
         toast(`Logged a rewatch of ${item.title}.`, { tone: 'success' })
+      } else if (entry) {
+        const base = detailsCache.get(cacheKey) ?? details
+        if (base) applyDetails({ ...base, isWatched: true, watch_entry: entry })
+        setUserRating(entry.rating ?? null)
+        toast(`Logged ${item.title} as watched — rate it below.`, {
+          tone: 'success',
+          action: { label: 'Undo', onClick: () => undoWatch(entry.id) },
+        })
+        ratingRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setRatingPulse(true)
       } else {
+        const fresh = await loadDetails(true)
         const entryId = fresh?.watch_entry?.id
         toast(`Logged ${item.title} as watched — rate it below.`, {
           tone: 'success',
@@ -257,7 +270,12 @@ export default function MediaInfoModal({
       })
       if (!res.ok) throw new Error('Failed to undo')
       setUserRating(null)
-      await loadDetails(true)
+      const cached = detailsCache.get(cacheKey)
+      if (cached) {
+        applyDetails({ ...cached, isWatched: false, watch_entry: null })
+      } else {
+        await loadDetails(true)
+      }
       toast(`Removed ${item.title} from your history.`, { tone: 'info' })
     } catch (err) {
       console.error(err)

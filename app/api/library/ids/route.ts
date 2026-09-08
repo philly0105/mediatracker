@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { fetchAllRows } from '@/lib/fetchAllRows'
+import { mediaKey } from '@/lib/mediaKey'
+import type { MediaType } from '@/types'
 
-type JoinedRow = { media: { tmdb_id: number } | { tmdb_id: number }[] | null }
+type JoinedMedia = { tmdb_id: number; type: MediaType }
+type JoinedRow = { media: JoinedMedia | JoinedMedia[] | null }
 
-function toIds(rows: JoinedRow[]): number[] {
-  const ids = new Set<number>()
+function toIds(rows: JoinedRow[]): string[] {
+  const ids = new Set<string>()
   for (const row of rows) {
     const media = Array.isArray(row.media) ? row.media[0] : row.media
-    if (typeof media?.tmdb_id === 'number') ids.add(media.tmdb_id)
+    if (typeof media?.tmdb_id === 'number' && (media.type === 'movie' || media.type === 'show')) {
+      ids.add(mediaKey(media.type, media.tmdb_id))
+    }
   }
   return Array.from(ids)
 }
@@ -29,7 +34,7 @@ export async function GET() {
     fetchAllRows<JoinedRow>((from, to) =>
       supabase
         .from('watch_entries')
-        .select('media!inner(tmdb_id)')
+        .select('media!inner(tmdb_id, type)')
         .eq('user_id', user.id)
         .order('id')
         .range(from, to)
@@ -37,7 +42,7 @@ export async function GET() {
     fetchAllRows<JoinedRow>((from, to) =>
       supabase
         .from('watchlist_items')
-        .select('media!inner(tmdb_id)')
+        .select('media!inner(tmdb_id, type)')
         .eq('user_id', user.id)
         .order('id')
         .range(from, to)

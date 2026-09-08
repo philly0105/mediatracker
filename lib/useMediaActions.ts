@@ -22,6 +22,24 @@ export function isAlreadyWatchedError(err: unknown): boolean {
   return err instanceof MediaActionError && err.status === 409
 }
 
+// POST /api/watch returns the row it inserted. Handing that row straight to
+// MediaInfoModal is what lets the modal offer Undo without refetching the whole
+// details payload; a body that isn't the shape we expect resolves to undefined,
+// and the modal falls back to that refetch.
+export async function readCreatedEntry(
+  res: Response
+): Promise<{ id: string; rating: number | null } | undefined> {
+  let body: { entry?: { id?: unknown; rating?: unknown } } | null = null
+  try {
+    body = await res.json()
+  } catch {
+    // fall through to the refetch path below
+  }
+  const entry = body?.entry
+  if (typeof entry?.id !== 'string') return undefined
+  return { id: entry.id, rating: typeof entry.rating === 'number' ? entry.rating : null }
+}
+
 // Best-effort read of the error body. An error response is not guaranteed to be
 // JSON; a parse failure must not mask the real status, so swallow it here.
 async function readError(res: Response): Promise<string> {

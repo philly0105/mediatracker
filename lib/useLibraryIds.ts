@@ -1,19 +1,25 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import type { MediaType } from '@/types'
+import { mediaKey } from '@/lib/mediaKey'
 
-type JoinedRow = { media: { tmdb_id: number } | { tmdb_id: number }[] | null }
+type JoinedMedia = { tmdb_id?: number | null; type?: MediaType | null }
+type JoinedRow = { media: JoinedMedia | JoinedMedia[] | null }
 
 // The embed comes back as an object or a single-element array depending on how
 // PostgREST resolves the relationship, so normalise both.
-export function toIdSet(rows: JoinedRow[] | null): Set<number> {
-  return new Set(
-    (rows ?? [])
-      .map((row) => (Array.isArray(row.media) ? row.media[0] : row.media)?.tmdb_id)
-      .filter((id): id is number => typeof id === 'number')
-  )
+export function toIdSet(rows: JoinedRow[] | null): Set<string> {
+  const ids = new Set<string>()
+  for (const row of rows ?? []) {
+    const media = Array.isArray(row.media) ? row.media[0] : row.media
+    if (typeof media?.tmdb_id === 'number' && (media.type === 'movie' || media.type === 'show')) {
+      ids.add(mediaKey(media.type, media.tmdb_id))
+    }
+  }
+  return ids
 }
 
-type IdSets = { watched: Set<number>; watchlist: Set<number> }
+type IdSets = { watched: Set<string>; watchlist: Set<string> }
 
 // Session-lifetime cache. KeyboardShortcuts renders the overlay as
 // `open ? <SearchOverlay/> : null`, so the hook remounts on every ⌘K; without
@@ -29,22 +35,22 @@ function loadIds(): Promise<IdSets> {
 
   inFlight = fetch('/api/library/ids')
     .then((res) => (res.ok ? res.json() : { watched: [], watchlist: [] }))
-    .then((data: { watched?: number[]; watchlist?: number[] }) => {
+    .then((data: { watched?: string[]; watchlist?: string[] }) => {
       cache = {
         watched: new Set(data.watched ?? []),
         watchlist: new Set(data.watchlist ?? []),
       }
       return cache
     })
-    .catch(() => ({ watched: new Set<number>(), watchlist: new Set<number>() }))
+    .catch(() => ({ watched: new Set<string>(), watchlist: new Set<string>() }))
     .finally(() => { inFlight = null })
 
   return inFlight
 }
 
 export function useLibraryIds() {
-  const [watchedIds, setWatchedIdsState] = useState<Set<number>>(() => cache?.watched ?? new Set())
-  const [watchlistIds, setWatchlistIdsState] = useState<Set<number>>(() => cache?.watchlist ?? new Set())
+  const [watchedIds, setWatchedIdsState] = useState<Set<string>>(() => cache?.watched ?? new Set())
+  const [watchlistIds, setWatchlistIdsState] = useState<Set<string>>(() => cache?.watchlist ?? new Set())
 
   useEffect(() => {
     let active = true
@@ -59,7 +65,7 @@ export function useLibraryIds() {
   // Callers mark things watched and shortlisted from inside these overlays. The
   // update has to reach the cache too, or closing and reopening ⌘K would paint
   // the pre-action badges back.
-  const setWatchedIds = useCallback((update: (prev: Set<number>) => Set<number>) => {
+  const setWatchedIds = useCallback((update: (prev: Set<string>) => Set<string>) => {
     setWatchedIdsState((prev) => {
       const next = update(prev)
       if (cache) cache.watched = next
@@ -67,7 +73,7 @@ export function useLibraryIds() {
     })
   }, [])
 
-  const setWatchlistIds = useCallback((update: (prev: Set<number>) => Set<number>) => {
+  const setWatchlistIds = useCallback((update: (prev: Set<string>) => Set<string>) => {
     setWatchlistIdsState((prev) => {
       const next = update(prev)
       if (cache) cache.watchlist = next
