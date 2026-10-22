@@ -49,6 +49,9 @@ export default function HomeHero({ show, details, loading, failed, onMarkWatched
   const { media, nextUp, tmdb } = show
   const backdrop = show.art?.backdrop_url ?? tmdb?.backdrop_url ?? null
   const logo = show.art?.logo_url ?? tmdb?.logo_url ?? null
+  // TMDB's ratio describes its own pick, which stored art can lag behind, so
+  // it only sizes the logo when the two are the same file.
+  const logoAspect = logo && logo === tmdb?.logo_url ? tmdb.logo_aspect ?? null : null
 
   const season = show.seasons.find((s) => s.id === nextUp.season_id)
   const { watched, total } = season ? seasonProgress(season, new Set(show.watchedEpisodeKeys)) : { watched: 0, total: 0 }
@@ -81,7 +84,9 @@ export default function HomeHero({ show, details, loading, failed, onMarkWatched
       >
         {/* The art: a band above the slab up to lg (220px on phones, 320px
             beside the rail), the whole stage from there. The one preloaded
-            image on Home, since it is the largest thing above the fold. */}
+            image on Home, at high priority, since it is the largest thing
+            above the fold. HeroSectionSkeleton paints the same image while
+            this section streams, so the preload is usually already done. */}
         <div className="relative h-[220px] w-full md:h-[320px] lg:absolute lg:inset-0 lg:h-auto">
           {backdrop && (
             <Image
@@ -90,6 +95,7 @@ export default function HomeHero({ show, details, loading, failed, onMarkWatched
               aria-hidden="true"
               fill
               preload
+              fetchPriority="high"
               sizes="(max-width: 1023px) 100vw, 1200px"
               className="object-cover object-[64%_18%] md:object-[50%_18%]"
             />
@@ -131,8 +137,10 @@ export default function HomeHero({ show, details, loading, failed, onMarkWatched
               place under forced colours, where a white PNG on the Canvas
               slab can vanish. Logos come in every ratio, so the CSS fixes the
               width and the height follows the art. The props are a 2x
-              intrinsic size rather than 288x96: Next warns when the rendered
-              box differs from the props on one axis only. */}
+              intrinsic size: Next warns when the rendered box differs from
+              the props on one axis only. Their ratio is TMDB's when known,
+              so the box the slab reserves is the one the logo fills and
+              nothing below it moves when it loads; otherwise 3:1. */}
           <h2 id="hero-title" style={{ margin: '24px 0 0', lineHeight: 0 }}>
             {logo && (
               <Image
@@ -140,7 +148,7 @@ export default function HomeHero({ show, details, loading, failed, onMarkWatched
                 alt=""
                 aria-hidden="true"
                 width={576}
-                height={192}
+                height={logoAspect ? Math.round(576 / logoAspect) : 192}
                 sizes="288px"
                 className="forced-colors:hidden"
                 style={{ width: 288, maxWidth: '100%', height: 'auto' }}

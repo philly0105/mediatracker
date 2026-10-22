@@ -24,6 +24,8 @@ type Props = {
   seedTitle: string
   backdropUrl: string | null
   logoUrl: string | null
+  /** The logo's width over height (TMDB's), so its box is reserved before it loads. */
+  logoAspect?: number | null
   platform: string | null
   year: number | null
   genres: string[]
@@ -36,7 +38,7 @@ type Props = {
  * frame is the panel tint without blur: it holds a photo, and a blur under
  * one would be paid for nothing.
  */
-export default function BecauseYouWatchedCard({ item, seedTitle, backdropUrl, logoUrl, platform, year, genres }: Props) {
+export default function BecauseYouWatchedCard({ item, seedTitle, backdropUrl, logoUrl, logoAspect, platform, year, genres }: Props) {
   const router = useRouter()
   const { openMedia, closeMedia } = useMediaModal()
   const meta = [platform, year, ...genres.slice(0, 2)].filter(Boolean).join(' · ')
@@ -76,13 +78,14 @@ export default function BecauseYouWatchedCard({ item, seedTitle, backdropUrl, lo
             <h2 id="byw-title" style={logoUrl ? { margin: '10px 0 0', lineHeight: 0 } : { margin: '8px 0 0', ...TITLE }}>
               {logoUrl ? (
                 <>
-                  {/* Sized like the hero logo: CSS width, height from the art, 2x props. */}
+                  {/* Sized like the hero logo: CSS width, height from the art,
+                      2x props at the logo's ratio when known (else 3:1). */}
                   <Image
                     src={logoUrl}
                     alt=""
                     aria-hidden="true"
                     width={336}
-                    height={112}
+                    height={logoAspect ? Math.round(336 / logoAspect) : 112}
                     sizes="168px"
                     className="forced-colors:hidden"
                     style={{ width: 168, maxWidth: '100%', height: 'auto' }}

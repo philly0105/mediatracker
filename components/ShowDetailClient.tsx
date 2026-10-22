@@ -318,6 +318,8 @@ export default function ShowDetailClient({
         type="show"
         backdropUrl={backdropUrl}
         logoUrl={logoUrl}
+        // TMDB's ratio is for its own pick; a stored logo can be another file.
+        logoAspect={logoUrl && logoUrl === tmdb?.logo_url ? tmdb.logo_aspect : null}
         posterUrl={media.poster_url}
         tagline={tmdb?.tagline}
         overview={media.overview}

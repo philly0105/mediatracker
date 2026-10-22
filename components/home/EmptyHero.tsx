@@ -42,6 +42,7 @@ export default function EmptyHero({ recent, preload = false }: Props) {
               aria-hidden="true"
               fill
               preload={preload}
+              fetchPriority={preload ? 'high' : undefined}
               sizes="(max-width: 1023px) 100vw, 1200px"
               className="object-cover object-[50%_18%]"
             />

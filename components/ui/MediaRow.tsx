@@ -98,11 +98,13 @@ export function MediaRow({
     : 'w-[104px] h-[58px] md:w-40 md:h-[90px]'
 
   // Fixed thumbs, so width/height props rather than `fill`. They also reserve
-  // the space, which is what stops the list jumping as images load.
+  // the space, which is what stops the list jumping as images load. The
+  // still's `sizes` follows its phone width, so phones fetch a smaller file.
   let thumb: React.ReactNode
   if (stillUrl && !stillErr) {
     thumb = (
       <Image src={stillUrl} alt="" width={160} height={90} onError={() => setStillErr(true)}
+        sizes={stillSize === 'sm' ? '(max-width: 767px) 72px, 160px' : '(max-width: 767px) 104px, 160px'}
         className={stillClass} style={thumbStyle} />
     )
   } else if (posterUrl && !posterErr) {

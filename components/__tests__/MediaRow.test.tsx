@@ -81,7 +81,10 @@ describe('MediaRow', () => {
     // Up next keeps the larger still; only an episode list, whose rows also
     // carry a synopsis and a wide toggle, trades it for text width.
     expect(img().className).toBe('w-[104px] h-[58px] md:w-40 md:h-[90px]')
+    // The file follows the drawn width, so a phone fetches a phone-sized still.
+    expect(img()).toHaveAttribute('sizes', '(max-width: 767px) 104px, 160px')
     rerender(<MediaRow title="The Bear" type="show" stillUrl={still} stillSize="sm" />)
     expect(img().className).toBe('w-[72px] h-10 md:w-40 md:h-[90px]')
+    expect(img()).toHaveAttribute('sizes', '(max-width: 767px) 72px, 160px')
   })
 })

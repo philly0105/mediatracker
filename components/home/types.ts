@@ -21,6 +21,8 @@ export type ContinueWatchingTmdb = {
   platform: string | null
   backdrop_url: string | null
   logo_url: string | null
+  /** TMDB's width over height for `logo_url`; optional so older callers still fit. */
+  logo_aspect?: number | null
   release_year: number | null
 }
 

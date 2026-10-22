@@ -15,6 +15,8 @@ export interface TitleHeroProps {
   backdropUrl?: string | null
   /** Replaces the title text when present; the title stays in the heading for assistive tech. */
   logoUrl?: string | null
+  /** The logo's width over height (TMDB's), so its box is reserved before it loads. */
+  logoAspect?: number | null
   /** Painted in the stage when there is no backdrop. */
   posterUrl?: string | null
   tagline?: string | null
@@ -85,6 +87,7 @@ export function TitleHero({
   type = 'show',
   backdropUrl,
   logoUrl,
+  logoAspect,
   posterUrl,
   tagline,
   overview,
@@ -145,6 +148,7 @@ export function TitleHero({
               fill
               sizes="(max-width: 1023px) 100vw, 1200px"
               preload={preload}
+              fetchPriority={preload ? 'high' : undefined}
               // A poster standing in for a backdrop is cropped to its top,
               // where the title art usually is.
               style={{ objectFit: 'cover', objectPosition: backdropUrl ? '50% 18%' : '50% 20%' }}
@@ -193,15 +197,16 @@ export function TitleHero({
                     where a white PNG on the Canvas slab can vanish. Logos
                     come in every ratio, so the CSS fixes the width and the
                     height follows the art, capped at 96 for the tall ones.
-                    The props are a 2x intrinsic size rather than 288x96:
-                    Next warns when the rendered box differs from the props
-                    on one axis only. */}
+                    The props are a 2x intrinsic size: Next warns when the
+                    rendered box differs from the props on one axis only.
+                    Their ratio is the logo's when known, so the reserved
+                    box is the one it fills; otherwise 3:1. */}
                 <Image
                   src={logoUrl}
                   alt=""
                   aria-hidden="true"
                   width={576}
-                  height={192}
+                  height={logoAspect ? Math.round(576 / logoAspect) : 192}
                   sizes="288px"
                   className="forced-colors:hidden"
                   style={{ width: 288, maxWidth: '100%', height: 'auto', maxHeight: 96, objectFit: 'contain', objectPosition: 'left' }}

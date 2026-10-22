@@ -109,6 +109,7 @@ interface FullDetails {
   vote_average?: number | null
   backdrop_url: string | null
   logo_url: string | null
+  logo_aspect: number | null
   tagline: string | null
   certification: string | null
 }
@@ -212,6 +213,7 @@ export default function MediaInfoModal({
         vote_average: data.vote_average ?? null,
         backdrop_url: data.backdrop_url ?? null,
         logo_url: data.logo_url ?? null,
+        logo_aspect: data.logo_aspect ?? null,
         tagline: data.tagline ?? null,
         certification: data.certification ?? null,
       }
@@ -497,6 +499,7 @@ export default function MediaInfoModal({
             type={item.type}
             backdropUrl={backdropUrl}
             logoUrl={details?.logo_url}
+            logoAspect={details?.logo_aspect}
             posterUrl={item.poster_url}
             tagline={details?.tagline}
             certification={details?.certification}

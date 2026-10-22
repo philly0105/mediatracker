@@ -29,6 +29,7 @@ export default async function BecauseYouWatched({ rec }: { rec: Promise<TopRecom
       seedTitle={item.seed_title}
       backdropUrl={item.backdrop_url ?? details?.backdrop_url ?? null}
       logoUrl={details?.logo_url ?? null}
+      logoAspect={details?.logo_aspect ?? null}
       platform={details?.watch_providers?.flatrate?.[0]?.provider_name ?? null}
       year={item.release_year ?? details?.release_year ?? null}
       genres={item.genres?.length ? item.genres : details?.genres ?? []}

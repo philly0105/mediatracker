@@ -236,6 +236,37 @@ describe('fetchTmdbDetails', () => {
     expect(details.logo_url).toBe('https://image.tmdb.org/t/p/w500/sev-logo.png')
   })
 
+  it('carries the picked logo\'s aspect ratio, so the hero can reserve its box', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 95396, name: 'Severance', genres: [], seasons: [], credits: { cast: [] },
+        images: {
+          logos: [
+            { file_path: '/other.png', iso_639_1: null, vote_average: 9, width: 2000, aspect_ratio: 2 },
+            { file_path: '/sev-logo.png', iso_639_1: 'en', vote_average: 5.4, width: 1200, aspect_ratio: 6.08 },
+          ],
+        },
+      }),
+    })
+    const details = await fetchTmdbDetails(95396, 'show')
+    expect(details.logo_url).toBe('https://image.tmdb.org/t/p/w500/sev-logo.png')
+    expect(details.logo_aspect).toBe(6.08)
+  })
+
+  it('has no logo aspect when TMDB gives no usable ratio', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', genres: [], credits: { crew: [], cast: [] },
+        images: { logos: [{ file_path: '/logo.png', iso_639_1: 'en', aspect_ratio: 0 }] },
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie')
+    expect(details.logo_url).toBe('https://image.tmdb.org/t/p/w500/logo.png')
+    expect(details.logo_aspect).toBeNull()
+  })
+
   it('returns null art when TMDB has none', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -262,6 +293,7 @@ describe('fetchTmdbDetails', () => {
     expect(new URL(mockFetch.mock.calls[0][0]).searchParams.has('include_image_language')).toBe(false)
     expect(details.backdrop_url).toBe('https://image.tmdb.org/t/p/w1280/backdrop.jpg')
     expect(details.logo_url).toBeNull()
+    expect(details.logo_aspect).toBeNull()
   })
 })
 

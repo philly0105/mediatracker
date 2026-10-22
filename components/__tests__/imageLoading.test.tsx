@@ -5,6 +5,8 @@ import path from 'node:path'
 import DashboardRecentCards from '../DashboardRecentCards'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '../ContinueWatchingRow'
 import EmptyHero from '../home/EmptyHero'
+import { HeroSectionSkeleton } from '../home/HomeSkeletons'
+import type { ContinueWatchingTmdb } from '../home/types'
 import { MultiSelectProvider } from '../MultiSelectProvider'
 import { ToastProvider } from '../ToastProvider'
 import type { WatchEntry, Media } from '@/types'
@@ -154,7 +156,23 @@ describe('image loading policy (Next.js 16)', () => {
     expect(images[3].getAttribute('data-preload')).toBe('false')
     expect(images[4].getAttribute('data-preload')).toBe('false')
 
+    // Five cards fill a phone-width rail at 118-128px each, so phones ask for
+    // a rail-sized poster rather than half the screen.
     for (const img of images) {
+      expect(img.getAttribute('data-sizes')).toBe('(max-width: 767px) 128px, (max-width: 1024px) 33vw, 20vw')
+    }
+  })
+
+  it('keeps the grid sizes for a short rail, whose cards stretch', () => {
+    const entries = ['1', '2', '3', '4'].map((id) => makeWatchEntry(id, `Movie ${id}`, `https://image.tmdb.org/t/p/w500/${id}.jpg`))
+    const { container } = render(
+      <ToastProvider>
+        <MultiSelectProvider>
+          <DashboardRecentCards entries={entries} />
+        </MultiSelectProvider>
+      </ToastProvider>
+    )
+    for (const img of Array.from(container.querySelectorAll('img'))) {
       expect(img.getAttribute('data-sizes')).toBe('(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw')
     }
   })
@@ -205,8 +223,53 @@ describe('image loading policy (Next.js 16)', () => {
     expect(preloaded[0].getAttribute('src')).toContain('s1-backdrop')
     expect(preloaded[0].getAttribute('data-fill')).toBe('true')
     expect(preloaded[0].getAttribute('alt')).toBe('')
+    expect(preloaded[0].getAttribute('fetchpriority')).toBe('high')
     // The art is the stage's width up to lg, where it becomes the whole stage.
     expect(preloaded[0].getAttribute('data-sizes')).toBe('(max-width: 1023px) 100vw, 1200px')
+  })
+
+  it('paints the stored hero art in the loading skeleton, as the hero does', () => {
+    // Without art the frame is a shimmer and loads nothing.
+    const bare = render(<HeroSectionSkeleton />)
+    expect(bare.container.querySelector('img')).toBeNull()
+    bare.unmount()
+
+    // With it, the skeleton's image is the hero's: same preload, priority and
+    // sizes, so React sends one preload and the swap to the hero is seamless.
+    const { container } = render(<HeroSectionSkeleton backdrop="https://image.tmdb.org/t/p/w1280/s1-backdrop.jpg" />)
+    const images = Array.from(container.querySelectorAll('img'))
+    expect(images).toHaveLength(1)
+    expect(images[0].getAttribute('src')).toContain('s1-backdrop')
+    expect(images[0].getAttribute('data-preload')).toBe('true')
+    expect(images[0].getAttribute('fetchpriority')).toBe('high')
+    expect(images[0].getAttribute('data-fill')).toBe('true')
+    expect(images[0].getAttribute('alt')).toBe('')
+    expect(images[0].getAttribute('data-sizes')).toBe('(max-width: 1023px) 100vw, 1200px')
+  })
+
+  it('reserves the hero logo at TMDB\'s ratio when the logo is TMDB\'s pick', () => {
+    const logo = 'https://image.tmdb.org/t/p/w500/s1-logo.png'
+    const tmdb = (logoUrl: string): ContinueWatchingTmdb => ({
+      tagline: null, certification: null, genres: [], vote_average: null, platform: null,
+      backdrop_url: null, logo_url: logoUrl, logo_aspect: 6, release_year: null,
+    })
+    const heroLogo = (show: ContinueWatchingShow) => {
+      const { container, unmount } = render(
+        <ToastProvider>
+          <ContinueWatchingRow shows={[show]} />
+        </ToastProvider>
+      )
+      const img = container.querySelector('#hero-title img')
+      const size = [img?.getAttribute('width'), img?.getAttribute('height')]
+      unmount()
+      return size
+    }
+    const base = makeShow('s1', 'Show 1', 'https://image.tmdb.org/t/p/w500/s1.jpg')
+
+    // 576 wide at 6:1 is 96 tall, so the 288px logo reserves 48px, its size.
+    expect(heroLogo({ ...base, art: { backdrop_url: null, logo_url: logo }, tmdb: tmdb(logo) })).toEqual(['576', '96'])
+    // A stored logo TMDB no longer picks keeps the 3:1 fallback box.
+    expect(heroLogo({ ...base, art: { backdrop_url: null, logo_url: logo }, tmdb: tmdb('https://image.tmdb.org/t/p/w500/other.png') })).toEqual(['576', '192'])
   })
 
   it('keeps the hero logo decorative, with the title text beside it for forced colours', () => {
@@ -244,6 +307,7 @@ describe('image loading policy (Next.js 16)', () => {
     const { container } = render(<EmptyHero recent={recent} preload />)
     const art = container.querySelector('img')
     expect(art?.getAttribute('data-preload')).toBe('true')
+    expect(art?.getAttribute('fetchpriority')).toBe('high')
     expect(art?.getAttribute('data-fill')).toBe('true')
     expect(art?.getAttribute('alt')).toBe('')
   })

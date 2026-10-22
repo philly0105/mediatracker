@@ -17,6 +17,8 @@ interface PosterCardProps {
   href?: string
   /** Preloads the poster for LCP optimization using Next.js 16 Image preload. */
   preload?: boolean
+  /** The poster's `sizes`, for a card that is not in the responsive grid. */
+  sizes?: string
   /** Pills pinned to the top-left of the poster; pass one or more `PosterBadge`s. */
   badges?: React.ReactNode
   /** Anything else positioned over the poster (the frame is position: relative). */
@@ -58,6 +60,7 @@ export function PosterCard({
   onClick,
   href,
   preload = false,
+  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw',
   badges,
   children,
 }: PosterCardProps) {
@@ -105,7 +108,7 @@ export function PosterCard({
           // `fill` rather than fixed dimensions: the wrapper above is already
           // position:relative with a 2/3 aspect ratio, so the box is reserved
           // before the image loads and the grid no longer reflows as posters
-          // arrive. `sizes` matches the responsive grid this card sits in
+          // arrive. `sizes` defaults to the responsive grid this card sits in
           // (2 columns on mobile, 3 on tablet, 5 on desktop). The caption
           // always carries the title, so the art is decorative: alt={title}
           // named every card twice ("Hamnet Hamnet 2025").
@@ -113,7 +116,7 @@ export function PosterCard({
             src={posterUrl}
             alt=""
             fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            sizes={sizes}
             preload={preload}
             onError={() => setImgErr(true)}
             className="poster-card-img"

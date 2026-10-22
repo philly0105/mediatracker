@@ -174,7 +174,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <HomeHeader email={user.email} name={user.name} />
 
-      <Suspense fallback={<HeroFallback />}>
+      <Suspense fallback={<HeroFallback backdrop={shown[0]?.art?.backdrop_url ?? null} />}>
         <HeroSection
           supabase={supabase}
           shown={shown}
@@ -243,6 +243,7 @@ async function HeroSection({ supabase, shown, recent, recentArt, comingSoon }: H
           platform: details.watch_providers?.flatrate?.[0]?.provider_name ?? null,
           backdrop_url: details.backdrop_url,
           logo_url: details.logo_url,
+          logo_aspect: details.logo_aspect ?? null,
           release_year: details.release_year,
         }
       : undefined
@@ -261,12 +262,14 @@ async function HeroSection({ supabase, shown, recent, recentArt, comingSoon }: H
   return <ContinueWatchingRow shows={shows} emptyHero={emptyHero} comingSoon={comingSoon} />
 }
 
-function HeroFallback() {
+// The hero's stored backdrop, when there is one, paints in the fallback so
+// the page's largest image does not wait on TMDB.
+function HeroFallback({ backdrop }: { backdrop: string | null }) {
   return (
     <div role="status" aria-busy="true" className="space-y-6">
       <span className="sr-only">Loading what to watch next...</span>
       <div aria-hidden="true" className="space-y-6">
-        <HeroSectionSkeleton />
+        <HeroSectionSkeleton backdrop={backdrop} />
       </div>
     </div>
   )

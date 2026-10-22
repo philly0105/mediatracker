@@ -43,6 +43,15 @@ describe('TitleHero', () => {
     expect(screen.getByText('Severance')).toHaveClass('sr-only', 'forced-colors:not-sr-only')
   })
 
+  it('reserves the logo at its own ratio when it is known, and 3:1 when not', () => {
+    const { rerender } = render(<TitleHero title="Severance" logoUrl={LOGO} logoAspect={6} />)
+    // 576 wide at 6:1: the box the slab reserves is the one the logo fills.
+    expect(screen.getByRole('heading', { level: 1 }).querySelector('img')).toHaveAttribute('height', '96')
+
+    rerender(<TitleHero title="Severance" logoUrl={LOGO} />)
+    expect(screen.getByRole('heading', { level: 1 }).querySelector('img')).toHaveAttribute('height', '192')
+  })
+
   it('renders a second-level heading for the modal', () => {
     render(<TitleHero title="Severance" headingLevel={2} />)
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Severance')
@@ -68,6 +77,7 @@ describe('TitleHero', () => {
     let art = container.querySelector('img')
     expect(art).toHaveAttribute('src', BACKDROP)
     expect(art).toHaveAttribute('data-preload', 'true')
+    expect(art).toHaveAttribute('fetchpriority', 'high')
     // Decorative: the heading already names the title.
     expect(art).toHaveAttribute('alt', '')
 
@@ -75,6 +85,7 @@ describe('TitleHero', () => {
     art = container.querySelector('img')
     expect(art).toHaveAttribute('src', POSTER)
     expect(art).toHaveAttribute('data-preload', 'false')
+    expect(art).not.toHaveAttribute('fetchpriority')
 
     rerender(<TitleHero title="Severance" />)
     expect(container.querySelector('img')).toBeNull()

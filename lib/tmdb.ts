@@ -244,6 +244,10 @@ export interface TmdbFullDetails {
   // Only the full payload carries `images`, so this is always null when
   // append is false.
   logo_url: string | null
+  // That logo's width over its height, so a hero can reserve the logo's box
+  // before the image arrives instead of shifting the slab when it does.
+  // Optional so details built elsewhere (tests, other callers) still fit.
+  logo_aspect?: number | null
   // On the base payload, so the cheap path has it too. Null when TMDB has none.
   tagline: string | null
   // The US content rating (R, TV-MA). It comes from release_dates (movies) or
@@ -283,23 +287,35 @@ export type TmdbLogo = {
   iso_639_1?: string | null
   vote_average?: number | null
   width?: number | null
+  aspect_ratio?: number | null
 }
 
 // The title logo the hero uses in place of the title text. The request already
 // limits logos to English and language-less ones; English wins because TMDB
 // leaves the language off logos that have no text, which would hide the title.
 // Then the community's top-voted, then the widest (the most detail to scale
-// down). Some logos are stored as SVG, which TMDB doesn't resize, but it keeps a
-// PNG of each under the same name, so the extension is swapped to get w500.
-export function pickLogo(logos: TmdbLogo[] | null | undefined): string | null {
-  const best = (logos ?? [])
+// down).
+function bestLogo(logos: TmdbLogo[] | null | undefined) {
+  return (logos ?? [])
     .filter((logo): logo is TmdbLogo & { file_path: string } => typeof logo.file_path === 'string' && logo.file_path !== '')
     .sort((a, b) =>
       Number(b.iso_639_1 === 'en') - Number(a.iso_639_1 === 'en') ||
       (b.vote_average ?? 0) - (a.vote_average ?? 0) ||
       (b.width ?? 0) - (a.width ?? 0)
-    )[0]
+    )[0] ?? null
+}
+
+// Some logos are stored as SVG, which TMDB doesn't resize, but it keeps a PNG
+// of each under the same name, so the extension is swapped to get w500.
+export function pickLogo(logos: TmdbLogo[] | null | undefined): string | null {
+  const best = bestLogo(logos)
   return best ? `${IMG}${best.file_path.replace(/\.svg$/i, '.png')}` : null
+}
+
+/** The picked logo's width over height; null when TMDB gives no usable ratio. */
+function pickLogoAspect(logos: TmdbLogo[] | null | undefined): number | null {
+  const ratio = bestLogo(logos)?.aspect_ratio
+  return typeof ratio === 'number' && ratio > 0 ? ratio : null
 }
 
 export type StreamingSort = 'popular' | 'rating' | 'latest'
@@ -358,6 +374,7 @@ export async function fetchTmdbDetails(
 
   // These fields only exist in the append_to_response payload; stay safe when append=false
   const logo_url = append ? pickLogo(d.images?.logos) : null
+  const logo_aspect = append ? pickLogoAspect(d.images?.logos) : null
   const trailerKey = append ? d.videos?.results?.find((v: TmdbVideo) => v.type === 'Trailer' && v.site === 'YouTube')?.key : undefined
   const trailer_url = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null
 
@@ -391,6 +408,7 @@ export async function fetchTmdbDetails(
       vote_average: d.vote_average,
       backdrop_url,
       logo_url,
+      logo_aspect,
       tagline,
       certification: append ? movieCertification(d.release_dates?.results) : null,
     }
@@ -420,6 +438,7 @@ export async function fetchTmdbDetails(
       vote_average: d.vote_average,
       backdrop_url,
       logo_url,
+      logo_aspect,
       tagline,
       certification: append ? showCertification(d.content_ratings?.results) : null,
     }

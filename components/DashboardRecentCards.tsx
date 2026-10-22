@@ -26,6 +26,12 @@ interface Props {
 const ARROW_CLASS =
   'glass-btn flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-secondary)] enabled:hover:text-[var(--text-primary)] disabled:opacity-30'
 
+// The rail's columns are minmax(118px, 1fr): from five cards a phone-width
+// panel is full and each is 118-128px wide, so the grid's 50vw would fetch
+// posters three times too large. Fewer cards keep the grid's sizes, since on
+// wider phones they stretch well past 128px.
+const RAIL_SIZES = '(max-width: 767px) 128px, (max-width: 1024px) 33vw, 20vw'
+
 /**
  * The reference's "Recently watched" panel: a rail of poster cards that
  * scrolls inside the panel, each with its half-star rating and the date it
@@ -133,6 +139,7 @@ export default function DashboardRecentCards({ entries, preloadFirst = false }: 
                   posterUrl={entry.media?.poster_url}
                   rating={entry.rating}
                   preload={preloadFirst && index === 0}
+                  sizes={entries.length >= 5 ? RAIL_SIZES : undefined}
                   badges={entry.rewatch ? (
                     <PosterBadge>
                       <RotateCcw size={14} strokeWidth={1.8} aria-hidden="true" />
