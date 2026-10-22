@@ -1,55 +1,40 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { Check, ChevronLeft, ChevronRight, Loader2, Play, Tv } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { findNextUp } from '@/lib/nextUp'
 import { useToast } from '@/components/ToastProvider'
+import { useMediaModal } from '@/components/MediaModalProvider'
+import AmbientBackdrop from '@/components/AmbientBackdrop'
+import HomeHero from '@/components/home/HomeHero'
+import UpNextPanel from '@/components/home/UpNextPanel'
+import type { NextEpisodeDetails } from '@/lib/nextEpisode'
+import type { Episode } from '@/types'
+import type { ContinueWatchingNextUp, ContinueWatchingShow } from '@/components/home/types'
 
-export type ContinueWatchingSeason = {
-  id: string
-  season_number: number
-  episode_count: number
-}
-
-export type ContinueWatchingNextUp = {
-  season_id: string
-  season_number: number
-  episode_number: number
-}
-
-export type ContinueWatchingShow = {
-  media: {
-    id: string
-    title: string
-    poster_url: string | null
-  }
-  seasons: ContinueWatchingSeason[]
-  watchedEpisodeKeys: string[]
-  nextUp: ContinueWatchingNextUp
-}
+export type {
+  ContinueWatchingNextUp,
+  ContinueWatchingSeason,
+  ContinueWatchingShow,
+  ContinueWatchingTmdb,
+} from '@/components/home/types'
 
 type Props = {
   shows: ContinueWatchingShow[]
+  /** The "Coming soon" panel, laid out beside "Up next". */
+  comingSoon?: ReactNode
+  /** Takes the hero's place when nothing is in progress. */
+  emptyHero?: ReactNode
 }
 
-function getEpisodeStats(seasons: ContinueWatchingSeason[], watchedKeys: Set<string>) {
-  let watched = 0
-  let total = 0
+const episodeKey = (nextUp: ContinueWatchingNextUp) => `${nextUp.season_id}-${nextUp.episode_number}`
 
-  for (const season of seasons) {
-    if (season.episode_count <= 0) continue
-    for (let episode = 1; episode <= season.episode_count; episode++) {
-      total++
-      if (watchedKeys.has(`${season.id}-${episode}`)) watched++
-    }
-  }
-
-  return { watched, total }
-}
-
-export default function ContinueWatchingRow({ shows }: Props) {
+/**
+ * The shows in progress: the first as the hero, the rest in the "Up next"
+ * panel, with one owner for the mark-watched state so a check in either place
+ * advances the same list. The hero's backdrop is also the page's ambient
+ * layer, registered here so it follows the hero as shows finish.
+ */
+export default function ContinueWatchingRow({ shows, comingSoon, emptyHero }: Props) {
   const [items, setItems] = useState(() =>
     shows.flatMap((show) => {
       const watchedKeys = new Set(show.watchedEpisodeKeys)
@@ -59,7 +44,45 @@ export default function ContinueWatchingRow({ shows }: Props) {
   )
   const [loadingById, setLoadingById] = useState<Record<string, boolean>>({})
   const [errorById, setErrorById] = useState<Record<string, boolean>>({})
+  // Episode details by "seasonId-episodeNumber", seeded with what the server
+  // sent for each show's next-up episode. Marking one watched moves a show
+  // to an episode the server never described, so that fills from the show's
+  // cached episode list on demand.
+  const [details, setDetails] = useState<Record<string, NextEpisodeDetails | null>>(() => {
+    const seeded: Record<string, NextEpisodeDetails | null> = {}
+    for (const show of shows) {
+      if (show.nextEpisode !== undefined) seeded[episodeKey(show.nextUp)] = show.nextEpisode
+    }
+    return seeded
+  })
   const { toast } = useToast()
+  const { openMedia } = useMediaModal()
+
+  const detailsFor = (show: ContinueWatchingShow) => details[episodeKey(show.nextUp)] ?? null
+
+  // The episode list is what /show/[id] reads (and fills from TMDB the first
+  // time), so this is the same cache the show page would warm. A miss costs
+  // the card its name and still, not the advance.
+  async function loadEpisodeDetails(mediaId: string): Promise<Record<string, NextEpisodeDetails | null>> {
+    try {
+      const response = await fetch(`/api/episodes/meta?media_id=${encodeURIComponent(mediaId)}`)
+      if (!response.ok) return {}
+      const payload = (await response.json()) as { episodes?: Episode[] }
+      const loaded: Record<string, NextEpisodeDetails | null> = {}
+      for (const episode of payload.episodes ?? []) {
+        loaded[`${episode.season_id}-${episode.episode_number}`] = {
+          name: episode.name,
+          runtime_mins: episode.runtime_mins,
+          air_date: episode.air_date,
+          still_url: episode.still_url,
+          overview: episode.overview,
+        }
+      }
+      return loaded
+    } catch {
+      return {}
+    }
+  }
 
   async function markWatched(show: ContinueWatchingShow) {
     const currentNextUp = show.nextUp
@@ -80,20 +103,19 @@ export default function ContinueWatchingRow({ shows }: Props) {
 
       if (!response.ok) throw new Error('Failed to mark episode watched')
 
+      const watchedKeys = new Set(show.watchedEpisodeKeys)
+      watchedKeys.add(episodeKey(currentNextUp))
+      const nextUp = findNextUp(show.seasons, watchedKeys)
+      if (nextUp && !(episodeKey(nextUp) in details)) {
+        const loaded = await loadEpisodeDetails(show.media.id)
+        setDetails((prev) => ({ ...loaded, ...prev }))
+      }
+
       setItems((prev) =>
         prev.flatMap((item) => {
           if (item.media.id !== show.media.id) return [item]
-
-          const watchedKeys = new Set(item.watchedEpisodeKeys)
-          watchedKeys.add(`${currentNextUp.season_id}-${currentNextUp.episode_number}`)
-          const nextUp = findNextUp(item.seasons, watchedKeys)
           if (!nextUp) return []
-
-          return [{
-            ...item,
-            watchedEpisodeKeys: Array.from(watchedKeys),
-            nextUp,
-          }]
+          return [{ ...item, watchedEpisodeKeys: Array.from(watchedKeys), nextUp }]
         })
       )
 
@@ -144,175 +166,57 @@ export default function ContinueWatchingRow({ shows }: Props) {
     }
   }
 
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  const updateScrollState = useCallback(() => {
-    const el = scrollerRef.current
-    if (!el) return
-    // A sub-pixel slack: fractional widths mean scrollLeft rarely lands exactly
-    // on the maximum, which would leave the right arrow enabled at the end.
-    const max = el.scrollWidth - el.clientWidth
-    setCanScrollLeft(el.scrollLeft > 1)
-    setCanScrollRight(el.scrollLeft < max - 1)
-  }, [])
-
-  useEffect(() => {
-    const el = scrollerRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    // Fires once on observe, so the initial state comes from here rather than
-    // from a setState in the effect body.
-    const observer = new ResizeObserver(updateScrollState)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [updateScrollState, items.length])
-
-  // scrollBy with no `behavior` uses the element's computed scroll-behavior, so
-  // the `scroll-smooth` class applies — and the global prefers-reduced-motion
-  // rule in globals.css turns it back to `auto` for anyone who asked for that.
-  function scrollByCards(direction: 1 | -1) {
-    const el = scrollerRef.current
-    if (!el) return
-    el.scrollBy({ left: direction * Math.max(el.clientWidth * 0.8, 260) })
+  // Rate and "add to a list" both go through the media modal, which already
+  // has the rating stars and the watchlist action; there is no separate
+  // rate-only surface to open.
+  function openDetails(show: ContinueWatchingShow) {
+    const { media, tmdb } = show
+    if (media.tmdb_id == null) return
+    openMedia({
+      tmdb_id: media.tmdb_id,
+      type: 'show',
+      title: media.title,
+      overview: '',
+      poster_url: media.poster_url,
+      release_year: tmdb?.release_year ?? null,
+      genres: tmdb?.genres,
+      vote_average: tmdb?.vote_average ?? undefined,
+    })
   }
 
-  if (items.length === 0) return null
+  const hero = items[0]
+  const rest = items.slice(1)
+  const heroBackdrop = hero ? hero.art?.backdrop_url ?? hero.tmdb?.backdrop_url ?? null : null
 
   return (
-    <div className="relative z-10 pt-4">
-      <div className="flex items-center justify-between mb-6 pl-2">
-        <h2 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-          Continue Watching
-        </h2>
-        {/* Arrows only where there is a pointer to use them; touch has the swipe
-            and the scrollbar is thin enough to be a poor drag target with a mouse. */}
-        <div className="hidden md:flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => scrollByCards(-1)}
-            disabled={!canScrollLeft}
-            aria-label="Scroll left"
-            className="p-1.5 rounded-sm border border-[var(--border-subtle)] text-zinc-400 enabled:hover:text-white enabled:hover:bg-white/10 disabled:opacity-30 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollByCards(1)}
-            disabled={!canScrollRight}
-            aria-label="Scroll right"
-            className="p-1.5 rounded-sm border border-[var(--border-subtle)] text-zinc-400 enabled:hover:text-white enabled:hover:bg-white/10 disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+    <>
+      <AmbientBackdrop src={heroBackdrop} />
+      {hero ? (
+        <HomeHero
+          show={hero}
+          details={detailsFor(hero)}
+          loading={loadingById[hero.media.id] ?? false}
+          failed={errorById[hero.media.id] ?? false}
+          onMarkWatched={() => markWatched(hero)}
+          onOpenDetails={hero.media.tmdb_id != null ? () => openDetails(hero) : undefined}
+        />
+      ) : (
+        emptyHero
+      )}
+      {(rest.length > 0 || comingSoon) && (
+        <div className="flex flex-wrap items-stretch" style={{ gap: 24 }}>
+          {rest.length > 0 && (
+            <UpNextPanel
+              shows={rest}
+              detailsFor={detailsFor}
+              loadingById={loadingById}
+              errorById={errorById}
+              onMarkWatched={markWatched}
+            />
+          )}
+          {comingSoon}
         </div>
-      </div>
-
-      <div className="relative">
-        {/* Edge fades, so a half-cut card reads as "there is more" rather than as
-            a clipping bug. Pointer-events off — they sit over the scroller. */}
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute inset-y-0 left-0 w-10 z-10 bg-gradient-to-r from-[var(--bg-void)] to-transparent transition-opacity duration-200 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`}
-        />
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute inset-y-0 right-0 w-10 z-10 bg-gradient-to-l from-[var(--bg-void)] to-transparent transition-opacity duration-200 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`}
-        />
-      <div
-        ref={scrollerRef}
-        onScroll={updateScrollState}
-        className="flex gap-4 overflow-x-auto pb-3 pl-2 pr-2 [scrollbar-width:thin] scroll-smooth snap-x snap-proximity"
-      >
-        {items.map((show) => {
-          const watchedKeys = new Set(show.watchedEpisodeKeys)
-          const { watched, total } = getEpisodeStats(show.seasons, watchedKeys)
-          const progressPercent = total > 0 ? (watched / total) * 100 : 0
-          const loading = loadingById[show.media.id] ?? false
-          const failed = errorById[show.media.id] ?? false
-
-          return (
-            <div
-              key={show.media.id}
-              className="group relative flex w-[260px] shrink-0 snap-start overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--glass-card)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--glass-card-hover)] hover:shadow-[var(--glow-violet)]"
-            >
-              <Link
-                href={`/show/${show.media.id}`}
-                className="flex min-w-0 flex-1 gap-3 p-3 pr-2"
-                aria-label={`Open ${show.media.title}`}
-              >
-                {/* Was a CSS `background-image`, the only poster in the app not
-                    going through next/image: no AVIF/WebP, no responsive sizes,
-                    no lazy loading, and it bypassed the remotePatterns allowlist
-                    entirely. Sits below the dashboard stat grid, so it does
-                    not preload. */}
-                <div
-                  className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-void)] shadow-md shadow-black/30 transition-transform duration-500 group-hover:scale-[1.03]"
-                  aria-hidden={Boolean(show.media.poster_url)}
-                >
-                  {show.media.poster_url ? (
-                    <Image
-                      src={show.media.poster_url}
-                      alt=""
-                      fill
-                      sizes="64px"
-                      style={{ objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-zinc-700">
-                      <Tv className="h-5 w-5" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex min-w-0 flex-1 flex-col py-0.5">
-                  <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white transition-colors group-hover:text-[var(--accent)]">
-                    {show.media.title}
-                  </h3>
-                  <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-zinc-400">
-                    <Play className="h-3 w-3 fill-[var(--accent)]/20 text-[var(--accent)]" />
-                    <span>Next up: S{show.nextUp.season_number} E{show.nextUp.episode_number}</span>
-                  </p>
-
-                  <div className="mt-auto space-y-1.5">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-[var(--teal-400)] transition-all duration-300"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                    <p className="text-[11px] font-medium text-zinc-500">
-                      {watched}/{total} watched
-                    </p>
-                    {failed && (
-                      <p className="text-[11px] font-semibold text-[var(--live)]">
-                        Could not update
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => markWatched(show)}
-                disabled={loading}
-                className="m-3 ml-0 flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-[var(--teal-tint-border)] bg-[var(--teal-tint-bg)] text-[var(--teal-300)] transition-all hover:border-[var(--teal-300)] hover:bg-[var(--teal-tint-bg)]/80 disabled:cursor-not-allowed disabled:opacity-60"
-                aria-label={`Mark ${show.media.title} season ${show.nextUp.season_number} episode ${show.nextUp.episode_number} watched`}
-                title="Mark watched"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          )
-        })}
-      </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }

@@ -1,0 +1,70 @@
+import type { ReactNode } from 'react'
+import { Skeleton } from '@/components/ui/Skeleton'
+
+// The hero's frame and the panels, at the sizes they load into, so the page
+// settles in place rather than reflowing as the server render arrives. Shared
+// by the route's loading state and the hero's own Suspense fallback, which
+// shows while TMDB fills in the next episodes. The hero frame is the panel
+// tint without blur: a placeholder is not worth a tier-1 surface.
+
+export function PanelSkeleton({ className = '', children }: { className?: string; children: ReactNode }) {
+  return (
+    <div className={`card-surface ${className}`}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 12, paddingLeft: 4 }}>
+        <div className="space-y-2">
+          <Skeleton className="h-[26px] w-36" />
+          <Skeleton className="h-[18px] w-48" />
+        </div>
+        <Skeleton className="h-11 w-24 rounded-full" />
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/** The hero frame and, below it, the "Up next" and "Coming soon" panels. */
+export function HeroSectionSkeleton() {
+  return (
+    <>
+      <div className="card-surface" style={{ padding: 8, borderRadius: 32 }}>
+        <div className="flex flex-col overflow-hidden md:h-[520px] md:flex-row" style={{ borderRadius: 24 }}>
+          <Skeleton className="h-[220px] w-full rounded-none md:hidden" />
+          <div className="glass-row flex flex-col rounded-none p-5 md:m-4 md:w-[480px] md:rounded-[var(--radius-slab)] md:p-7">
+            <Skeleton className="h-[18px] w-40" />
+            <Skeleton className="mt-6 h-20 w-72 max-w-full" />
+            <Skeleton className="mt-3.5 h-5 w-3/4" />
+            <div className="mt-6 flex items-center gap-3.5">
+              <Skeleton className="h-[52px] w-[52px] rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-[18px] w-56" />
+              </div>
+            </div>
+            <Skeleton className="mt-4 h-[92px] w-full rounded-[var(--radius-lg)]" />
+            <div className="mt-auto flex gap-2 pt-5">
+              <Skeleton className="h-12 w-44 rounded-full" />
+              <Skeleton className="h-12 w-28 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-stretch gap-6">
+        <PanelSkeleton className="flex-[1.7_1_520px]">
+          <div className="space-y-2.5">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-[110px] w-full rounded-[var(--radius-row)]" />
+            ))}
+          </div>
+        </PanelSkeleton>
+        <PanelSkeleton className="flex-[1_1_340px]">
+          <div className="space-y-3.5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-[51px] w-full" />
+            ))}
+          </div>
+        </PanelSkeleton>
+      </div>
+    </>
+  )
+}

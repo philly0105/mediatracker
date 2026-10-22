@@ -1,11 +1,18 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '../ContinueWatchingRow'
 import { ToastProvider } from '../ToastProvider'
 
-// Framer-motion's AnimatePresence keeps exiting toasts mounted while the exit
-// animation runs, which never completes in jsdom. Stub it out, and strip the
-// animation-only props so React does not warn about unknown DOM attributes.
+// The hero's rate/add buttons open the media modal and the Up next rows
+// navigate to the show page; neither needs the real provider or router here.
+const openMedia = vi.fn()
+const push = vi.fn()
+vi.mock('@/components/MediaModalProvider', () => ({
+  useMediaModal: () => ({ openMedia, closeMedia: vi.fn() }),
+}))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push, refresh: vi.fn(), back: vi.fn() }),
+}))
 
 const fetchMock = vi.fn()
 function callsFor(method: string) {
@@ -14,19 +21,20 @@ function callsFor(method: string) {
 
 // One season of three episodes. `watched` is the watchedEpisodeKeys snapshot,
 // and `nextEpisode` is the episode the rail reports as next up.
-function makeShow(watched: string[], nextEpisode: number): ContinueWatchingShow {
+function makeShow(watched: string[], nextEpisode: number, overrides: Partial<ContinueWatchingShow> = {}): ContinueWatchingShow {
   return {
     media: { id: 'm1', title: 'Breaking Bad', poster_url: null },
     seasons: [{ id: 's1', season_number: 1, episode_count: 3 }],
     watchedEpisodeKeys: watched,
     nextUp: { season_id: 's1', season_number: 1, episode_number: nextEpisode },
+    ...overrides,
   }
 }
 
-function renderRail(shows: ContinueWatchingShow[]) {
+function renderRail(shows: ContinueWatchingShow[], extra: { emptyHero?: React.ReactNode; comingSoon?: React.ReactNode } = {}) {
   render(
     <ToastProvider>
-      <ContinueWatchingRow shows={shows} />
+      <ContinueWatchingRow shows={shows} {...extra} />
     </ToastProvider>
   )
 }
@@ -36,26 +44,30 @@ describe('ContinueWatchingRow', () => {
     fetchMock.mockReset()
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) })
     global.fetch = fetchMock
+    openMedia.mockReset()
+    push.mockReset()
   })
 
-  it('renders the show title and next-up episode', () => {
+  it('renders the first show as the hero with its next-up episode', () => {
     renderRail([makeShow(['s1-1'], 2)])
 
-    expect(screen.getByText('Breaking Bad')).toBeInTheDocument()
-    expect(screen.getByText('Next up: S1 E2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Breaking Bad' })).toBeInTheDocument()
+    expect(screen.getByText('Next · S1 · E2')).toBeInTheDocument()
+    expect(screen.getByText('1 of 3 episodes watched')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Episodes' })).toHaveAttribute('href', '/show/m1')
   })
 
   it('marks the episode watched and offers an undo', async () => {
     renderRail([makeShow(['s1-1'], 2)])
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Mark Breaking Bad season 1 episode 2 watched' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Mark E2 watched' }))
     })
 
     expect(callsFor('POST')).toHaveLength(1)
     expect(JSON.parse(String(callsFor('POST')[0][1]?.body))).toEqual({ season_id: 's1', episode_number: 2 })
 
-    expect(await screen.findByText('Next up: S1 E3')).toBeInTheDocument()
+    expect(await screen.findByText('Next · S1 · E3')).toBeInTheDocument()
     expect(screen.getByText('Marked Breaking Bad S1 E2 as watched.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
   })
@@ -64,15 +76,15 @@ describe('ContinueWatchingRow', () => {
     renderRail([makeShow(['s1-1'], 2)])
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Mark Breaking Bad season 1 episode 2 watched' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Mark E2 watched' }))
     })
-    expect(await screen.findByText('Next up: S1 E3')).toBeInTheDocument()
+    expect(await screen.findByText('Next · S1 · E3')).toBeInTheDocument()
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     })
 
-    expect(await screen.findByText('Next up: S1 E2')).toBeInTheDocument()
+    expect(await screen.findByText('Next · S1 · E2')).toBeInTheDocument()
     expect(callsFor('DELETE')).toHaveLength(1)
     expect(JSON.parse(String(callsFor('DELETE')[0][1]?.body))).toEqual({ season_id: 's1', episode_number: 2 })
   })
@@ -81,96 +93,84 @@ describe('ContinueWatchingRow', () => {
     renderRail([makeShow(['s1-1', 's1-2'], 3)])
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Mark Breaking Bad season 1 episode 3 watched' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Mark E3 watched' }))
     })
 
-    // Marking the final episode removes the card from the rail entirely.
+    // Marking the final episode removes the show from the page entirely.
     expect(await screen.findByRole('button', { name: 'Undo' })).toBeInTheDocument()
-    expect(screen.queryByText('Next up: S1 E3')).not.toBeInTheDocument()
+    expect(screen.queryByText('Next · S1 · E3')).not.toBeInTheDocument()
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     })
 
-    expect(await screen.findByText('Next up: S1 E3')).toBeInTheDocument()
+    expect(await screen.findByText('Next · S1 · E3')).toBeInTheDocument()
   })
-})
 
-// jsdom does no layout: scrollWidth, clientWidth and scrollBy are all inert, and
-// ResizeObserver does not exist. Give the scroller real numbers so the arrow
-// enable/disable logic has something to read.
-describe('ContinueWatchingRow scroll affordances (F-44)', () => {
-  let resizeCallbacks: Array<() => void>
-  const metrics = { scrollLeft: 0, clientWidth: 600, scrollWidth: 1600 }
+  it('shows the hours left when the episode runtime is known, and not otherwise', () => {
+    const { unmount } = render(
+      <ToastProvider>
+        <ContinueWatchingRow shows={[makeShow(['s1-1'], 2, {
+          nextEpisode: { name: 'Cat’s in the Bag...', runtime_mins: 45, air_date: '2008-01-27', still_url: null, overview: null },
+        })]} />
+      </ToastProvider>
+    )
+    expect(screen.getByText('2 left this season · 1h 30m to go')).toBeInTheDocument()
+    expect(screen.getByText('Cat’s in the Bag...')).toBeInTheDocument()
+    expect(screen.getByText('45m · Aired Jan 27, 2008')).toBeInTheDocument()
+    unmount()
 
-  beforeEach(() => {
-    resizeCallbacks = []
-    fetchMock.mockReset()
-    global.fetch = fetchMock as unknown as typeof fetch
+    renderRail([makeShow(['s1-1'], 2)])
+    expect(screen.getByText('2 left this season')).toBeInTheDocument()
+    expect(screen.getByText('Episode 2')).toBeInTheDocument()
+  })
 
-    class FakeResizeObserver {
-      constructor(private cb: () => void) {}
-      observe() { resizeCallbacks.push(this.cb); this.cb() }
-      disconnect() {}
-      unobserve() {}
+  it('opens the media modal from the rate and add-to-list buttons only when the TMDB id is known', () => {
+    const { unmount } = render(
+      <ToastProvider>
+        <ContinueWatchingRow shows={[makeShow(['s1-1'], 2)]} />
+      </ToastProvider>
+    )
+    expect(screen.queryByRole('button', { name: 'Rate Breaking Bad' })).not.toBeInTheDocument()
+    unmount()
+
+    renderRail([makeShow(['s1-1'], 2, { media: { id: 'm1', title: 'Breaking Bad', poster_url: null, tmdb_id: 1396 } })])
+    fireEvent.click(screen.getByRole('button', { name: 'Rate Breaking Bad' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Breaking Bad to a list' }))
+    expect(openMedia).toHaveBeenCalledTimes(2)
+    expect(openMedia.mock.calls[0][0]).toMatchObject({ tmdb_id: 1396, type: 'show', title: 'Breaking Bad' })
+  })
+
+  it('lists the remaining shows under Up next, each with its own check', async () => {
+    const second: ContinueWatchingShow = {
+      media: { id: 'm2', title: 'Better Call Saul', poster_url: null },
+      seasons: [{ id: 's2', season_number: 1, episode_count: 4 }],
+      watchedEpisodeKeys: ['s2-1'],
+      nextUp: { season_id: 's2', season_number: 1, episode_number: 2 },
+      nextEpisode: { name: 'Mijo', runtime_mins: 47, air_date: '2015-02-09', still_url: null, overview: null },
     }
-    vi.stubGlobal('ResizeObserver', FakeResizeObserver)
+    renderRail([makeShow(['s1-1'], 2), second])
 
-    for (const key of ['clientWidth', 'scrollWidth'] as const) {
-      vi.spyOn(HTMLElement.prototype, key, 'get').mockImplementation(function (this: HTMLElement) {
-        return this.className.includes('overflow-x-auto') ? metrics[key] : 0
-      })
-    }
-    vi.spyOn(HTMLElement.prototype, 'scrollLeft', 'get').mockImplementation(function (this: HTMLElement) {
-      return this.className.includes('overflow-x-auto') ? metrics.scrollLeft : 0
+    expect(screen.getByRole('heading', { name: 'Up next' })).toBeInTheDocument()
+    expect(screen.getByText('1 more show in progress')).toBeInTheDocument()
+    expect(screen.getByText('“Mijo”')).toBeInTheDocument()
+    expect(screen.getByText('S1 · E2 · 47m')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Mark Better Call Saul season 1 episode 2 watched' }))
     })
-    // scrollBy is not implemented in jsdom; move the fake offset and re-run the
-    // observer callbacks the way a real scroll event would.
-    HTMLElement.prototype.scrollBy = function (...args: [ScrollToOptions?] | [number, number]) {
-      const left = typeof args[0] === 'number' ? args[0] : args[0]?.left ?? 0
-      metrics.scrollLeft = Math.max(
-        0,
-        Math.min(metrics.scrollWidth - metrics.clientWidth, metrics.scrollLeft + left)
-      )
-      for (const cb of resizeCallbacks) cb()
-    }
+
+    expect(JSON.parse(String(callsFor('POST')[0][1]?.body))).toEqual({ season_id: 's2', episode_number: 2 })
+    expect(await screen.findByText('S1 · E3')).toBeInTheDocument()
+    // The hero was untouched.
+    expect(screen.getByText('Next · S1 · E2')).toBeInTheDocument()
   })
 
-  afterEach(() => {
-    // stubGlobal is not undone by restoreAllMocks, and a leaked ResizeObserver
-    // is exactly the kind of cross-file bleed F-45 documents.
-    vi.unstubAllGlobals()
-    vi.restoreAllMocks()
-    metrics.scrollLeft = 0
-  })
+  it('renders the empty hero and the coming-soon panel when nothing is in progress', () => {
+    renderRail([], { emptyHero: <div>Pick something to watch</div>, comingSoon: <div>Coming soon panel</div> })
 
-  it('starts pinned left: only the right arrow is live', () => {
-    renderRail([makeShow([], 1)])
-
-    expect(screen.getByLabelText('Scroll left')).toBeDisabled()
-    expect(screen.getByLabelText('Scroll right')).toBeEnabled()
-  })
-
-  it('enables the left arrow once scrolled, and disables the right at the end', () => {
-    renderRail([makeShow([], 1)])
-
-    act(() => { fireEvent.click(screen.getByLabelText('Scroll right')) })
-    expect(screen.getByLabelText('Scroll left')).toBeEnabled()
-
-    // Far enough to hit the end whatever the step size works out to.
-    act(() => {
-      for (let i = 0; i < 5; i++) fireEvent.click(screen.getByLabelText('Scroll right'))
-    })
-    expect(screen.getByLabelText('Scroll right')).toBeDisabled()
-    expect(screen.getByLabelText('Scroll left')).toBeEnabled()
-  })
-
-  it('offers no arrows when everything already fits', () => {
-    metrics.scrollWidth = metrics.clientWidth
-    renderRail([makeShow([], 1)])
-
-    expect(screen.getByLabelText('Scroll left')).toBeDisabled()
-    expect(screen.getByLabelText('Scroll right')).toBeDisabled()
-    metrics.scrollWidth = 1600
+    expect(screen.getByText('Pick something to watch')).toBeInTheDocument()
+    expect(screen.getByText('Coming soon panel')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Up next' })).not.toBeInTheDocument()
   })
 })

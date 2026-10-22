@@ -1,36 +1,43 @@
 import { Skeleton } from '@/components/ui/Skeleton'
+import { HeroSectionSkeleton, PanelSkeleton } from '@/components/home/HomeSkeletons'
 
-// The dashboard runs several DB reads on the server, so without a loading state
-// it would block behind a blank screen. This mirrors the page's layout (header,
-// bento grid, recently-watched posters). The TMDB "upcoming releases" call has
-// its own Suspense boundary inside the grid and no longer gates this.
 export default function DashboardLoading() {
   return (
-    <div className="space-y-12 animate-pulse">
-      {/* Header */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between pb-2">
-        <div className="space-y-3">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-8 w-56" />
-          <Skeleton className="h-4 w-80 max-w-full" />
+    <div role="status" aria-busy="true" className="space-y-6">
+      <span className="sr-only">Loading your dashboard...</span>
+      <div aria-hidden="true" className="space-y-6">
+        {/* Header */}
+        <div className="flex items-start justify-between" style={{ padding: '4px 0 0 4px' }}>
+          <div className="space-y-2">
+            <Skeleton className="h-[18px] w-44" />
+            <Skeleton className="h-9 w-72 max-w-full" />
+          </div>
+          <div className="hidden md:flex items-center gap-3">
+            <Skeleton className="h-11 w-36 rounded-full" />
+            <Skeleton className="h-11 w-11 rounded-full" />
+          </div>
         </div>
-        <Skeleton className="h-11 w-full md:w-96" />
-      </div>
 
-      {/* Bento grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Skeleton className="h-32 rounded-[var(--radius-2xl)]" />
-        <Skeleton className="h-32 rounded-[var(--radius-2xl)]" />
-        <Skeleton className="h-72 md:col-span-2 rounded-[var(--radius-2xl)]" />
-      </div>
+        {/* Hero, Up next + Coming soon */}
+        <HeroSectionSkeleton />
 
-      {/* Recently watched */}
-      <div className="space-y-5">
-        <Skeleton className="h-7 w-44" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
-          ))}
+        {/* Recently watched */}
+        <PanelSkeleton>
+          <div className="grid grid-flow-col auto-cols-[minmax(118px,1fr)] gap-4 overflow-hidden">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
+            ))}
+          </div>
+        </PanelSkeleton>
+
+        {/* Stats + Because you watched */}
+        <div className="flex flex-wrap items-stretch gap-6">
+          <PanelSkeleton className="flex-[1.7_1_520px]">
+            <Skeleton className="h-[200px] w-full" />
+          </PanelSkeleton>
+          <div className="card-surface flex-[1_1_340px]" style={{ padding: 8, borderRadius: 'var(--radius-2xl)' }}>
+            <Skeleton className="h-[268px] w-full rounded-[20px]" />
+          </div>
         </div>
       </div>
     </div>

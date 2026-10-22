@@ -229,16 +229,20 @@ alter table media add column if not exists logo_url text;
 ## Task 8: Home dashboard
 **Files:** `app/(app)/page.tsx`, `components/{ContinueWatchingRow,DashboardUpcoming,DashboardUpcomingWidget,DashboardRecentCards,DashboardSearchBar}.tsx`, `app/(app)/loading.tsx`
 
-- [ ] Rebuild to match `reference/home.html` section by section, from the data the page already loads:
+- [x] Rebuild to match `reference/home.html` section by section, from the data the page already loads:
   1. Header: date eyebrow + "Good evening, {first name}" (pick the greeting from the hour) + a "Log a watch" glass pill and avatar on the right.
   2. Hero for the first continue-watching show: a glass frame (radius 28, hero-frame shadow) around the sharp backdrop (`backdrop_url`, `object-position` set so faces clear the slab). A `.glass-slab` on the left with logo (`logo_url`, falling back to the title in 44px/650 text), tagline or overview line, meta chips, `ProgressRing` + "6 of 10 episodes watched / 4 left this season · 3h 42m to go", the next-episode card (still + "Next · S2 · E7" in accent + name + runtime · air date) and actions (primary "Mark E7 watched", secondary "Episodes", icon Rate and Add to list). The `<AmbientBackdrop>` uses the same show.
   3. A two-column row: the "Up next" panel (`SectionHeader` + `MediaRow`s for the remaining shows with stills, platform, `SegmentedProgress` and a check button) and the "Coming soon" panel (DateStack list from the upcoming data, bookmark state).
   4. A "Recently watched" panel holding a horizontal `PosterCard` rail (scrolls inside the panel, no blur per card), with half-star ratings, dates and a Rewatch chip.
   5. "2026 so far": the stats panel (numerals + a recharts bar chart of hours per month, current month in accent) beside the "Because you watched X" card (recommendation backdrop, logo, meta, CTA).
-- [ ] Empty states: no shows in progress → the hero becomes a "Pick something to watch" panel using the most recent watch's art; no upcoming → a quiet line in the panel.
-- [ ] `loading.tsx`: skeletons in the same layout.
-- [ ] Compare against `screenshots/home-desktop-top.jpg` and `home-mobile.jpg` at 1440 and 390, and fix the differences.
-- [ ] Verify, then commit: `style(home): spatial-glass dashboard`
+  - The data the hero and cards need landed first in its own commit: TMDB tagline and US certification, recommendation backdrops, hours per month (`computeYearlyHours`), server-side recommendations (`lib/recommendations.ts`) and next-episode details (`lib/nextEpisode.ts`).
+  - The hero backdrop is now the page's one preloaded image. The Recently watched rail preloads its first poster only when the hero has no art.
+  - Rate and Add to list open the existing media modal. The TMDB-backed hero streams in through Suspense, so the header and the rail don't wait for TMDB.
+  - Until `AuthUser` carries a display name, the greeting's first name comes from the email's local part.
+- [x] Empty states: no shows in progress → the hero becomes a "Pick something to watch" panel using the most recent watch's art; no upcoming → a quiet line in the panel.
+- [x] `loading.tsx`: skeletons in the same layout.
+- [x] Compare against `screenshots/home-desktop-top.jpg` and `home-mobile.jpg` at 1440 and 390, and fix the differences.
+- [x] Verify, then commit: `style(home): spatial-glass dashboard`
 
 ## Task 9: Title experience
 **Files:** `app/(app)/show/[id]/page.tsx`, `components/{ShowDetailClient,MediaInfoModal,EpisodeTracker,EditEntryModal,SimilarModal,MediaModalStack,TonightPickModal}.tsx`, `app/(app)/person/[name]/page.tsx`

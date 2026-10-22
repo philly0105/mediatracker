@@ -1,19 +1,36 @@
 'use client'
-import { Search, ChevronRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
+import { Plus } from 'lucide-react'
 import { openSearchOverlay } from '@/lib/searchOverlayBus'
 import { Kbd } from '@/components/ui/Kbd'
 
+/**
+ * The header's "Log a watch" pill. It opens the same ⌘K search overlay the
+ * old search bar did; the keyboard hint stays so the shortcut is still
+ * discoverable. A flat fill rather than a blurred one: a button is not a
+ * tier-1 surface, and the pill sits over the ambient layer, which is already
+ * blurred.
+ */
 export default function DashboardSearchBar() {
   return (
     <button
       type="button"
       onClick={openSearchOverlay}
-      className="w-full max-w-xl h-11 px-5 flex items-center gap-3 rounded-full bg-[var(--surface-shell)]/80 border border-[var(--border-default)] hover:border-[var(--border-strong)] transition-all text-left"
+      className="inline-flex items-center gap-2 rounded-full bg-[var(--glass-fill-selected)] text-[var(--text-primary)] transition-colors hover:bg-[var(--btn-ghost-bg-hover)]"
+      style={{
+        height: 44,
+        padding: '0 12px 0 14px',
+        boxShadow: 'var(--glass-btn-edge)',
+        fontSize: 'var(--text-base)',
+        lineHeight: '20px',
+        fontWeight: 'var(--weight-semibold)' as CSSProperties['fontWeight'],
+        letterSpacing: 'var(--tracking-text)',
+        whiteSpace: 'nowrap',
+      }}
     >
-      <Search className="w-5 h-5 text-zinc-500" />
-      <span className="flex-1 text-sm text-zinc-500 truncate">Search and add a title</span>
-      <Kbd keys="K" className="hidden md:inline-flex items-center gap-0.5 text-[10px] font-semibold text-zinc-500 border border-white/10 rounded px-1.5 py-0.5" />
-      <ChevronRight className="w-4 h-4 text-zinc-500 md:hidden" aria-hidden="true" />
+      <Plus size={18} strokeWidth={1.8} aria-hidden="true" />
+      Log a watch
+      <Kbd keys="K" />
     </button>
   )
 }

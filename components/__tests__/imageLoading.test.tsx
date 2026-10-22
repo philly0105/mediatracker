@@ -4,6 +4,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import DashboardRecentCards from '../DashboardRecentCards'
 import ContinueWatchingRow, { type ContinueWatchingShow } from '../ContinueWatchingRow'
+import EmptyHero from '../home/EmptyHero'
 import { MultiSelectProvider } from '../MultiSelectProvider'
 import { ToastProvider } from '../ToastProvider'
 import type { WatchEntry, Media } from '@/types'
@@ -110,7 +111,7 @@ function makeShow(id: string, title: string, posterUrl: string): ContinueWatchin
 }
 
 describe('image loading policy (Next.js 16)', () => {
-  it('preloads exactly one poster among recent dashboard cards', () => {
+  it('preloads the first recent poster only when the page asks it to', () => {
     const entries = [
       makeWatchEntry('1', 'Movie 1', 'https://image.tmdb.org/t/p/w500/1.jpg'),
       makeWatchEntry('2', 'Movie 2', 'https://image.tmdb.org/t/p/w500/2.jpg'),
@@ -119,10 +120,25 @@ describe('image loading policy (Next.js 16)', () => {
       makeWatchEntry('5', 'Movie 5', 'https://image.tmdb.org/t/p/w500/5.jpg'),
     ]
 
-    const { container } = render(
+    // Default: the hero backdrop above the rail is the LCP image, so the rail
+    // preloads nothing.
+    const quiet = render(
       <ToastProvider>
         <MultiSelectProvider>
           <DashboardRecentCards entries={entries} />
+        </MultiSelectProvider>
+      </ToastProvider>
+    )
+    const quietImages = Array.from(quiet.container.querySelectorAll('img'))
+    expect(quietImages).toHaveLength(5)
+    expect(quietImages.filter((img) => img.getAttribute('data-preload') === 'true')).toHaveLength(0)
+    quiet.unmount()
+
+    // No hero art on the page: the first poster takes the one preload slot.
+    const { container } = render(
+      <ToastProvider>
+        <MultiSelectProvider>
+          <DashboardRecentCards entries={entries} preloadFirst />
         </MultiSelectProvider>
       </ToastProvider>
     )
@@ -143,7 +159,7 @@ describe('image loading policy (Next.js 16)', () => {
     }
   })
 
-  it('does not preload any Continue Watching posters and sets 64px sizes', () => {
+  it('does not preload any Up next posters and leaves them at their fixed 60x90', () => {
     const shows = [
       makeShow('s1', 'Show 1', 'https://image.tmdb.org/t/p/w500/s1.jpg'),
       makeShow('s2', 'Show 2', 'https://image.tmdb.org/t/p/w500/s2.jpg'),
@@ -156,15 +172,55 @@ describe('image loading policy (Next.js 16)', () => {
       </ToastProvider>
     )
 
+    // The first show is the hero, which has no backdrop here, so only the two
+    // Up next rows carry an image.
     const images = Array.from(container.querySelectorAll('img'))
-    expect(images).toHaveLength(3)
+    expect(images).toHaveLength(2)
 
     const preloaded = images.filter((img) => img.getAttribute('data-preload') === 'true')
     expect(preloaded).toHaveLength(0)
 
     for (const img of images) {
-      expect(img.getAttribute('data-sizes')).toBe('64px')
+      expect(img.getAttribute('data-sizes')).toBeNull()
+      expect(img.getAttribute('width')).toBe('60')
+      expect(img.getAttribute('height')).toBe('90')
     }
+  })
+
+  it('preloads the hero backdrop, and nothing else, when the first show has art', () => {
+    const shows = [
+      { ...makeShow('s1', 'Show 1', 'https://image.tmdb.org/t/p/w500/s1.jpg'), art: { backdrop_url: 'https://image.tmdb.org/t/p/w1280/s1-backdrop.jpg', logo_url: null } },
+      makeShow('s2', 'Show 2', 'https://image.tmdb.org/t/p/w500/s2.jpg'),
+    ]
+
+    const { container } = render(
+      <ToastProvider>
+        <ContinueWatchingRow shows={shows} />
+      </ToastProvider>
+    )
+
+    const images = Array.from(container.querySelectorAll('img'))
+    const preloaded = images.filter((img) => img.getAttribute('data-preload') === 'true')
+    expect(preloaded).toHaveLength(1)
+    expect(preloaded[0].getAttribute('src')).toContain('s1-backdrop')
+    expect(preloaded[0].getAttribute('data-fill')).toBe('true')
+    expect(preloaded[0].getAttribute('alt')).toBe('')
+  })
+
+  it('preloads the empty hero art only when the page asks it to', () => {
+    const recent = { title: 'Sinners', backdrop_url: 'https://image.tmdb.org/t/p/w1280/sinners-backdrop.jpg' }
+
+    // A late TMDB fallback: the rail already holds the page's one preload.
+    const quiet = render(<EmptyHero recent={recent} />)
+    expect(quiet.container.querySelector('img')?.getAttribute('data-preload')).toBe('false')
+    quiet.unmount()
+
+    // Stored art: the hero is the LCP image, and the rail preloads nothing.
+    const { container } = render(<EmptyHero recent={recent} preload />)
+    const art = container.querySelector('img')
+    expect(art?.getAttribute('data-preload')).toBe('true')
+    expect(art?.getAttribute('data-fill')).toBe('true')
+    expect(art?.getAttribute('alt')).toBe('')
   })
 
   it('rejects deprecated Image priority prop across all non-test source files', () => {

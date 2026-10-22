@@ -1,105 +1,194 @@
 'use client'
 import Image from 'next/image'
-
+import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, Film, Tv, ArrowRight } from 'lucide-react'
+import { Bookmark, Film, Tv } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useMediaModal } from '@/components/MediaModalProvider'
-import Link from 'next/link'
-import { formatDateLabel } from '@/lib/formatDate'
+import { useMediaActions } from '@/lib/useMediaActions'
+import { useToast } from '@/components/ToastProvider'
+import { mediaKey } from '@/lib/mediaKey'
 import type { UpcomingRelease } from '@/lib/tmdb'
+import { DateStack } from '@/components/ui/DateStack'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { formatCountdown } from '@/components/home/format'
+import { parseTimeKey, timeKey } from '@/components/home/greeting'
 
 interface Props {
   releases: UpcomingRelease[]
+  /** `type:tmdbId` keys of everything on the watchlist, for the bookmark state. */
+  watchlistKeys?: string[]
+  /**
+   * The server's clock as a greeting timeKey, for the countdowns' first
+   * render. Pass it from the server component that renders this; without it
+   * the hydration snapshot is the client's clock.
+   */
+  today?: string
 }
 
-export default function DashboardUpcomingWidget({ releases }: Props) {
+// Enough rows to stand as tall as the "Up next" panel beside this one.
+const MAX_ROWS = 7
+const semibold = 'var(--weight-semibold)' as CSSProperties['fontWeight']
+
+// No subscription, just the server/client snapshot split (as HomeGreeting):
+// the countdowns depend on the day, and the server, on UTC, can be a day
+// ahead of or behind the reader around midnight. The server's key is the
+// hydration snapshot and the client's clock takes over in the first commit,
+// so the text is right for the reader without a hydration mismatch.
+const noSubscribe = () => () => {}
+const clientKey = () => timeKey(new Date())
+
+/**
+ * The reference's "Coming soon" list: date stack, poster, title and countdown,
+ * with a bookmark that adds the title to (or removes it from) the watchlist
+ * in place. The row itself still opens the media modal as it always has.
+ */
+export default function DashboardUpcomingWidget({ releases, watchlistKeys = [], today: serverToday }: Props) {
   const router = useRouter()
-
   const { openMedia, closeMedia } = useMediaModal()
+  const { toast } = useToast()
+  // Same bucket the calendar adds to.
+  const { addToWatchlist, removeFromWatchlist } = useMediaActions({ priority: 'must_watch' })
 
-  // Take the first 3 releases to fit the bento grid neatly
-  const upcoming = releases.slice(0, 3)
+  const [saved, setSaved] = useState(() => new Set(watchlistKeys))
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const upcoming = releases.slice(0, MAX_ROWS)
+  const savedCount = upcoming.filter((item) => saved.has(mediaKey(item.type, item.tmdb_id))).length
+  const today = parseTimeKey(useSyncExternalStore(noSubscribe, clientKey, () => serverToday ?? clientKey())).date
+
+  async function toggleBookmark(item: UpcomingRelease) {
+    const key = mediaKey(item.type, item.tmdb_id)
+    const wasSaved = saved.has(key)
+    // Optimistic: the bookmark fills at once and reverts if the write fails.
+    setSaved((prev) => {
+      const next = new Set(prev)
+      if (wasSaved) next.delete(key)
+      else next.add(key)
+      return next
+    })
+    setBusy(key)
+    try {
+      if (wasSaved) await removeFromWatchlist(item.tmdb_id, item.type)
+      else await addToWatchlist(item.tmdb_id, item.type)
+      router.refresh()
+    } catch (err) {
+      setSaved((prev) => {
+        const next = new Set(prev)
+        if (wasSaved) next.add(key)
+        else next.delete(key)
+        return next
+      })
+      toast(err instanceof Error ? err.message : 'Could not update your watchlist.', { tone: 'error' })
+    } finally {
+      setBusy(null)
+    }
+  }
 
   return (
-    <div className="flex flex-col justify-between h-full p-6 relative group overflow-hidden">
-      <div>
-        {/* Widget Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg border border-[var(--accent)]/30 flex items-center justify-center bg-[var(--accent)]/10 text-[var(--accent)]">
-              <Calendar className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Coming Soon</span>
-              <h3 className="text-base font-bold text-white leading-tight">Release Calendar</h3>
-            </div>
-          </div>
-          <Link
-            href="/calendar"
-            className="text-[11px] font-bold text-zinc-400 hover:text-white flex items-center gap-0.5 transition-colors"
-          >
-            <span>Full view</span>
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-        </div>
+    <>
+      <SectionHeader
+        id="coming-soon-title"
+        title="Coming soon"
+        sub={
+          // Wraps as whole phrases when the panel is narrow (one line at 390
+          // is a near thing), never mid-phrase, and the dot stays with the
+          // second phrase so no line ends on it.
+          <span className="flex flex-wrap items-center gap-x-1">
+            <span>In theaters</span>
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <span aria-hidden="true">·</span>
+              <Bookmark size={12} strokeWidth={1.8} fill="currentColor" aria-hidden="true" style={{ color: 'var(--accent)' }} />
+              <span>{savedCount} on your watchlist</span>
+            </span>
+          </span>
+        }
+        action={{ label: 'Calendar', href: '/calendar' }}
+      />
 
-        {/* Releases List */}
-        {upcoming.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <span className="text-sm text-zinc-500 font-medium">No upcoming releases found.</span>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {upcoming.map((item) => {
-              const resultItem: TmdbSearchResult = {
-                tmdb_id: item.tmdb_id,
-                type: item.type,
-                title: item.title,
-                overview: item.overview || '',
-                poster_url: item.poster_url,
-                release_year: item.release_year,
-                genres: item.genres,
-                vote_average: item.vote_average,
-              }
+      {upcoming.length === 0 ? (
+        <p style={{ margin: 0, padding: '8px 4px', fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-muted)' }}>
+          No upcoming releases found.
+        </p>
+      ) : (
+        <ul className="flex flex-col" style={{ gap: 14, margin: 0, padding: 0, listStyle: 'none' }}>
+          {upcoming.map((item, index) => {
+            const key = mediaKey(item.type, item.tmdb_id)
+            const isSaved = saved.has(key)
+            // A second title on the same day shares the first one's date
+            // stack: a blank column and a tighter gap, as in the reference.
+            const sameDay = index > 0 && upcoming[index - 1].full_release_date === item.full_release_date
+            const resultItem: TmdbSearchResult = {
+              tmdb_id: item.tmdb_id,
+              type: item.type,
+              title: item.title,
+              overview: item.overview || '',
+              poster_url: item.poster_url,
+              release_year: item.release_year,
+              genres: item.genres,
+              vote_average: item.vote_average,
+            }
 
-              return (
+            return (
+              <li key={key} className="flex items-center" style={{ gap: 12, marginTop: sameDay ? -9 : 0 }}>
+                {sameDay ? <span aria-hidden="true" style={{ flex: 'none', width: 40 }} /> : <DateStack date={item.full_release_date} />}
                 <button
-                  key={`${item.type}-${item.tmdb_id}`}
+                  type="button"
                   onClick={() => openMedia(resultItem, {
                     // Matches the old onDone, which fired for both actions.
                     onChanged: () => { closeMedia(); router.refresh() },
                   })}
-                  className="w-full flex items-center gap-3 p-2 rounded-lg bg-[var(--bg-void)]/60 border border-white/5 hover:border-[var(--border-strong)] hover:bg-white/5 transition-all text-left group/item"
+                  className="flex min-w-0 flex-1 items-center rounded-[var(--radius-sm)] text-left"
+                  style={{ gap: 12, padding: 0, background: 'transparent', color: 'inherit' }}
                 >
                   {item.poster_url ? (
                     <Image
                       src={item.poster_url}
                       alt=""
-                      width={32}
-                      height={48}
-                      className="w-8 h-12 object-cover rounded-md flex-shrink-0 border border-white/5"
+                      width={34}
+                      height={51}
+                      style={{ flex: 'none', width: 34, height: 51, objectFit: 'cover', borderRadius: 'var(--radius-xs)', boxShadow: 'var(--shadow-sm)' }}
                     />
                   ) : (
-                    <div className="w-8 h-12 rounded-md flex-shrink-0 flex items-center justify-center bg-zinc-800 border border-white/5 text-zinc-600">
-                      {item.type === 'show' ? <Tv className="w-4 h-4" /> : <Film className="w-4 h-4" />}
-                    </div>
+                    <span
+                      aria-hidden="true"
+                      className="flex items-center justify-center"
+                      style={{ flex: 'none', width: 34, height: 51, borderRadius: 'var(--radius-xs)', background: 'var(--glass-card)', color: 'var(--text-faint)' }}
+                    >
+                      {item.type === 'show' ? <Tv size={14} strokeWidth={1.8} /> : <Film size={14} strokeWidth={1.8} />}
+                    </span>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <span className="font-bold text-sm text-white group-hover/item:text-[var(--accent)] transition-colors block truncate leading-snug">
+                  <span style={{ minWidth: 0 }}>
+                    <span
+                      className="block truncate"
+                      style={{ fontSize: 'var(--text-base)', lineHeight: '18px', fontWeight: semibold, color: 'var(--text-primary)' }}
+                    >
                       {item.title}
                     </span>
-                    <span className="text-[11px] font-semibold text-zinc-400 block mt-0.5">
-                      {formatDateLabel(item.full_release_date)} · {item.type === 'show' ? 'TV' : 'Movie'}
+                    <span
+                      className="tabular block"
+                      style={{ marginTop: 2, fontSize: 'var(--text-xs)', lineHeight: '16px', color: 'var(--text-muted)' }}
+                    >
+                      {[formatCountdown(item.full_release_date, today), item.episode_label].filter(Boolean).join(' · ')}
                     </span>
-                  </div>
+                  </span>
                 </button>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-    </div>
+                <button
+                  type="button"
+                  onClick={() => toggleBookmark(item)}
+                  disabled={busy === key}
+                  aria-pressed={isSaved}
+                  aria-label={isSaved ? `On your watchlist: ${item.title}` : `Add ${item.title} to watchlist`}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-[var(--glass-fill-hover)] disabled:cursor-wait"
+                  style={{ background: 'transparent', color: isSaved ? 'var(--accent)' : 'var(--text-secondary)' }}
+                >
+                  <Bookmark size={18} strokeWidth={1.8} aria-hidden="true" fill={isSaved ? 'currentColor' : 'none'} />
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </>
   )
 }
