@@ -172,8 +172,9 @@ export default function AmbientBackdrop({ src }: { src?: string | null }) {
 ```
 - [x] In `globals.css`, add `@media (prefers-reduced-transparency: reduce) { .ambient-img { display: none } }` and `@media (prefers-reduced-motion: reduce) { .ambient-img { transition: none } }`.
 - [x] `app/layout.tsx`: replace `<div className="ambient-layer" />` with a default `<AmbientBackdrop />` (tint only, with a faint aqua radial: `radial-gradient(1200px 600px at 20% -10%, rgba(143,227,240,.10), transparent 60%)` on the tint div when `src` is empty).
-- [ ] Pages pass their featured art: Home → the first continue-watching show's backdrop; title page and modal → that title's backdrop; library-type pages → the most recently watched title. Render `<AmbientBackdrop src=… />` at the top of the page; it stacks above the default.
+- [x] Pages pass their featured art: Home → the first continue-watching show's backdrop; title page and modal → that title's backdrop; library-type pages → the most recently watched title. Render `<AmbientBackdrop src=… />` at the top of the page; it stacks above the default.
   - Library-type pages get the most recent watch from `components/RecentAmbient.tsx`, mounted in `app/(app)/layout.tsx`. Home and the title page wire theirs in Tasks 8 and 9.
+  - Wired: Home in `ContinueWatchingRow`, the title page in `ShowDetailClient`, the modal in `MediaInfoModal`, auth in `AuthShell`. Each registers with the host in the root layout rather than rendering its own layer.
 - [x] Test `toAmbientSrc` (`w1280` → `w780`, `original` → `w780`, `null` → `null`) and that the image is `aria-hidden` with `alt=""`.
 - [x] Verify, then commit: `feat: ambient backdrop layer that follows the featured title`
 
@@ -266,8 +267,8 @@ alter table media add column if not exists logo_url text;
   - The priority groups are now tabs, so the page opens on the first group that has titles.
 - [x] `SearchOverlay`: a centred `.glass-panel` (max-width 720, radius 28), input `.glass-inset` 52px, result rows `.glass-row` with poster thumbs, keyboard selection highlighted with `rgba(255,255,255,.12)` + accent ring.
 - [x] Ambient on these pages = the most recently watched title.
-- [ ] Profile `/library` scroll with 4× CPU throttle against the baseline; there must be no new long tasks.
-  - Deferred to the Task 14 performance pass.
+- [x] Profile `/library` scroll with 4× CPU throttle against the baseline; there must be no new long tasks.
+  - Done in the Task 14 performance pass. The first profile found a third long task: each page of the infinite list re-rendered every row twice (once for the new rows, once when their `SelectableOverlay`s registered with the multi-select provider), and each row's date label built a new `Intl` formatter. `formatAirDate` now shares one formatter and `MediaCard` is memoized. Three runs each: two long tasks per scroll on both builds, about 100 and 113 ms against the baseline's 160 and 130; blocking time 109–118 ms against 183–222; median frame 16.7 ms against 33.3.
 - [x] Verify, then commit: `style(library): spatial-glass grids, toolbar and search overlay`
 
 ## Task 11: Calendar and Stats
@@ -302,10 +303,17 @@ alter table media add column if not exists logo_url text;
 - [x] Verify, then commit: `docs(design-skill): describe spatial glass`
 
 ## Task 14: QA, performance and PR
-- [ ] Visual pass: every route at 1440, 1100, 900, 768 and 390. Save screenshots to `docs/designs/spatial-glass/after/` and compare with the reference and the baseline. No horizontal overflow anywhere.
-- [ ] Accessibility: keyboard-only pass through the shell, search overlay, modal stack and the episode toggles. Check contrast on the three lightest backdrops in your library (spec §5.3). Turn on reduced motion, reduced transparency and forced colours and check each.
-- [ ] Performance: Lighthouse mobile on `/` and `/library` against the baseline (no regression) and a scroll profile on `/library`.
-- [ ] Leftover grep: `rg -n "#100e09|#15120c|#1b1711|#7c9a6a|#c4805f|#d3a85c|Outfit|--orb-|ambient-layer" app components lib`, which should return nothing.
-- [ ] `npm run lint && npm run test:run && npm run build` all green.
+- [x] Visual pass: every route at 1440, 1100, 900, 768 and 390. Save screenshots to `docs/designs/spatial-glass/after/` and compare with the reference and the baseline. No horizontal overflow anywhere.
+  - Every route was audited at all five widths on the mock data, against the reference and the baseline, and what it found is fixed in `d35b953`. Horizontal overflow is 0 on every shot. `after/` holds the final 1440x900 and 390x844 full-page shots under the baseline's names; the middle widths were checked but not committed, to keep the repo small. The home shots scroll through the page first so the hours chart, which loads when it nears the viewport, is drawn.
+- [x] Accessibility: keyboard-only pass through the shell, search overlay, modal stack and the episode toggles. Check contrast on the three lightest backdrops in your library (spec §5.3). Turn on reduced motion, reduced transparency and forced colours and check each.
+  - Keyboard walks of the shell at 1440 and 390, the search overlay, the modal stack (info modal, Similar, a third title; Escape unwinds one level at a time and returns focus to the opener) and the episode toggles found no traps. The three lightest backdrops were The Brutalist, Wild Horse Nine and Dune: Part Two; text over them failed 4.5:1 until the ambient tint went from .50/.62/.84 to .70/.74/.86 and the recommendation rows got a dark base. Reduced transparency, reduced motion and forced colours (dark and light) were checked on the main routes at 1440 and 390, and what they found is fixed in `d35b953`. Lighthouse accessibility is 100 on `/` and `/library` (baseline 98 and 92).
+  - Left for a follow-up, all present on master: SearchOverlay focus restore and Tab containment (`useModal`), scroll-padding under the fixed mobile bars, the mobile top bar landmark, calendar row names, the 404 landmark, and the nested interactive elements in `RecommendationCard`.
+- [x] Performance: Lighthouse mobile on `/` and `/library` against the baseline (no regression) and a scroll profile on `/library`.
+  - Results and conditions are in `docs/designs/spatial-glass/after/lighthouse.md`; three interleaved runs per route and build, plus two earlier rounds. `/library` is level (89 against 87 in the final round, 89 against 90 and 90 against 90 before). `/` scores 87 against 94 (5 to 7 points down across the rounds), and all of the gap is the simulated LCP. The hero art paints at about 500 ms, held by React's Suspense reveal throttle after an early skeleton frame at about 200 ms. The baseline paints nothing until its Google Fonts stylesheet loads (350 to 397 ms observed), so its FCP and LCP are the same frame. FCP (1.2 s against 1.8 s), Speed Index (2.2 s against 2.3 s), CLS (0) and accessibility (100 against 98 and 92) all improved or held. This is a deviation from "no regression" on the simulated score, reported in the handback.
+  - Fixed in this pass: loading skeletons that rendered a client module (a `Card`, or the recommendations row through `RecommendationCard.tsx`), so a prefetch of those links downloaded the client chunks of the page that renders the same component, which for settings put the Supabase auth client on every page (home scripts from 264 to 195 KiB, baseline 185); the hero art in the home Suspense fallback; the rail and still `sizes`. The scroll profile is under Task 10.
+- [x] Leftover grep: `rg -n "#100e09|#15120c|#1b1711|#7c9a6a|#c4805f|#d3a85c|Outfit|--orb-|ambient-layer" app components lib`, which should return nothing.
+  - The only hits are `app/__tests__/palette.test.ts`, the guard test that fails if any of these come back.
+- [x] `npm run lint && npm run test:run && npm run build` all green.
+  - On gmk1 with the final tree: lint clean, 92 files and 753 tests passing in four runs in a row, the build and `tsc --noEmit` clean. `1ebeb76` fixed a race in the LibraryView infinite-scroll test (it fired the observer before the effect had made it), which had failed two of four full runs.
 - [ ] Push the branch and open a PR titled "Spatial Glass redesign" with before and after screenshots. Vercel builds a preview for Richard to check on his phone.
 - [ ] Hand back to Richard: preview URL, the migration and backfill status, and any deviations from the spec with the reasons.
