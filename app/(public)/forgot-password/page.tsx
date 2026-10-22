@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice } from '@/components/AuthShell'
+import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice, AuthLink } from '@/components/AuthShell'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -55,8 +54,8 @@ export default function ForgotPasswordPage() {
         </>
       )}
 
-      <p className="text-xs text-zinc-500 text-center">
-        <Link href="/login" className="text-zinc-300 hover:text-white transition-colors">Back to sign in</Link>
+      <p className="-my-3 text-center">
+        <AuthLink href="/login">Back to sign in</AuthLink>
       </p>
     </AuthShell>
   )

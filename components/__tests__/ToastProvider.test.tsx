@@ -52,6 +52,29 @@ describe('ToastProvider', () => {
     expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
   })
 
+  it('renders each toast on a glass panel with a decorative tone icon', () => {
+    const { toast } = renderHarness()
+
+    act(() => {
+      toast('Saved', { tone: 'success' })
+      toast('Failed', { tone: 'error' })
+    })
+
+    const status = screen.getByRole('status')
+    const alert = screen.getByRole('alert')
+    expect(status).toHaveClass('glass-panel')
+    expect(alert).toHaveClass('glass-panel')
+    // The tone icon leads the toast and is hidden from the reader: the live
+    // region already announces the message, and the tone is in role and
+    // aria-live. Checked as the first child so the dismiss button's own
+    // aria-hidden X cannot stand in for it.
+    for (const toast of [status, alert]) {
+      const icon = toast.firstElementChild
+      expect(icon?.tagName.toLowerCase()).toBe('svg')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
+
   it('auto-dismisses after durationMs', () => {
     const { trigger } = renderHarness()
     trigger()

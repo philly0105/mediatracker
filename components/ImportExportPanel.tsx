@@ -1,6 +1,6 @@
 'use client'
-import { useState, useCallback } from 'react'
-import { Download, Upload } from 'lucide-react'
+import { useState, useCallback, type CSSProperties } from 'react'
+import { Download, Upload, Check, Minus, X, Circle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
@@ -65,6 +65,31 @@ The Dark Knight,2008,movie,5,2024-01-15,One of the best films ever made,watched
 Inception,2010,movie,4.5,2024-02-20,,watched
 Breaking Bad,2008,show,,,,watchlist
 `
+
+const CARD_TITLE: CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--text-md)',
+  lineHeight: '24px',
+  fontWeight: 'var(--weight-semibold)' as CSSProperties['fontWeight'],
+  letterSpacing: 'var(--tracking-text)',
+  color: 'var(--text-primary)',
+}
+
+const META: CSSProperties = {
+  margin: '2px 0 0',
+  fontSize: 'var(--text-sm)',
+  lineHeight: '18px',
+  color: 'var(--text-secondary)',
+}
+
+// Per-row outcome: the lucide glyph, its colour, and the name a screen reader
+// gets for it (the glyph is the only status a successful row carries).
+const RESULT_STATE: Record<RowResult['state'], { icon: typeof Check; color: string; label: string }> = {
+  pending: { icon: Circle, color: 'var(--text-faint)', label: 'Pending' },
+  success: { icon: Check, color: 'var(--accent)', label: 'Imported' },
+  skipped: { icon: Minus, color: 'var(--text-muted)', label: 'Skipped' },
+  error: { icon: X, color: 'var(--danger)', label: 'Failed' },
+}
 
 export default function ImportExportPanel() {
   const [rows, setRows] = useState<ImportRow[]>([])
@@ -144,44 +169,43 @@ export default function ImportExportPanel() {
   const failed = results.filter(r => r.state === 'error').length
 
   return (
-    <div className="space-y-5">
-      {/* Export */}
-      <Card className="space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-sm font-bold text-white">Export library</h3>
-            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-              Download your watched history and watchlist as a CSV file.
-            </p>
-          </div>
-          <a
-            href="/api/export"
-            className="inline-flex items-center justify-center gap-2 rounded-sm text-sm font-semibold text-zinc-300 transition-all hover:bg-white/10 shrink-0"
-            style={{ padding: '7px 14px', fontSize: 'var(--text-sm)', background: 'var(--btn-ghost-bg)', border: '1px solid var(--border-default)' }}
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export CSV
-          </a>
+    <div className="space-y-3">
+      {/* Export. Rows inside a panel are the flat tier-2 fill; the hover
+          brightening is for clickable rows, and these two are not. */}
+      <Card variant="row" className="hover:bg-[var(--glass-card)] flex items-start justify-between gap-4 flex-wrap" style={{ padding: 16 }}>
+        <div className="min-w-0">
+          <h3 style={CARD_TITLE}>Export library</h3>
+          <p style={META}>
+            Download your watched history and watchlist as a CSV file.
+          </p>
         </div>
+        <a
+          href="/api/export"
+          className="btn glass-btn inline-flex items-center justify-center gap-2 shrink-0 text-[var(--text-primary)]"
+          style={{ padding: '0 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' as CSSProperties['fontWeight'] }}
+        >
+          <Download className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+          Export CSV
+        </a>
       </Card>
 
       {/* Import */}
-      <Card className="space-y-5">
+      <Card variant="row" className="hover:bg-[var(--glass-card)] space-y-5" style={{ padding: 16 }}>
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="text-sm font-bold text-white">Import from CSV</h3>
-            <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+          <div className="min-w-0">
+            <h3 style={CARD_TITLE}>Import from CSV</h3>
+            <p style={META}>
               Bulk-add watched entries or watchlist items from a CSV file.
             </p>
           </div>
-          <Button onClick={downloadTemplate} variant="ghost" size="sm">
+          <Button onClick={downloadTemplate} variant="secondary" size="sm">
             Download template
           </Button>
         </div>
 
         {/* Column guide */}
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">CSV columns</p>
+          <p style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', fontWeight: 'var(--weight-medium)' as CSSProperties['fontWeight'], color: 'var(--text-muted)' }}>CSV columns</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
             {[
               { col: 'title', note: 'required' },
@@ -194,7 +218,7 @@ export default function ImportExportPanel() {
             ].map(({ col, note }) => (
               <div key={col} className="flex gap-2 items-baseline">
                 <code className="text-xs text-[var(--accent)] font-mono">{col}</code>
-                <span className="text-xs text-zinc-500">{note}</span>
+                <span className="text-xs text-[var(--text-muted)]">{note}</span>
               </div>
             ))}
           </div>
@@ -221,54 +245,57 @@ export default function ImportExportPanel() {
             focusable file input (sr-only, not `hidden`, which would drop it out
             of the tab order and the a11y tree), so the picker opens from the
             keyboard as well as the pointer. No onClick — clicking the label
-            already activates the input, and both would open two pickers. */}
+            already activates the input, and both would open two pickers. The
+            global outline cannot land on the sr-only input, so the well keeps
+            an outer focus-within ring of its own (nothing clips the label, so
+            the ring stays visible). */}
         <label
           onDragOver={e => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) loadFile(f) }}
-          className="relative block rounded-lg p-8 text-center cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-[var(--accent)]"
+          className="glass-inset relative block p-8 text-center cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-[var(--border-focus)]"
           style={{
-            background: dragging ? 'rgba(124, 154, 106, 0.08)' : 'var(--btn-ghost-bg)',
+            background: dragging ? 'var(--green-tint-bg)' : undefined,
             border: `1px dashed ${dragging ? 'var(--accent)' : 'var(--border-default)'}`,
           }}>
           <input type="file" accept=".csv" className="sr-only"
             onChange={e => { const f = e.target.files?.[0]; if (f) loadFile(f) }} />
-          <Upload className="w-5 h-5 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-          <p className="text-zinc-400 text-sm">
+          <Upload className="w-5 h-5 mx-auto mb-2" strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+          <p className="text-sm text-[var(--text-secondary)]">
             {rows.length > 0
-              ? <span className="text-white font-medium">{rows.length} rows loaded — click or drop to replace</span>
-              : <>Drop your CSV here or <span className="text-white underline underline-offset-2">click to browse</span></>}
+              ? <span className="text-[var(--text-primary)] font-medium">{rows.length} rows loaded — click or drop to replace</span>
+              : <>Drop your CSV here or <span className="text-[var(--text-primary)] underline underline-offset-2">click to browse</span></>}
           </p>
         </label>
 
         {/* Preview table */}
         {rows.length > 0 && results.length === 0 && (
-          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
+          <div className="glass-inset overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border-divider)' }}>
                     {['title', 'year', 'type', 'rating', 'date', 'status'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs text-zinc-500 uppercase tracking-wider font-semibold">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left text-xs text-[var(--text-muted)] font-medium">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.slice(0, 10).map((row, i) => (
                     <tr key={i} style={{ borderBottom: i < Math.min(rows.length, 10) - 1 ? '1px solid var(--border-faint)' : 'none' }}>
-                      <td className="px-4 py-2.5 text-white font-medium truncate max-w-[180px]">{row.title}</td>
-                      <td className="px-4 py-2.5 text-zinc-400">{row.year || '—'}</td>
-                      <td className="px-4 py-2.5 text-zinc-400">{row.type || 'movie'}</td>
-                      <td className="px-4 py-2.5 text-zinc-400">{row.rating || '—'}</td>
-                      <td className="px-4 py-2.5 text-zinc-400">{row.date || '—'}</td>
-                      <td className="px-4 py-2.5 text-zinc-400">{row.status || 'watched'}</td>
+                      <td className="px-4 py-2.5 text-[var(--text-primary)] font-medium truncate max-w-[180px]">{row.title}</td>
+                      <td className="px-4 py-2.5 text-[var(--text-secondary)]">{row.year || '—'}</td>
+                      <td className="px-4 py-2.5 text-[var(--text-secondary)]">{row.type || 'movie'}</td>
+                      <td className="px-4 py-2.5 text-[var(--text-secondary)]">{row.rating || '—'}</td>
+                      <td className="px-4 py-2.5 text-[var(--text-secondary)]">{row.date || '—'}</td>
+                      <td className="px-4 py-2.5 text-[var(--text-secondary)]">{row.status || 'watched'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {rows.length > 10 && (
-              <p className="px-4 py-2 text-xs text-zinc-500" style={{ borderTop: '1px solid var(--border-faint)' }}>
+              <p className="px-4 py-2 text-xs text-[var(--text-muted)]" style={{ borderTop: '1px solid var(--border-faint)' }}>
                 +{rows.length - 10} more rows
               </p>
             )}
@@ -284,7 +311,7 @@ export default function ImportExportPanel() {
                 : `${mode === 'watchlist' ? 'Add to watchlist' : 'Import'} ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`}
             </Button>
             {importing && (
-              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-soft)' }}>
+              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--progress-track)' }}>
                 <div className="h-full rounded-full transition-all" style={{ width: `${(completed / rows.length) * 100}%`, background: 'var(--accent)' }} />
               </div>
             )}
@@ -295,39 +322,39 @@ export default function ImportExportPanel() {
         {results.length > 0 && (
           <div className="space-y-3">
             {done && (
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-white font-medium">{succeeded} imported</span>
-                {skipped > 0 && <span className="text-zinc-500">{skipped} already existed</span>}
-                {failed > 0 && <span className="text-rust-400">{failed} failed</span>}
+              <div className="flex items-center gap-4 text-sm tabular">
+                <span className="text-[var(--text-primary)] font-medium">{succeeded} imported</span>
+                {skipped > 0 && <span className="text-[var(--text-muted)]">{skipped} already existed</span>}
+                {failed > 0 && <span style={{ color: 'var(--danger)' }}>{failed} failed</span>}
               </div>
             )}
-            <div className="rounded-lg overflow-hidden space-y-px" style={{ border: '1px solid var(--border-subtle)' }}>
-              {/* The zebra stripe below was 1% cold white — so faint it never
-                  actually read as banding. --border-faint is the warm ramp's
-                  lowest step and is what the row rule already uses. */}
-              {results.map((r, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-2.5"
-                  style={{ background: i % 2 === 0 ? 'transparent' : 'var(--border-faint)', borderBottom: '1px solid var(--border-faint)' }}>
-                  <span className="text-base leading-none" style={{ color: r.state === 'success' ? 'var(--green-500)' : r.state === 'skipped' ? 'var(--zinc-500)' : r.state === 'error' ? 'var(--live)' : 'var(--zinc-700)' }}>
-                    {r.state === 'pending' ? '○' : r.state === 'success' ? '✓' : r.state === 'skipped' ? '–' : '✗'}
-                  </span>
-                  <span className="flex-1 text-sm" style={{ color: r.state === 'error' ? 'var(--live)' : r.state === 'success' ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-                    {r.title}
-                  </span>
-                  {r.state === 'skipped' && (
-                    <span className="text-xs text-zinc-500">already in library</span>
-                  )}
-                  {r.state === 'success' && r.matched && r.matched !== r.title && (
-                    <span className="text-xs text-zinc-500">matched: {r.matched}</span>
-                  )}
-                  {r.state === 'error' && (
-                    <span className="text-xs text-rust-500">{r.error}</span>
-                  )}
-                  {r.state === 'pending' && importing && (
-                    <span className="text-xs text-zinc-500">waiting</span>
-                  )}
-                </div>
-              ))}
+            <div className="glass-inset overflow-hidden">
+              {results.map((r, i) => {
+                const { icon: Icon, color, label } = RESULT_STATE[r.state]
+                return (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5"
+                    style={{ borderBottom: i < results.length - 1 ? '1px solid var(--border-faint)' : 'none' }}>
+                    <span role="img" aria-label={label} className="inline-flex shrink-0" style={{ color }}>
+                      <Icon className="w-4 h-4" strokeWidth={1.8} />
+                    </span>
+                    <span className="flex-1 text-sm" style={{ color: r.state === 'error' ? 'var(--danger)' : r.state === 'success' ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {r.title}
+                    </span>
+                    {r.state === 'skipped' && (
+                      <span className="text-xs text-[var(--text-muted)]">already in library</span>
+                    )}
+                    {r.state === 'success' && r.matched && r.matched !== r.title && (
+                      <span className="text-xs text-[var(--text-muted)]">matched: {r.matched}</span>
+                    )}
+                    {r.state === 'error' && (
+                      <span className="text-xs" style={{ color: 'var(--danger)' }}>{r.error}</span>
+                    )}
+                    {r.state === 'pending' && importing && (
+                      <span className="text-xs text-[var(--text-muted)]">waiting</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { MediaRow } from '@/components/ui/MediaRow'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Eyebrow } from '@/components/ui/Eyebrow'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { ShareFooter } from '@/components/ShareFooter'
+import { SharePosterCard, SharePosterFan } from '../../SharePosterCard'
+import AmbientBackdrop from '@/components/AmbientBackdrop'
 import { Bookmark } from 'lucide-react'
 import type { SharedWatchlistRow, Media, WatchlistPriority } from '@/types'
 
@@ -38,12 +39,19 @@ export default async function SharedWatchlistPage({ params }: { params: Promise<
   const items = typedRows.filter((r): r is SharedWatchlistRow & { media: Media; priority: WatchlistPriority } => Boolean(r.media && r.priority))
 
   return (
-    <div className="max-w-4xl">
-      <PageHeader
-        eyebrow="Shared list"
-        title="Watchlist"
-        sub={items.length === 1 ? '1 title' : `${items.length} titles`}
-      />
+    <div>
+      {/* The rows come newest first, so this is the owner's latest addition.
+          The RPC serialises the whole media row, so backdrop_url is simply
+          absent until migration 014. */}
+      <AmbientBackdrop src={items[0]?.media.backdrop_url ?? null} />
+      <div className="glass-panel glass-rim mb-6 p-6 md:p-7 [&>header]:mb-0">
+        <PageHeader
+          eyebrow="Shared list"
+          title="Watchlist"
+          sub={items.length === 1 ? '1 title' : `${items.length} titles`}
+          action={<SharePosterFan posterUrls={items.slice(0, 3).map((item) => item.media.poster_url)} />}
+        />
+      </div>
       {items.length === 0 ? (
         <EmptyState
           icon={Bookmark}
@@ -51,21 +59,20 @@ export default async function SharedWatchlistPage({ params }: { params: Promise<
           hint="This watchlist is shared, but the owner has not added anything to it."
         />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {(['must_watch', 'want_to_watch', 'someday'] as const).map(priority => {
             const group = items.filter((i) => i.priority === priority)
             if (group.length === 0) return null
             return (
-              <section key={priority}>
-                <Eyebrow style={{ marginBottom: '12px' }}>{PRIORITY_LABELS[priority]}</Eyebrow>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <section key={priority} aria-labelledby={`share-${priority}`}>
+                <SectionHeader id={`share-${priority}`} title={PRIORITY_LABELS[priority]} />
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-6 lg:grid-cols-5 xl:grid-cols-6">
                   {group.map((item) => (
-                    <MediaRow
+                    <SharePosterCard
                       key={item.media.id}
                       title={item.media.title}
-                      year={item.media.release_year ?? undefined}
-                      type={item.media.type}
                       posterUrl={item.media.poster_url}
+                      caption={item.media.release_year}
                     />
                   ))}
                 </div>

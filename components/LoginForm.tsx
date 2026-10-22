@@ -1,9 +1,8 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { AuthShell, AuthInput, AuthSubmit, AuthError } from '@/components/AuthShell'
+import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthLink } from '@/components/AuthShell'
 
 export default function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
   const [email, setEmail] = useState('')
@@ -45,17 +44,13 @@ export default function LoginForm({ signupEnabled }: { signupEnabled: boolean })
 
       <AuthSubmit disabled={loading}>{loading ? 'Signing in…' : 'Sign In'}</AuthSubmit>
 
-      <div className="flex items-center justify-between text-xs text-zinc-500">
-        <Link href="/forgot-password" className="hover:text-zinc-300 transition-colors">
-          Forgot password?
-        </Link>
+      {/* The links are 44px targets, so the row pulls back in to keep the
+          text where a 13px line would sit. */}
+      <div className="-my-3 flex items-center justify-between">
+        <AuthLink href="/forgot-password">Forgot password?</AuthLink>
         {/* Hidden rather than shown-and-rejected when signup is off: the page
             cannot check the invite code, but it can be told whether one exists. */}
-        {signupEnabled && (
-          <Link href="/signup" className="hover:text-zinc-300 transition-colors">
-            Create an account
-          </Link>
-        )}
+        {signupEnabled && <AuthLink href="/signup">Create an account</AuthLink>}
       </div>
     </AuthShell>
   )

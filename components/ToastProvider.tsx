@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { X, CheckCircle2, AlertCircle, Info } from 'lucide-react'
 import { UNDO_TOAST_MS } from '@/lib/useDeferredAction'
 
 export type ToastTone = 'success' | 'error' | 'info'
@@ -24,19 +24,13 @@ interface ToastContextType {
 
 const Context = createContext<ToastContextType | null>(null)
 
-const TONE_STYLES: Record<ToastTone, { card: string; text: string }> = {
-  success: {
-    card: 'border-[var(--accent)]/40',
-    text: 'text-[var(--green-300)]',
-  },
-  error: {
-    card: 'border-[var(--live)]/50',
-    text: 'text-[var(--rust-300)]',
-  },
-  info: {
-    card: 'border-[var(--border-strong)]',
-    text: 'text-[var(--zinc-100)]',
-  },
+// The tone is a leading icon rather than a tinted border and text: the message
+// stays in the primary colour on every toast, the icon takes the accent, and
+// an error's icon is the one --danger exception.
+const TONE_ICON: Record<ToastTone, { icon: typeof Info; color: string }> = {
+  success: { icon: CheckCircle2, color: 'var(--accent)' },
+  error: { icon: AlertCircle, color: 'var(--danger)' },
+  info: { icon: Info, color: 'var(--accent)' },
 }
 
 // Anything past this and the stack marches up the screen — a bulk action or a
@@ -162,40 +156,60 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           in insertion order, which two separate containers could not. */}
       {mounted && createPortal(
         <div className="fixed left-4 right-4 md:left-auto md:right-6 bottom-24 md:bottom-20 z-[110] flex flex-col items-center md:items-end gap-2 pointer-events-none">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              role={t.tone === 'error' ? 'alert' : 'status'}
-              aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
-              aria-atomic="true"
-              onMouseEnter={() => pauseTimer(t.id)}
-              onMouseLeave={() => resumeTimer(t.id)}
-              onFocus={() => pauseTimer(t.id)}
-              onBlur={() => resumeTimer(t.id)}
-              className={`toast-enter pointer-events-auto flex items-center gap-3 w-full md:w-auto md:max-w-sm px-4 py-3 rounded-[var(--radius-md)] border shadow-2xl shadow-black/50 bg-[var(--bg-void)]/95 ${TONE_STYLES[t.tone].card}`}
-            >
-              <p className={`flex-1 text-sm font-medium leading-snug ${TONE_STYLES[t.tone].text}`}>
-                {t.message}
-              </p>
-
-              {t.action && (
-                <button
-                  onClick={() => handleAction(t)}
-                  className="shrink-0 text-xs font-bold uppercase tracking-wider text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
-                >
-                  {t.action.label}
-                </button>
-              )}
-
-              <button
-                onClick={() => dismiss(t.id)}
-                aria-label="Dismiss notification"
-                className="shrink-0 p-1 rounded-sm text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+          {toasts.map((t) => {
+            const { icon: Icon, color } = TONE_ICON[t.tone]
+            return (
+              // The one floating glass element: a blurred panel at the inset
+              // radius. Three at most are ever on screen, well inside the
+              // tier-1 budget. The 44px action and dismiss targets set the
+              // height, so the vertical padding is only 6px.
+              <div
+                key={t.id}
+                role={t.tone === 'error' ? 'alert' : 'status'}
+                aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
+                aria-atomic="true"
+                onMouseEnter={() => pauseTimer(t.id)}
+                onMouseLeave={() => resumeTimer(t.id)}
+                onFocus={() => pauseTimer(t.id)}
+                onBlur={() => resumeTimer(t.id)}
+                className="toast-enter glass-panel glass-rim pointer-events-auto flex items-center gap-3 w-full md:w-auto md:max-w-sm rounded-[var(--radius-lg)]"
+                style={{ padding: '6px 6px 6px 16px' }}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+                <Icon className="w-5 h-5 shrink-0" strokeWidth={1.8} aria-hidden="true" style={{ color }} />
+
+                <p
+                  className="flex-1"
+                  style={{
+                    margin: 0,
+                    fontSize: 'var(--text-base)',
+                    lineHeight: '20px',
+                    fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'],
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {t.message}
+                </p>
+
+                {t.action && (
+                  <button
+                    onClick={() => handleAction(t)}
+                    className="shrink-0 min-h-11 px-3 rounded-full text-[var(--accent)] hover:text-[var(--accent-hover)] hover:bg-[var(--glass-fill-hover)] transition-colors"
+                    style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'] }}
+                  >
+                    {t.action.label}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => dismiss(t.id)}
+                  aria-label="Dismiss notification"
+                  className="shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)] transition-colors"
+                >
+                  <X className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                </button>
+              </div>
+            )
+          })}
         </div>,
         document.body
       )}

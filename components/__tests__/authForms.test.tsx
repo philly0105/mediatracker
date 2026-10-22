@@ -2,6 +2,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import LoginForm from '../LoginForm'
 import SignupForm from '../SignupForm'
+import { AmbientHost } from '../AmbientBackdrop'
+import { AUTH_BACKDROP } from '../AuthShell'
 
 const push = vi.fn()
 const refresh = vi.fn()
@@ -26,6 +28,32 @@ beforeEach(() => {
   signInWithPassword.mockResolvedValue({ error: null })
   mockFetch.mockReset()
   global.fetch = mockFetch
+})
+
+describe('AuthShell', () => {
+  it('shows the wordmark over the card and registers the static backdrop', () => {
+    // No session on these pages, so the ambient art is the spec's static
+    // default rather than the most recent watch. The host paints the w780
+    // cut of whatever is registered.
+    render(
+      <>
+        <AmbientHost />
+        <LoginForm signupEnabled />
+      </>,
+    )
+    expect(screen.getByText('DorfMovies')).toBeInTheDocument()
+    const art = document.querySelector('img.ambient-img')
+    expect(art).not.toBeNull()
+    expect(art?.getAttribute('src')).toBe(AUTH_BACKDROP.replace(/\/t\/p\/w\d+\//, '/t/p/w780/'))
+  })
+
+  it('announces errors as alerts in the danger colour', () => {
+    searchParams = 'error=Nope'
+    render(<LoginForm signupEnabled />)
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent('Nope')
+    expect(alert.style.color).toBe('var(--danger)')
+  })
 })
 
 describe('LoginForm', () => {

@@ -283,12 +283,14 @@ alter table media add column if not exists logo_url text;
 ## Task 12: Settings, import, auth, share, errors
 **Files:** `app/(app)/{settings,import}/**`, `components/{ImportExportPanel,PasswordChangeForm,ShareToggle,ShareFooter,AuthShell,LoginForm,SignupForm,KeyboardHelp,KeyboardShortcutPanels,ToastProvider,BackButton,Presence}.tsx`, `app/(public)/**`, `app/{error,global-error,not-found}.tsx`, route `loading.tsx` / `error.tsx` files
 
-- [ ] Settings and import: a 720px column of `.glass-panel` sections; destructive text `#FF9B9B`.
-- [ ] Auth: a centred 420px glass card over a default ambient backdrop (a static popular title or the default tint).
-- [ ] Public share pages: the library grid style, read-only, with the owner header.
-- [ ] Toasts: `.glass-panel` radius 16, 14px text, icon in accent; keep the existing undo actions.
-- [ ] Error, not-found and loading: glass panel with message + actions, and skeletons.
-- [ ] Verify, then commit: `style: spatial-glass settings, auth, share, toasts and errors`
+- [x] Settings and import: a 720px column of `.glass-panel` sections; destructive text `#FF9B9B`.
+- [x] Auth: a centred 420px glass card over a default ambient backdrop (a static popular title or the default tint).
+  - Auth registers a static TMDB backdrop (`AUTH_BACKDROP` in `components/AuthShell.tsx`). If it fails to load, the default tint shows.
+- [x] Public share pages: the library grid style, read-only, with the owner header.
+  - The read-only poster card lives beside the share pages, in `app/(public)/share/SharePosterCard.tsx`.
+- [x] Toasts: `.glass-panel` radius 16, 14px text, icon in accent; keep the existing undo actions.
+- [x] Error, not-found and loading: glass panel with message + actions, and skeletons.
+- [x] Verify, then commit: `style: spatial-glass settings, auth, share, toasts and errors`
 
 ## Task 13: Design skill update
 **Files:** `.agents/skills/dorfmovies-design/{SKILL.md,readme.md,guidelines/*,components/**/*.prompt.md}`, plus `app/styles/design-system/README.md` if wording changes

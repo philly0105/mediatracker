@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { MediaRow } from '@/components/ui/MediaRow'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ShareFooter } from '@/components/ShareFooter'
+import { SharePosterCard, SharePosterFan } from '../../SharePosterCard'
+import AmbientBackdrop from '@/components/AmbientBackdrop'
+import { formatDateLabel } from '@/lib/formatDate'
 import { Clapperboard } from 'lucide-react'
 import type { SharedWatchedRow, Media } from '@/types'
 
@@ -35,12 +37,19 @@ export default async function SharedWatchedPage({ params }: { params: Promise<{ 
   const entries = typedRows.filter((r): r is SharedWatchedRow & { media: Media } => Boolean(r.media))
 
   return (
-    <div className="max-w-4xl">
-      <PageHeader
-        eyebrow="Shared list"
-        title="Watched"
-        sub={entries.length === 1 ? '1 title' : `${entries.length} titles`}
-      />
+    <div>
+      {/* The rows come newest first, so this is the owner's most recent watch,
+          the same default the signed-in pages use. The RPC serialises the whole
+          media row, so backdrop_url is simply absent until migration 014. */}
+      <AmbientBackdrop src={entries[0]?.media.backdrop_url ?? null} />
+      <div className="glass-panel glass-rim mb-6 p-6 md:p-7 [&>header]:mb-0">
+        <PageHeader
+          eyebrow="Shared list"
+          title="Watched"
+          sub={entries.length === 1 ? '1 title' : `${entries.length} titles`}
+          action={<SharePosterFan posterUrls={entries.slice(0, 3).map((entry) => entry.media.poster_url)} />}
+        />
+      </div>
       {entries.length === 0 ? (
         <EmptyState
           icon={Clapperboard}
@@ -48,16 +57,14 @@ export default async function SharedWatchedPage({ params }: { params: Promise<{ 
           hint="This list is shared, but the owner has not logged anything to it."
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-6 lg:grid-cols-5 xl:grid-cols-6">
           {entries.map((entry, idx: number) => (
-            <MediaRow
+            <SharePosterCard
               key={`${entry.media.id}-${entry.watched_at ?? ''}-${idx}`}
               title={entry.media.title}
-              year={entry.media.release_year ?? undefined}
-              type={entry.media.type}
               posterUrl={entry.media.poster_url}
               rating={entry.rating}
-              watchedAt={entry.watched_at}
+              caption={entry.watched_at ? formatDateLabel(entry.watched_at) : entry.media.release_year}
             />
           ))}
         </div>

@@ -1,9 +1,10 @@
 'use client'
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useModal } from '@/lib/useModal'
 import { Kbd } from '@/components/ui/Kbd'
+import { Button } from '@/components/ui/Button'
 import { QUICK_NAV } from '@/lib/quickNav'
 
 interface Props {
@@ -23,8 +24,6 @@ interface Shortcut {
   label: string
 }
 
-const CAP_CLASS = 'inline-flex items-center text-[10px] font-semibold text-zinc-400 border border-white/10 rounded px-1.5 py-0.5'
-
 const GLOBAL: Shortcut[] = [
   { chord: [{ keys: 'K', mod: true }], label: 'Open search' },
   { chord: [{ keys: '/' }], label: 'Open search' },
@@ -39,13 +38,31 @@ const IN_SEARCH: Shortcut[] = [
   { chord: [{ keys: '⇧' }, { keys: '↵' }], label: 'Add the highlighted title to your watchlist' },
 ]
 
+const TITLE: CSSProperties = {
+  margin: '0 0 20px',
+  fontSize: 'var(--text-xl)',
+  lineHeight: '26px',
+  fontWeight: 'var(--weight-heading)' as CSSProperties['fontWeight'],
+  letterSpacing: 'var(--tracking-snug)',
+  color: 'var(--text-primary)',
+}
+
+const SECTION_TITLE: CSSProperties = {
+  margin: '0 0 4px',
+  fontSize: 'var(--text-sm)',
+  lineHeight: '18px',
+  fontWeight: 'var(--weight-medium)' as CSSProperties['fontWeight'],
+  color: 'var(--text-muted)',
+}
+
+// The chip itself is Kbd's own recipe; the row only arranges the caps.
 function Row({ chord, label }: Shortcut) {
   return (
-    <div className="flex items-center justify-between gap-6 py-2">
-      <span className="text-sm text-zinc-300">{label}</span>
+    <div className="flex items-center justify-between gap-6 py-2.5">
+      <span style={{ fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-secondary)' }}>{label}</span>
       <span className="flex items-center gap-1 shrink-0">
         {chord.map((cap) => (
-          <Kbd key={cap.keys} keys={cap.keys} mod={cap.mod ?? false} className={CAP_CLASS} />
+          <Kbd key={cap.keys} keys={cap.keys} mod={cap.mod ?? false} />
         ))}
       </span>
     </div>
@@ -55,8 +72,8 @@ function Row({ chord, label }: Shortcut) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">{title}</h3>
-      <div className="divide-y divide-[var(--border-subtle)]">{children}</div>
+      <h3 style={SECTION_TITLE}>{title}</h3>
+      <div className="divide-y divide-[var(--border-divider)]">{children}</div>
     </div>
   )
 }
@@ -73,40 +90,45 @@ export default function KeyboardHelp({ onClose, exiting = false }: Props) {
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[12dvh]" style={{ background: 'var(--scrim)' }}>
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div
-        ref={containerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="keyboard-help-title"
-        style={{ background: 'var(--surface-modal)' }}
-        className={`${exiting ? 'dialog-out' : 'dialog-in'} relative w-full max-w-lg rounded-[var(--radius-2xl)] border border-white/15 p-6 shadow-2xl max-h-[76dvh] overflow-y-auto`}
-      >
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 p-1.5 rounded-sm text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+      {/* The glass panel is a non-scrolling wrapper and the dialog inside it
+          scrolls: useModal focuses the dialog, so it has to be the scroller
+          for the arrow keys to reach the content (its Tab trap only cycles
+          the Close button), while the rim is an absolutely positioned edge
+          that would scroll away with the content if it sat on the scroller.
+          The scroller clips to the inherited radius. */}
+      <div className={`${exiting ? 'dialog-out' : 'dialog-in'} glass-panel glass-rim relative w-full max-w-lg`}>
+        <div
+          ref={containerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="keyboard-help-title"
+          className="relative max-h-[76dvh] overflow-y-auto rounded-[inherit] p-6"
         >
-          <X className="w-4 h-4" />
-        </button>
+          <div className="absolute top-3 right-3 z-[1]">
+            <Button variant="icon" aria-label="Close" onClick={onClose}>
+              <X className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+            </Button>
+          </div>
 
-        <h2 id="keyboard-help-title" className="text-lg font-bold tracking-tight text-white mb-5">
-          Keyboard shortcuts
-        </h2>
+          <h2 id="keyboard-help-title" style={TITLE}>
+            Keyboard shortcuts
+          </h2>
 
-        <div className="space-y-5">
-          <Section title="Anywhere">
-            {GLOBAL.map((s) => <Row key={s.label + s.chord.map((c) => c.keys).join()} {...s} />)}
-          </Section>
+          <div className="space-y-5">
+            <Section title="Anywhere">
+              {GLOBAL.map((s) => <Row key={s.label + s.chord.map((c) => c.keys).join()} {...s} />)}
+            </Section>
 
-          <Section title="Go to">
-            {QUICK_NAV.map((item) => (
-              <Row key={item.href} chord={[{ keys: 'g' }, { keys: item.key }]} label={item.name} />
-            ))}
-          </Section>
+            <Section title="Go to">
+              {QUICK_NAV.map((item) => (
+                <Row key={item.href} chord={[{ keys: 'g' }, { keys: item.key }]} label={item.name} />
+              ))}
+            </Section>
 
-          <Section title="In search">
-            {IN_SEARCH.map((s) => <Row key={s.label + s.chord.map((c) => c.keys).join()} {...s} />)}
-          </Section>
+            <Section title="In search">
+              {IN_SEARCH.map((s) => <Row key={s.label + s.chord.map((c) => c.keys).join()} {...s} />)}
+            </Section>
+          </div>
         </div>
       </div>
     </div>,

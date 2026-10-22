@@ -572,8 +572,9 @@ describe('KeyboardShortcuts g-navigation and help sheet (F-44)', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' })
     // Closed, but still on screen playing .dialog-out — the whole point of
-    // <Presence>.
-    expect(sheet).toHaveClass('dialog-out')
+    // <Presence>. The animated element is the glass panel wrapping the
+    // dialog: the dialog itself is the scroller inside it.
+    expect(sheet.parentElement).toHaveClass('dialog-out')
     expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBe(sheet)
 
     await waitFor(() => {

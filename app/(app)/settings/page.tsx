@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ComponentType, CSSProperties } from 'react'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ShareToggle from '@/components/ShareToggle'
@@ -7,10 +8,40 @@ import ImportExportPanel from '@/components/ImportExportPanel'
 import { KeyRound, Share2, ArrowLeftRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 
 export const metadata: Metadata = {
   title: 'Settings',
   description: 'Account, sharing and data settings.',
+}
+
+// Each settings section is one glass panel headed by its icon in a glass
+// circle and the section title; the panel's aria-labelledby points at the h2.
+function PanelHeader({ id, icon: Icon, title }: { id: string; icon: ComponentType<{ className?: string; strokeWidth?: number }>; title: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <span
+        aria-hidden="true"
+        className="glass-btn inline-flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-[var(--text-secondary)]"
+      >
+        <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+      </span>
+      <SectionHeader id={id} title={title} style={{ marginBottom: 0, paddingLeft: 0, flex: 1 }} />
+    </div>
+  )
+}
+
+// Panels tighten to 14px padding under the content breakpoint (spec 4.4);
+// Card's panel variant only knows the 20px desktop padding.
+const PANEL = 'max-[760px]:p-3.5'
+
+const CARD_TITLE: CSSProperties = {
+  margin: '0 0 16px',
+  fontSize: 'var(--text-md)',
+  lineHeight: '24px',
+  fontWeight: 'var(--weight-semibold)' as CSSProperties['fontWeight'],
+  letterSpacing: 'var(--tracking-text)',
+  color: 'var(--text-primary)',
 }
 
 export default async function SettingsPage() {
@@ -27,71 +58,52 @@ export default async function SettingsPage() {
       : '')
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto md:mx-0">
+    <div className="max-w-[var(--content-narrow)] mx-auto md:mx-0">
       <PageHeader
         eyebrow="Your account"
         title="Settings"
         sub="Manage your account, sharing preferences, and data."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-6">
         {/* Account Section */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-            <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
-              <KeyRound className="w-4 h-4 text-[var(--accent)]" />
-            </div>
-            <h2 className="text-lg font-bold tracking-tight text-white">Account</h2>
-          </div>
-          
-          <Card>
-            <h3 className="text-sm font-bold text-white mb-4">Change Password</h3>
-            <PasswordChangeForm />
-          </Card>
-        </section>
+        <Card as="section" variant="panel" className={PANEL} aria-labelledby="settings-account">
+          <PanelHeader id="settings-account" icon={KeyRound} title="Account" />
+          <h3 style={CARD_TITLE}>Change Password</h3>
+          <PasswordChangeForm />
+        </Card>
 
         {/* Sharing Section */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-            <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
-              <Share2 className="w-4 h-4 text-[var(--accent)]" />
-            </div>
-            <h2 className="text-lg font-bold tracking-tight text-white">Sharing</h2>
+        <Card as="section" variant="panel" className={PANEL} aria-labelledby="settings-sharing">
+          <PanelHeader id="settings-sharing" icon={Share2} title="Sharing" />
+          <p
+            className="mb-4"
+            style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-secondary)' }}
+          >
+            Create public links to share your library with friends. Anyone with the link can view your items, but they cannot edit them.
+          </p>
+          <div className="space-y-3">
+            <ShareToggle
+              label="Watched History"
+              type="watched"
+              token={settings?.watched_share_token ?? null}
+              shareUrl={settings?.watched_share_token ? `${appUrl}/share/watched/${settings.watched_share_token}` : null}
+            />
+            <ShareToggle
+              label="Watchlist"
+              type="watchlist"
+              token={settings?.watchlist_share_token ?? null}
+              shareUrl={settings?.watchlist_share_token ? `${appUrl}/share/watchlist/${settings.watchlist_share_token}` : null}
+            />
           </div>
+        </Card>
 
-          <Card className="space-y-6">
-            <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-              Create public links to share your library with friends. Anyone with the link can view your items, but they cannot edit them.
-            </p>
-            <div className="space-y-6">
-              <ShareToggle
-                label="Watched History"
-                type="watched"
-                token={settings?.watched_share_token ?? null}
-                shareUrl={settings?.watched_share_token ? `${appUrl}/share/watched/${settings.watched_share_token}` : null}
-              />
-              <div className="h-px w-full bg-[var(--border-subtle)]" />
-              <ShareToggle
-                label="Watchlist"
-                type="watchlist"
-                token={settings?.watchlist_share_token ?? null}
-                shareUrl={settings?.watchlist_share_token ? `${appUrl}/share/watchlist/${settings.watchlist_share_token}` : null}
-              />
-            </div>
-          </Card>
-        </section>
+        {/* Import / Export Section */}
+        <Card as="section" variant="panel" id="import-export" className={`${PANEL} scroll-mt-8`} aria-labelledby="settings-import-export">
+          <PanelHeader id="settings-import-export" icon={ArrowLeftRight} title="Import & Export" />
+          <ImportExportPanel />
+        </Card>
       </div>
-
-      {/* Import / Export Section */}
-      <section id="import-export" className="space-y-4 scroll-mt-8">
-        <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-          <div className="p-1.5 rounded-sm border border-[var(--green-tint-border)] bg-[var(--green-tint-bg)]">
-            <ArrowLeftRight className="w-4 h-4 text-[var(--accent)]" />
-          </div>
-          <h2 className="text-lg font-bold tracking-tight text-white">Import &amp; Export</h2>
-        </div>
-        <ImportExportPanel />
-      </section>
     </div>
   )
 }

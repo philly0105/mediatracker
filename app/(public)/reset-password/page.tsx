@@ -1,9 +1,8 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice } from '@/components/AuthShell'
+import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice, AuthLink } from '@/components/AuthShell'
 import { Button } from '@/components/ui/Button'
 
 // Reached from the emailed recovery link, by way of /auth/callback — which has
@@ -50,10 +49,8 @@ export default function ResetPasswordPage() {
     return (
       <AuthShell title="Link expired" subtitle="That reset link is no longer valid.">
         <AuthError>Reset links are single-use and expire after an hour.</AuthError>
-        <p className="text-xs text-zinc-500 text-center">
-          <Link href="/forgot-password" className="text-zinc-300 hover:text-white transition-colors">
-            Request a new one
-          </Link>
+        <p className="-my-3 text-center">
+          <AuthLink href="/forgot-password">Request a new one</AuthLink>
         </p>
       </AuthShell>
     )
@@ -77,7 +74,7 @@ export default function ResetPasswordPage() {
   if (hasSession === null) {
     return (
       <AuthShell title="Verifying link" subtitle="Checking your reset link…">
-        <p className="text-sm text-zinc-400 text-center">Loading…</p>
+        <p className="text-center text-[length:var(--text-base)] leading-5 text-[var(--text-secondary)]">Loading…</p>
       </AuthShell>
     )
   }

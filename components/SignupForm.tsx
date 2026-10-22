@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice } from '@/components/AuthShell'
+import { AuthShell, AuthInput, AuthSubmit, AuthError, AuthNotice, AuthLink } from '@/components/AuthShell'
 
 export default function SignupForm() {
   const [email, setEmail] = useState('')
@@ -52,9 +51,13 @@ export default function SignupForm() {
     return (
       <AuthShell title="Check your email" subtitle={`A confirmation link is on its way to ${email}.`}>
         <AuthNotice>Follow the link to finish setting up your account.</AuthNotice>
-        <p className="text-xs text-zinc-500">
+        <p className="text-[length:var(--text-sm)] leading-[18px] text-[var(--text-muted)]">
           Nothing arrived? Check spam, then{' '}
-          <button type="button" onClick={() => setSent(false)} className="text-zinc-300 underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            className="inline-flex min-h-11 items-center text-[var(--text-primary)] underline underline-offset-2"
+          >
             try again
           </button>
           .
@@ -92,9 +95,9 @@ export default function SignupForm() {
 
       <AuthSubmit disabled={loading}>{loading ? 'Creating…' : 'Create account'}</AuthSubmit>
 
-      <p className="text-xs text-zinc-500 text-center">
+      <p className="-my-3 text-center text-[length:var(--text-sm)] leading-[18px] text-[var(--text-muted)]">
         Already have one?{' '}
-        <Link href="/login" className="text-zinc-300 hover:text-white transition-colors">Sign in</Link>
+        <AuthLink href="/login">Sign in</AuthLink>
       </p>
     </AuthShell>
   )
