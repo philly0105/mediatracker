@@ -22,6 +22,7 @@ import type { Media } from '@/types'
 import { NavItem } from './ui/NavItem'
 import { Avatar } from './ui/Avatar'
 import { Kbd } from './ui/Kbd'
+import { Wordmark } from './ui/Wordmark'
 import { openSearchOverlay } from '@/lib/searchOverlayBus'
 import { useModal } from '@/lib/useModal'
 import { useMediaModal } from '@/components/MediaModalProvider'
@@ -66,27 +67,6 @@ const SHELL_NAV: NavEntry[] = [...PRIMARY_NAV.filter((item) => !item.action), ..
 function isNavActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/'
   return pathname === href || pathname.startsWith(`${href}/`)
-}
-
-// The mark from the reference sidebar: a light rounded square with the "D"
-// and its counter cut out. app/icon.tsx draws the same shape with literals
-// because Satori resolves no CSS variables.
-function Mark() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
-      <rect x="0.5" y="0.5" width="31" height="31" rx="10" fill="var(--text-primary)" />
-      <path d="M10.5 8h5.7a8 8 0 0 1 0 16h-5.7z" fill="var(--ink)" />
-      <circle cx="16.2" cy="16" r="2.6" fill="var(--text-primary)" />
-    </svg>
-  )
-}
-
-const WORDMARK: CSSProperties = {
-  fontSize: 17,
-  lineHeight: '22px',
-  fontWeight: 'var(--weight-heading)',
-  letterSpacing: '-0.02em',
-  color: 'var(--text-primary)',
 }
 
 // The rail (md) stacks the icon over its label and the sidebar (lg) lays them
@@ -159,9 +139,8 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
           style={{ maxHeight: 'calc(100vh - 2 * var(--shell-pad))' }}
         >
           {/* Wordmark */}
-          <div className="flex min-h-11 items-center justify-center gap-2 lg:justify-start lg:px-2">
-            <Mark />
-            <span className="hidden lg:inline" style={WORDMARK}>DorfMovies</span>
+          <div className="flex min-h-11 items-center justify-center lg:justify-start lg:px-2">
+            <Wordmark textClassName="hidden lg:inline" />
           </div>
 
           {/* Search is an action, not a destination — a field-shaped trigger reads
@@ -209,10 +188,7 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
           panel's 40px: they sit over scrolling content, so they are the one
           place the blur is repainted every frame. */}
       <div className="glass-panel glass-rim md:hidden fixed top-0 left-0 right-0 z-40 rounded-none flex items-center justify-between px-4 py-2.5 [--glass-blur:var(--blur-md)]">
-        <span className="flex items-center gap-2">
-          <Mark />
-          <span style={WORDMARK}>DorfMovies</span>
-        </span>
+        <Wordmark />
         <div className="flex items-center gap-2">
           {/* Was a bare icon with no link and no handler: it looked tappable
               and did nothing. */}

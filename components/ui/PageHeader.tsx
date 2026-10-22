@@ -15,7 +15,16 @@ interface PageHeaderProps {
   action?: React.ReactNode
   /** Show a visible Select / Done button wired to the multi-select provider. */
   selectable?: boolean
+  /** Merged onto the <header>. An unprefixed bottom margin (`mb-0`, `my-2`,
+   *  `m-0`) replaces the built-in `mb-6`. */
+  className?: string
 }
+
+// Tailwind orders utilities by its own sort, not by class order, so `mb-0`
+// and `mb-6` on one element leave `mb-6` winning. The default steps aside
+// whenever the caller sets its own; a prefixed margin (`md:mb-10`) sorts
+// after the base utilities and layers on top as usual.
+const OWN_BOTTOM_MARGIN = /(^|\s)-?m[by]?-/
 
 /**
  * The single page-title treatment. Every route used to hand-roll its own —
@@ -23,12 +32,17 @@ interface PageHeaderProps {
  * 650 and drops to 24/30 under the content breakpoint, which Tailwind's `md`
  * stands in for.
  */
-export function PageHeader({ eyebrow, title, sub, action, selectable }: PageHeaderProps) {
+export function PageHeader({ eyebrow, title, sub, action, selectable, className }: PageHeaderProps) {
   const multiSelect = useOptionalMultiSelect()
   const showSelectButton = selectable && multiSelect != null
+  const margin = className && OWN_BOTTOM_MARGIN.test(className) ? null : 'mb-6'
 
   return (
-    <header className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+    <header
+      className={['flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', margin, className]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className="min-w-0">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <h1

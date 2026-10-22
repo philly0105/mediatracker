@@ -109,6 +109,27 @@ describe('fetchTmdbDetails', () => {
     })
   })
 
+  it('maps the first twelve cast credits with character and headshot, beside the five names', async () => {
+    const cast = Array.from({ length: 14 }, (_, i) => ({
+      name: `Actor ${i + 1}`,
+      character: i === 1 ? '' : `Role ${i + 1}`,
+      profile_path: i === 2 ? null : `/face${i + 1}.jpg`,
+    }))
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 95396, name: 'Severance', genres: [], seasons: [], credits: { cast } }),
+    })
+    const details = await fetchTmdbDetails(95396, 'show')
+    expect(details.cast_members).toEqual(['Actor 1', 'Actor 2', 'Actor 3', 'Actor 4', 'Actor 5'])
+    expect(details.cast_credits).toHaveLength(12)
+    expect(details.cast_credits?.slice(0, 3)).toEqual([
+      { name: 'Actor 1', character: 'Role 1', profile_url: 'https://image.tmdb.org/t/p/w185/face1.jpg' },
+      // TMDB's blank character and missing headshot both come back as null.
+      { name: 'Actor 2', character: null, profile_url: 'https://image.tmdb.org/t/p/w185/face2.jpg' },
+      { name: 'Actor 3', character: 'Role 3', profile_url: null },
+    ])
+  })
+
   it('includes collection data when movie belongs to a collection', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -169,6 +190,7 @@ describe('fetchTmdbDetails', () => {
       title: 'Fight Club',
       vote_average: 8.4,
       cast_members: [],
+      cast_credits: [],
       director: null,
       trailer_url: null,
       watch_providers: null,

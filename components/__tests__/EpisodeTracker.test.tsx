@@ -322,4 +322,14 @@ describe('EpisodeTracker rows', () => {
     expect(screen.getByText('58m')).toBeInTheDocument()
     expect(screen.getByText('A chemistry teacher is diagnosed.')).toBeInTheDocument()
   })
+
+  it('keeps an episode with no still on the still-shaped placeholder', () => {
+    renderTracker(watched())
+    // No still anywhere: every placeholder is the 16:9 thumb, not a poster.
+    for (const li of screen.getAllByRole('listitem')) {
+      const thumb = li.querySelector('.glass-row')!.firstElementChild as HTMLElement
+      expect(thumb.className).toContain('md:w-40')
+      expect(thumb.style.width).toBe('')
+    }
+  })
 })

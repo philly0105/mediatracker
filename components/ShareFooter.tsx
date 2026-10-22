@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Wordmark } from '@/components/AuthShell'
+import { Wordmark } from '@/components/ui/Wordmark'
 
 /**
  * The one piece of branding on the app's only public-facing pages. Someone

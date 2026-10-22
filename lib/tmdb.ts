@@ -4,6 +4,7 @@ const BASE = 'https://api.themoviedb.org/3'
 const IMG = 'https://image.tmdb.org/t/p/w500'
 const BACKDROP = 'https://image.tmdb.org/t/p/w1280'
 const STILL = 'https://image.tmdb.org/t/p/w300' // episode stills are thumbnail-sized
+const PROFILE = 'https://image.tmdb.org/t/p/w185' // cast headshots are 112px tiles
 
 // TMDB responses are public, never user-specific. Windows are chosen by how volatile
 // the underlying data actually is: near-static detail/credits metadata gets a long
@@ -55,7 +56,7 @@ type TmdbListItem = TmdbMovieListItem | TmdbShowListItem
 
 // Detail-payload building blocks (from /movie/:id, /tv/:id and friends).
 type TmdbGenre = { id?: number; name: string }
-type TmdbCastMember = { id?: number; name: string; character?: string }
+type TmdbCastMember = { id?: number; name: string; character?: string | null; profile_path?: string | null }
 type TmdbCrewMember = { id?: number; name: string; job?: string }
 type TmdbVideo = { key?: string; type?: string; site?: string }
 type TmdbSeason = { id?: number; season_number: number; episode_count: number; name?: string }
@@ -203,6 +204,21 @@ export interface TmdbWatchProviders {
   buy?: TmdbWatchProvider[]
 }
 
+export interface TmdbCastCredit {
+  name: string
+  character: string | null
+  profile_url: string | null
+}
+
+// TMDB writes an unknown character as "", which would render an empty caption.
+function castCredits(cast: TmdbCastMember[] | null | undefined): TmdbCastCredit[] {
+  return (cast ?? []).slice(0, 12).map((c) => ({
+    name: c.name,
+    character: nullIfBlank(c.character),
+    profile_url: c.profile_path ? `${PROFILE}${c.profile_path}` : null,
+  }))
+}
+
 export interface TmdbFullDetails {
   tmdb_id: number
   imdb_id: string | null
@@ -215,6 +231,9 @@ export interface TmdbFullDetails {
   runtime_mins: number | null
   director: string | null
   cast_members: string[]
+  // The cast strip's tiles: the first twelve credits with character and
+  // headshot. cast_members stays the names list the media row stores.
+  cast_credits?: TmdbCastCredit[]
   seasons?: Array<{ season_number: number; episode_count: number }>
   full_release_date?: string | null
   trailer_url?: string | null
@@ -362,6 +381,7 @@ export async function fetchTmdbDetails(
       runtime_mins: d.runtime ?? null,
       director,
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: TmdbCastMember) => c.name),
+      cast_credits: castCredits(d.credits?.cast),
       full_release_date: d.release_date || null,
       trailer_url,
       belongs_to_collection: d.belongs_to_collection
@@ -385,6 +405,7 @@ export async function fetchTmdbDetails(
       runtime_mins: showRuntimeMins(d),
       director: null,
       cast_members: (d.credits?.cast ?? []).slice(0, 5).map((c: TmdbCastMember) => c.name),
+      cast_credits: castCredits(d.credits?.cast),
       seasons: (d.seasons ?? [])
         // Season 0 is TMDB's "Specials" bucket — recaps, behind-the-scenes,
         // webisodes — and it is often larger than a real season. Dropping it

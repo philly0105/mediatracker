@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { firstNameFromEmail, formatEyebrowDate, greetingFor, parseTimeKey, timeKey } from '../home/greeting'
+import { firstNameFromEmail, formatEyebrowDate, greetingFor, greetingName, parseTimeKey, timeKey } from '../home/greeting'
 import { formatCountdown, formatMinutes, formatShortDate } from '../home/format'
 
 describe('greetingFor', () => {
@@ -26,6 +26,19 @@ describe('firstNameFromEmail', () => {
     expect(firstNameFromEmail('2000@example.com')).toBeNull()
     expect(firstNameFromEmail('')).toBeNull()
     expect(firstNameFromEmail(undefined)).toBeNull()
+  })
+})
+
+describe('greetingName', () => {
+  it('prefers the first word of the display name from user_metadata', () => {
+    expect(greetingName('Richard Dorf', 'rd2000@example.com')).toBe('Richard')
+    expect(greetingName('  Anne-Marie  Duff ', null)).toBe('Anne-Marie')
+  })
+
+  it('falls back to the email when there is no usable name', () => {
+    expect(greetingName(undefined, 'richard.dorf@example.com')).toBe('Richard')
+    expect(greetingName('   ', 'richard.dorf@example.com')).toBe('Richard')
+    expect(greetingName(null, '2000@example.com')).toBeNull()
   })
 })
 

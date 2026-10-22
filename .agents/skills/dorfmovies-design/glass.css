@@ -31,6 +31,10 @@ body {
   outline-offset: 2px;
 }
 
+:where([role="dialog"]):focus-visible {
+  outline: none;
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }
@@ -88,6 +92,12 @@ body {
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .ambient-img {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
   .ambient-img {
     display: none;
   }

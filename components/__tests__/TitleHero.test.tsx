@@ -45,6 +45,20 @@ describe('TitleHero', () => {
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
   })
 
+  it('puts the heading id on the title heading, for a dialog to name itself by', () => {
+    render(<TitleHero title="Severance" headingLevel={2} headingId="hero-title" logoUrl={LOGO} />)
+    expect(screen.getByRole('heading', { level: 2 })).toHaveAttribute('id', 'hero-title')
+  })
+
+  it('paints the frame through the panel token, so the opaque fallback still applies', () => {
+    const { container } = render(<TitleHero title="Severance" />)
+    const frame = container.firstElementChild as HTMLElement
+    expect(frame).toHaveClass('glass-panel', '[--glass-panel:var(--glass-hero)]')
+    // An inline background would beat the reduced-transparency rule.
+    expect(frame.style.background).toBe('')
+    expect(frame.style.borderRadius).toBe('32px')
+  })
+
   it('preloads the backdrop only when asked, and falls back to the poster', () => {
     const { container, rerender } = render(<TitleHero title="Severance" backdropUrl={BACKDROP} preload />)
     let art = container.querySelector('img')

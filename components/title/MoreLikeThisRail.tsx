@@ -30,14 +30,15 @@ export function MoreLikeThisRail({ items, onSelect, title = 'More like this', su
       <SectionHeader title={title} sub={sub} action={action} />
       {/* The reference rail: column-flow grid, posters at least 118px wide,
           scrolling sideways with the scrollbar hidden. It bleeds through the
-          panel's --space-5 padding so the last poster is cut at the rim, not
-          20px short of it, which is what reads as "this scrolls". */}
+          panel's padding (--panel-pad, or --space-5 outside a Card panel) so
+          the last poster is cut at the rim, not short of it, which is what
+          reads as "this scrolls". */}
       <ul
         className="scrollbar-none"
         style={{
           listStyle: 'none',
-          margin: '0 calc(var(--space-5) * -1)',
-          padding: '0 var(--space-5) 4px',
+          margin: '0 calc(var(--panel-pad, var(--space-5)) * -1)',
+          padding: '0 var(--panel-pad, var(--space-5)) 4px',
           display: 'grid',
           gridAutoFlow: 'column',
           gridAutoColumns: 'minmax(118px, 1fr)',

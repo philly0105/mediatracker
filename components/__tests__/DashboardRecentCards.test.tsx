@@ -62,6 +62,7 @@ describe('DashboardRecentCards', () => {
     ])
 
     expect(screen.getByRole('heading', { name: 'Recently watched' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Recently watched' })).toBeInTheDocument()
     expect(screen.getByText('Oct 19')).toBeInTheDocument()
     expect(screen.getByText('Oct 3')).toBeInTheDocument()
     expect(screen.getAllByLabelText('Rated 4 out of 5')).toHaveLength(2)

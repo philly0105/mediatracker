@@ -261,7 +261,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
           className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 pl-1 tabular"
           style={{ fontSize: 'var(--text-xs)', lineHeight: '16px', color: 'var(--text-muted)' }}
         >
-          <LegendKey swatch="var(--chart-line)">Movies</LegendKey>
+          <LegendKey swatch="var(--chart-bar-strong)">Movies</LegendKey>
           <LegendKey swatch="var(--chart-bar)">Episodes</LegendKey>
           {average > 0 && <LegendKey dashed>Avg {Math.round(average)}</LegendKey>}
         </div>
@@ -311,9 +311,9 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                   because the brighter fill belongs at the base. The
                   highlighted column is the accent (spec §5.5), with the
                   lighter accent-hover at its base for the same reason. */}
-              <Bar dataKey="movies" name="Movies" stackId="month" fill="var(--chart-line)" isAnimationActive={!reducedMotion}>
+              <Bar dataKey="movies" name="Movies" stackId="month" fill="var(--chart-bar-strong)" isAnimationActive={!reducedMotion}>
                 {activity.map((_, i) => (
-                  <Cell key={i} fill={i === highlight ? 'var(--accent-hover)' : 'var(--chart-line)'} />
+                  <Cell key={i} fill={i === highlight ? 'var(--accent-hover)' : 'var(--chart-bar-strong)'} />
                 ))}
               </Bar>
               <Bar dataKey="episodes" name="Episodes" stackId="month" fill="var(--chart-bar)" radius={BAR_TOP} isAnimationActive={!reducedMotion}>

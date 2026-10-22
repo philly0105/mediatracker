@@ -42,8 +42,9 @@ export default async function SharedWatchedPage({ params }: { params: Promise<{ 
           the same default the signed-in pages use. The RPC serialises the whole
           media row, so backdrop_url is simply absent until migration 014. */}
       <AmbientBackdrop src={entries[0]?.media.backdrop_url ?? null} />
-      <div className="glass-panel glass-rim mb-6 p-6 md:p-7 [&>header]:mb-0">
+      <div className="glass-panel glass-rim mb-6 p-6 md:p-7">
         <PageHeader
+          className="mb-0"
           eyebrow="Shared list"
           title="Watched"
           sub={entries.length === 1 ? '1 title' : `${entries.length} titles`}

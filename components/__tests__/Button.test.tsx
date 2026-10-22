@@ -40,6 +40,20 @@ describe('Button', () => {
     )
   })
 
+  it('dims a disabled primary like every other variant', () => {
+    // `.btn-primary:disabled` in globals.css swaps the white fill for glass;
+    // the 40% here is what says disabled, so a disabled primary never looks
+    // brighter than the disabled buttons beside it.
+    render(
+      <>
+        <Button disabled>Update Password</Button>
+        <Button variant="secondary" disabled>Episodes</Button>
+      </>
+    )
+    expect(screen.getByRole('button', { name: 'Update Password' }).style.opacity).toBe('0.4')
+    expect(screen.getByRole('button', { name: 'Episodes' }).style.opacity).toBe('0.4')
+  })
+
   it('keeps the tone class on top of the variant', () => {
     render(<Button variant="secondary" tone="destructive">Remove</Button>)
     expect(screen.getByRole('button', { name: 'Remove' })).toHaveClass('glass-btn', 'btn-tone-destructive')

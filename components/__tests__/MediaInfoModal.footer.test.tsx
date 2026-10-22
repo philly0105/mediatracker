@@ -174,6 +174,23 @@ describe('MediaInfoModal external links', () => {
     expect(imdb).toHaveAttribute('target', '_blank')
   })
 
+  it('names the dialog by its title heading, even with another one under it', async () => {
+    mockDetails({})
+    render(
+      <ToastProvider>
+        <MediaInfoModal item={movie} covered onClose={vi.fn()} onAddToWatchlist={vi.fn()} onMarkAsWatched={vi.fn()} />
+        <MediaInfoModal item={show} onClose={vi.fn()} onAddToWatchlist={vi.fn()} onMarkAsWatched={vi.fn()} />
+      </ToastProvider>,
+    )
+
+    // MediaModalStack keeps the lower modal mounted, so a shared heading id
+    // would name both dialogs after the first one in the document.
+    const top = await screen.findByRole('dialog', { name: 'Breaking Bad' })
+    const heading = screen.getByRole('heading', { level: 2, name: 'Breaking Bad' })
+    expect(top).toHaveAttribute('aria-labelledby', heading.id)
+    expect(screen.getByRole('dialog', { name: 'Heat' })).not.toBe(top)
+  })
+
   it('keeps the JustWatch link when nothing streams the title', async () => {
     mockDetails({ ...movie, watch_providers: { link: 'https://www.themoviedb.org/movie/550/watch', flatrate: [] } })
     render(
@@ -187,5 +204,58 @@ describe('MediaInfoModal external links', () => {
       'href',
       'https://www.themoviedb.org/movie/550/watch',
     )
+  })
+})
+
+describe('MediaInfoModal cast', () => {
+  beforeEach(() => {
+    mockFetch.mockReset()
+    global.fetch = mockFetch
+    HTMLElement.prototype.scrollIntoView = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('shows headshots and characters from the credits, after the director', async () => {
+    // Its own tmdb_id: the modal caches details per title for the session.
+    const heat = { ...movie, tmdb_id: 949 }
+    mockDetails({
+      ...heat,
+      director: 'Michael Mann',
+      cast_members: ['Al Pacino'],
+      cast_credits: [
+        { name: 'Al Pacino', character: 'Vincent Hanna', profile_url: 'https://image.tmdb.org/t/p/w185/pacino.jpg' },
+        { name: 'Michael Mann', character: null, profile_url: null },
+      ],
+    })
+    render(
+      <ToastProvider>
+        <MediaInfoModal item={heat} onClose={vi.fn()} onAddToWatchlist={vi.fn()} onMarkAsWatched={vi.fn()} />
+      </ToastProvider>,
+    )
+
+    const pacino = await screen.findByRole('link', { name: /Al Pacino/ })
+    expect(pacino).toHaveTextContent('Vincent Hanna')
+    expect(pacino.querySelector('img')?.getAttribute('src')).toContain(
+      encodeURIComponent('https://image.tmdb.org/t/p/w185/pacino.jpg'),
+    )
+    // An actor-director is listed once, as the director.
+    const people = screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/person/'))
+    expect(people.map((a) => a.getAttribute('href'))).toEqual(['/person/Michael%20Mann', '/person/Al%20Pacino'])
+    expect(people[0]).toHaveTextContent('Director')
+  })
+
+  it('falls back to the names when the credits are missing', async () => {
+    const ronin = { ...movie, tmdb_id: 8195, title: 'Ronin' }
+    mockDetails({ ...ronin, cast_members: ['Robert De Niro'] })
+    render(
+      <ToastProvider>
+        <MediaInfoModal item={ronin} onClose={vi.fn()} onAddToWatchlist={vi.fn()} onMarkAsWatched={vi.fn()} />
+      </ToastProvider>,
+    )
+
+    expect(await screen.findByRole('link', { name: /Robert De Niro/ })).toHaveAttribute('href', '/person/Robert%20De%20Niro')
   })
 })

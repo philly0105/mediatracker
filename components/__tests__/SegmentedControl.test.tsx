@@ -39,6 +39,23 @@ describe('SegmentedControl', () => {
     expect(screen.getByRole('radio', { name: 'TV Shows' }).className).not.toContain('forced-colors:')
   })
 
+  it('shows a count as a muted suffix and folds it into the name', () => {
+    render(
+      <SegmentedControl
+        options={[{ id: 'must', label: 'Must Watch', count: 12 }, { id: 'someday', label: 'Someday' }]}
+        value="must"
+        onChange={vi.fn()}
+      />
+    )
+
+    const counted = screen.getByRole('radio', { name: 'Must Watch · 12' })
+    const tally = counted.querySelector('[aria-hidden="true"]')!
+    expect(tally).toHaveTextContent('12')
+    expect(tally.className).toContain('tabular')
+    // No count, no override: the name is still the label alone.
+    expect(screen.getByRole('radio', { name: 'Someday' })).not.toHaveAttribute('aria-label')
+  })
+
   it('triggers onChange with the selected option id', () => {
     const onChange = vi.fn()
     render(

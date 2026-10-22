@@ -22,8 +22,13 @@ export async function createClient() {
   )
 }
 
-/** The only two claims anything in this app reads off the session. */
-export type AuthUser = { id: string; email?: string }
+/** The only claims anything in this app reads off the session. */
+export type AuthUser = {
+  id: string
+  email?: string
+  /** The account's display name from user_metadata, when the provider set one. */
+  name?: string
+}
 
 /**
  * Verifies the session and returns the caller's identity.
@@ -47,5 +52,9 @@ export const getAuthenticatedUser = cache(async (): Promise<AuthUser | null> => 
   const supabase = await createClient()
   const { data } = await supabase.auth.getClaims()
   if (!data?.claims?.sub) return null
-  return { id: data.claims.sub, email: data.claims.email }
+  // Read off the verified token like the rest, so it costs no extra call.
+  // user_metadata is untyped, so take the first field that is a non-blank string.
+  const meta = data.claims.user_metadata
+  const name = [meta?.full_name, meta?.name].find((v): v is string => typeof v === 'string' && v.trim() !== '')
+  return { id: data.claims.sub, email: data.claims.email, name }
 })

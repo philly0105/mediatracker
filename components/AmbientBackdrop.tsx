@@ -24,7 +24,7 @@
 //
 // Never animate the blur. Only opacity crossfades, and not at all under
 // prefers-reduced-motion. globals.css hides .ambient-img under
-// prefers-reduced-transparency, leaving the tint.
+// prefers-reduced-transparency and forced colours, leaving the tint.
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react'
 
 const TINT = 'linear-gradient(180deg, rgba(4,12,17,.50) 0%, rgba(4,12,17,.62) 55%, rgba(5,13,18,.84) 100%)'

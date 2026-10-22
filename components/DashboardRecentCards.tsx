@@ -1,6 +1,5 @@
 'use client'
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
-import Link from 'next/link'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, MonitorPlay, RotateCcw } from 'lucide-react'
 import type { WatchEntry, TmdbSearchResult } from '@/types'
@@ -10,6 +9,7 @@ import SelectableOverlay from './SelectableOverlay'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PosterCard, PosterBadge } from '@/components/ui/PosterCard'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { formatShortDate } from '@/components/home/format'
 
 interface Props {
@@ -22,9 +22,6 @@ interface Props {
   preloadFirst?: boolean
 }
 
-// SectionHeader's trailing link, for a header that also carries the arrows.
-const LINK_CLASS =
-  'inline-flex items-center gap-0.5 min-h-11 pl-3 pr-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--white)] hover:bg-[var(--glass-fill-hover)] transition-colors'
 const ARROW_CLASS =
   'glass-btn flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-secondary)] enabled:hover:text-[var(--text-primary)] disabled:opacity-30'
 
@@ -78,26 +75,15 @@ export default function DashboardRecentCards({ entries, preloadFirst = false }: 
 
   return (
     <Card variant="panel" as="section" aria-labelledby="recent-title">
-      <div className="flex items-center justify-between" style={{ gap: 16, marginBottom: 12, paddingLeft: 4 }}>
-        <div style={{ minWidth: 0 }}>
-          <h2
-            id="recent-title"
-            style={{
-              margin: 0, fontSize: 'var(--text-xl)', lineHeight: '26px',
-              fontWeight: 'var(--weight-heading)' as CSSProperties['fontWeight'],
-              letterSpacing: 'var(--tracking-snug)', color: 'var(--text-primary)',
-            }}
-          >
-            Recently watched
-          </h2>
-          <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)' }}>
-            Your ratings, newest first
-          </p>
-        </div>
-        <div className="flex items-center gap-1" style={{ flex: 'none' }}>
-          {/* Arrows only where there is a pointer to use them; touch has the
-              swipe, and the rail's scrollbar is hidden. */}
-          {entries.length > 0 && (
+      <SectionHeader
+        id="recent-title"
+        title="Recently watched"
+        sub="Your ratings, newest first"
+        action={{ label: 'Library', href: '/library' }}
+        actions={
+          // Arrows only where there is a pointer to use them; touch has the
+          // swipe, and the rail's scrollbar is hidden.
+          entries.length > 0 && (
             <div className="hidden md:flex items-center gap-1.5" style={{ marginRight: 4 }}>
               <button type="button" onClick={() => scrollByCards(-1)} disabled={!canScrollLeft} aria-label="Scroll left" className={ARROW_CLASS}>
                 <ChevronLeft size={16} strokeWidth={1.8} aria-hidden="true" />
@@ -106,17 +92,9 @@ export default function DashboardRecentCards({ entries, preloadFirst = false }: 
                 <ChevronRight size={16} strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
-          )}
-          <Link
-            href="/library"
-            className={LINK_CLASS}
-            style={{ fontSize: 'var(--text-base)', lineHeight: '20px', fontWeight: 'var(--weight-medium)' as CSSProperties['fontWeight'], letterSpacing: 'var(--tracking-text)' }}
-          >
-            Library
-            <ChevronRight size={16} strokeWidth={1.8} aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
+          )
+        }
+      />
 
       {entries.length === 0 ? (
         <EmptyState
@@ -134,7 +112,7 @@ export default function DashboardRecentCards({ entries, preloadFirst = false }: 
         <ul
           ref={scrollerRef}
           onScroll={updateScrollState}
-          className="scrollbar-none grid grid-flow-col auto-cols-[minmax(118px,1fr)] gap-4 overflow-x-auto scroll-smooth -mx-3.5 px-3.5 pb-1 md:mx-0 md:px-0"
+          className="scrollbar-none grid grid-flow-col auto-cols-[minmax(118px,1fr)] gap-4 overflow-x-auto scroll-smooth mx-[calc(var(--panel-pad)*-1)] px-[var(--panel-pad)] pb-1 md:mx-0 md:px-0"
           style={{ listStyle: 'none' }}
         >
           {entries.map((entry, index) => (

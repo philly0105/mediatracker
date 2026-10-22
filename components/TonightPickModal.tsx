@@ -171,7 +171,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
                   {/* Must Watch carries the accent; the other two are the
                       neutral chip. The retired rust and amber tints are gone. */}
                   <Badge tone={pick.priority === 'must_watch' ? 'accent' : 'neutral'}>
-                    {PriorityIcon && <PriorityIcon className="h-3.5 w-3.5" />}
+                    {PriorityIcon && <PriorityIcon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />}
                     {pick.priority === 'must_watch' ? 'Must Watch' : pick.priority === 'want_to_watch' ? 'Want to Watch' : 'Someday'}
                   </Badge>
 

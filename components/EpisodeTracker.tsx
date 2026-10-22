@@ -185,6 +185,7 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                 title={meta?.name ?? `Episode ${ep}`}
                 type="show"
                 stillUrl={meta?.still_url}
+                thumbShape="still"
                 aside={meta?.runtime_mins ? formatMinutes(meta.runtime_mins) : ''}
                 subtitle={airLabel ? (unaired ? `Airs ${airLabel}` : airLabel) : undefined}
                 actions={

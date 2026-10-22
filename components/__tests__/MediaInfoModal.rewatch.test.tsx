@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import MediaInfoModal from '../MediaInfoModal'
 import { ToastProvider } from '../ToastProvider'
 import { MediaActionError } from '@/lib/useMediaActions'
+import { formatDateLabel } from '@/lib/formatDate'
+import type { ComponentProps } from 'react'
 import type { TmdbSearchResult } from '@/types'
 
 
@@ -25,7 +27,7 @@ const mockFetch = vi.fn()
 
 // The modal loads /api/tmdb/details on mount; isWatched drives which primary
 // button renders.
-function mockDetails(opts: { isWatched: boolean; watchEntry?: { id: string; rating: number | null } | null }) {
+function mockDetails(opts: { isWatched: boolean; watchEntry?: { id: string; rating: number | null; watched_at?: string } | null }) {
   mockFetch.mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -45,7 +47,7 @@ function mockDetails(opts: { isWatched: boolean; watchEntry?: { id: string; rati
   })
 }
 
-function renderModal(onMarkAsWatched: (opts?: { rewatch?: boolean }) => Promise<void>) {
+function renderModal(onMarkAsWatched: ComponentProps<typeof MediaInfoModal>['onMarkAsWatched']) {
   return render(
     <ToastProvider>
       <MediaInfoModal
@@ -139,20 +141,34 @@ describe('MediaInfoModal rewatch flow', () => {
     })
   })
 
-  it('renders the rating stars once a watch entry exists', async () => {
-    mockDetails({ isWatched: true, watchEntry: { id: 'entry-1', rating: 3.5 } })
+  it('shows the watched date and the rating stars once a watch entry exists', async () => {
+    mockDetails({ isWatched: true, watchEntry: { id: 'entry-1', rating: 3.5, watched_at: '2026-08-20' } })
     renderModal(vi.fn().mockResolvedValue(undefined))
 
-    await screen.findByText('Your Rating')
-    expect(screen.getByText('3.5 / 5')).toBeInTheDocument()
-    expect(screen.getByRole('slider', { name: 'Rating' })).toBeInTheDocument()
+    // The hero's watched status, as on the show page, replaced "Your Rating".
+    await screen.findByText('Watched Aug 20, 2026')
+    expect(screen.getByRole('slider', { name: 'Rating' })).toHaveAttribute('aria-valuetext', '3.5 stars')
+  })
+
+  it('dates a first log in the hero without refetching the details', async () => {
+    mockDetails({ isWatched: false })
+    renderModal(vi.fn().mockResolvedValue({ id: 'entry-1', rating: null }))
+
+    const button = await screen.findByText('Mark as Watched')
+    await act(async () => {
+      fireEvent.click(button)
+    })
+
+    await screen.findByText(`Watched ${formatDateLabel(new Date().toISOString().split('T')[0])}`)
+    // Only the mount load: the returned entry is enough to date and rate.
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('PATCHes /api/watch with the entry id when a star is clicked', async () => {
-    mockDetails({ isWatched: true, watchEntry: { id: 'entry-1', rating: null } })
+    mockDetails({ isWatched: true, watchEntry: { id: 'entry-1', rating: null, watched_at: '2026-08-20' } })
     renderModal(vi.fn().mockResolvedValue(undefined))
 
-    await screen.findByText('Your Rating')
+    await screen.findByRole('slider', { name: 'Rating' })
     await act(async () => {
       const slider = screen.getByRole('slider')
       fireEvent.change(slider, { target: { value: '3' } })

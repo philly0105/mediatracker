@@ -19,6 +19,16 @@ describe('Card', () => {
     expect(container.firstElementChild).toHaveClass('glass-panel', 'glass-rim')
   })
 
+  it('tightens the panel padding under the 760px content breakpoint', () => {
+    // Through --panel-pad, which a rail bleeding to the rim reads back.
+    const { container } = render(<Card variant="panel">body</Card>)
+    expect(container.firstElementChild).toHaveClass(
+      '[--panel-pad:14px]',
+      'min-[760px]:[--panel-pad:var(--space-5)]',
+      'p-[var(--panel-pad)]'
+    )
+  })
+
   it('takes a landmark element through `as`', () => {
     render(<Card as="section" aria-label="Up next">body</Card>)
     expect(screen.getByRole('region', { name: 'Up next' }).tagName).toBe('SECTION')

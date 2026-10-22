@@ -106,10 +106,12 @@ export function PosterCard({
           // position:relative with a 2/3 aspect ratio, so the box is reserved
           // before the image loads and the grid no longer reflows as posters
           // arrive. `sizes` matches the responsive grid this card sits in
-          // (2 columns on mobile, 3 on tablet, 5 on desktop).
+          // (2 columns on mobile, 3 on tablet, 5 on desktop). The caption
+          // always carries the title, so the art is decorative: alt={title}
+          // named every card twice ("Hamnet Hamnet 2025").
           <Image
             src={posterUrl}
-            alt={title}
+            alt=""
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             preload={preload}
@@ -118,7 +120,8 @@ export function PosterCard({
             style={{ objectFit: 'cover' }}
           />
         ) : (
-          <div style={{
+          // Hidden for the same reason: the caption already says the title.
+          <div aria-hidden="true" style={{
             width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
             textAlign: 'center', padding: '16px',

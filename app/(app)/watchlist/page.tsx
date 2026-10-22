@@ -453,10 +453,11 @@ function WatchlistContent() {
               label="Priority"
               options={PRIORITY_ORDER.map((p) => ({
                 id: p,
+                label: PRIORITY_LABELS[p],
                 // The count used to sit in a chip beside each heading; it rides
                 // on the segment now, and waits for the load so three zeros
                 // never flash first.
-                label: loading ? PRIORITY_LABELS[p] : `${PRIORITY_LABELS[p]} · ${groups[p].total}`,
+                count: loading ? undefined : groups[p].total,
               }))}
               value={activePriority}
               onChange={setActivePriority}

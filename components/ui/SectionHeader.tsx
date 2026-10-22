@@ -8,6 +8,8 @@ interface SectionHeaderProps {
   sub?: React.ReactNode
   /** Trailing "See all ›" link. */
   action?: { label: string; href: string }
+  /** Extra controls before the link, e.g. a rail's scroll arrows. */
+  actions?: React.ReactNode
   /** Put on the heading so the section can point at it with aria-labelledby. */
   id?: string
   className?: string
@@ -16,7 +18,7 @@ interface SectionHeaderProps {
 
 // The header of every glass panel: title, optional sub line and a trailing
 // link, laid out as in the reference's "Up next" and "Coming soon" panels.
-export function SectionHeader({ title, sub, action, id, className, style }: SectionHeaderProps) {
+export function SectionHeader({ title, sub, action, actions, id, className, style }: SectionHeaderProps) {
   return (
     <div
       className={className}
@@ -50,15 +52,20 @@ export function SectionHeader({ title, sub, action, id, className, style }: Sect
           </p>
         )}
       </div>
-      {action && (
-        <Link
-          href={action.href}
-          className="inline-flex items-center gap-0.5 min-h-11 pl-3 pr-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--white)] hover:bg-[var(--glass-fill-hover)] transition-colors"
-          style={{ flex: 'none', fontSize: 'var(--text-base)', lineHeight: '20px', fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'], letterSpacing: 'var(--tracking-text)' }}
-        >
-          {action.label}
-          <ChevronRight size={16} strokeWidth={1.8} aria-hidden="true" />
-        </Link>
+      {(actions || action) && (
+        <div className="flex items-center gap-1" style={{ flex: 'none' }}>
+          {actions}
+          {action && (
+            <Link
+              href={action.href}
+              className="inline-flex items-center gap-0.5 min-h-11 pl-3 pr-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--white)] hover:bg-[var(--glass-fill-hover)] transition-colors"
+              style={{ fontSize: 'var(--text-base)', lineHeight: '20px', fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'], letterSpacing: 'var(--tracking-text)' }}
+            >
+              {action.label}
+              <ChevronRight size={16} strokeWidth={1.8} aria-hidden="true" />
+            </Link>
+          )}
+        </div>
       )}
     </div>
   )

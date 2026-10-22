@@ -181,6 +181,7 @@ Gradient tokens go through `background`, never `bg-[var(--x)]`: Tailwind emits t
 | `--skeleton-shimmer` | `rgba(255, 255, 255, 0.10)` | skeleton shimmer |
 | `--progress-track` | `rgba(255, 255, 255, 0.16)` | ring track, unwatched segments |
 | `--chart-bar` | `rgba(255, 255, 255, 0.26)` | bars (the current or peak bar is `--accent`) |
+| `--chart-bar-strong` | `rgba(255, 255, 255, 0.60)` | base series of a stacked bar |
 | `--chart-line` | `rgba(255, 255, 255, 0.60)` | dashed average |
 | `--chart-baseline` | `rgba(255, 255, 255, 0.14)` | x axis |
 | `--chart-grid` | `rgba(255, 255, 255, 0.08)` | gridlines |

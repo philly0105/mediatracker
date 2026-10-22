@@ -451,7 +451,7 @@ export default function SearchOverlay({ onClose }: Props) {
                     style={rowStyle(i === activeIndex, '0 12px')}
                   >
                     <span aria-hidden="true" className="inline-flex shrink-0" style={{ color: 'var(--text-muted)' }}>
-                      <Icon className="h-[18px] w-[18px] [stroke-width:1.8]" />
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                     </span>
                     <span className="truncate" style={ROW_LABEL}>{item.name}</span>
                   </div>
@@ -477,7 +477,7 @@ export default function SearchOverlay({ onClose }: Props) {
                     style={rowStyle(i === activeIndex, '0 12px')}
                   >
                     <span aria-hidden="true" className="inline-flex shrink-0" style={{ color: 'var(--text-muted)' }}>
-                      <Icon className="h-[18px] w-[18px] [stroke-width:1.8]" />
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                     </span>
                     <span className="truncate" style={ROW_LABEL}>{page.name}</span>
                   </div>

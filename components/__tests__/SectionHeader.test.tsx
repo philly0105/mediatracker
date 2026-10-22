@@ -18,6 +18,27 @@ describe('SectionHeader', () => {
     expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('renders extra actions before the trailing link', () => {
+    render(
+      <SectionHeader
+        title="Recently watched"
+        action={{ label: 'Library', href: '/library' }}
+        actions={<button type="button">Scroll right</button>}
+      />
+    )
+    const button = screen.getByRole('button', { name: 'Scroll right' })
+    const link = screen.getByRole('link', { name: 'Library' })
+    expect(button.parentElement).toBe(link.parentElement)
+    expect(button.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('leaves out the right-hand group when there is nothing to put in it', () => {
+    // A rail with no entries passes `entries.length > 0 && …`, i.e. false; an
+    // empty group would still take the header's gap from the title.
+    const { container } = render(<SectionHeader title="Recently watched" actions={false} />)
+    expect(container.firstElementChild?.children).toHaveLength(1)
+  })
+
   it('puts the id on the heading so a section can label itself with it', () => {
     render(
       <section aria-labelledby="soon-title">

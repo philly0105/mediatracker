@@ -13,6 +13,12 @@ interface MediaRowProps {
   posterUrl?: string | null
   /** A 16:9 episode still; shown in place of the poster thumb when given. */
   stillUrl?: string | null
+  /**
+   * The placeholder's shape when there is no art. Defaults to a still when a
+   * still was given and a poster otherwise; an episode list passes 'still' so
+   * an episode with no still keeps its siblings' 16:9 shape.
+   */
+  thumbShape?: 'poster' | 'still'
   rating?: number | null
   onRate?: (rating: number | null) => void
   review?: string | null
@@ -43,6 +49,7 @@ export function MediaRow({
   type = 'movie',
   posterUrl,
   stillUrl,
+  thumbShape,
   rating = null,
   onRate,
   review,
@@ -79,9 +86,14 @@ export function MediaRow({
         className={stillSize} style={thumbStyle} />
     )
   } else if (posterUrl && !posterErr) {
-    thumb = <Image src={posterUrl} alt={title} width={60} height={90} onError={() => setPosterErr(true)} style={thumbStyle} />
+    // Both sides pinned: preflight's `height: auto` would otherwise let the
+    // poster's own ratio set the height, which Next warns about in dev.
+    thumb = (
+      <Image src={posterUrl} alt={title} width={60} height={90} onError={() => setPosterErr(true)}
+        style={{ ...thumbStyle, width: 60, height: 90 }} />
+    )
   } else {
-    const stillShaped = !!stillUrl
+    const stillShaped = thumbShape ? thumbShape === 'still' : !!stillUrl
     thumb = (
       <div className={stillShaped ? stillSize : undefined} style={{
         ...thumbStyle, ...(stillShaped ? {} : { width: 60, height: 90 }),
@@ -101,8 +113,9 @@ export function MediaRow({
       onClick={onClick}
       {...activatableProps(onClick, title)}
       // The reference's "Up next" row: a tier-2 fill with the gradient rim,
-      // no blur, because rows render once per list item.
-      className="glass-row glass-rim"
+      // no blur, because rows render once per list item. A clickable row also
+      // takes the hover fill on keyboard focus.
+      className={onClick ? 'glass-row glass-rim media-row-interactive' : 'glass-row glass-rim'}
       style={{
         display: 'flex',
         alignItems: 'center',

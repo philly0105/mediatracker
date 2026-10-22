@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
@@ -64,12 +63,6 @@ export async function loadYearStats(supabase: SupabaseClient, userId: string, ye
   return { entries: entries as unknown as WatchEntry[], episodes }
 }
 
-const UNIT: CSSProperties = {
-  fontSize: 'var(--text-body)',
-  lineHeight: '18px',
-  fontWeight: 'var(--weight-medium)' as CSSProperties['fontWeight'],
-}
-
 type Props = {
   stats: Promise<YearStats>
   /** Shows with an unwatched episode, from the continue-watching list. */
@@ -126,10 +119,8 @@ export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now
             icon={<Star size={18} strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--rating)', fill: 'var(--rating)' }} />}
           />
           <StatTile label="Top genre" value={topGenre} />
-          {/* The unit rides in the icon slot: it is the muted 15/18 word the
-              reference sets beside the numeral, and StatTile has no unit of its own. */}
-          <StatTile label="In progress" value={inProgress} icon={<span style={UNIT}>{inProgress === 1 ? 'show' : 'shows'}</span>} />
-          <StatTile label="On Must watch" value={mustWatch} icon={<span style={UNIT}>{mustWatch === 1 ? 'title' : 'titles'}</span>} />
+          <StatTile label="In progress" value={inProgress} unit={inProgress === 1 ? 'show' : 'shows'} />
+          <StatTile label="On Must watch" value={mustWatch} unit={mustWatch === 1 ? 'title' : 'titles'} />
         </div>
 
         <figure style={{ flex: '1.35 1 280px', margin: 0, minWidth: 0 }}>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import AmbientBackdrop from '@/components/AmbientBackdrop'
 import { Button } from '@/components/ui/Button'
+import { Wordmark } from '@/components/ui/Wordmark'
 
 // The login page's card and inputs, lifted so signup, forgot-password and
 // reset-password are the same surface rather than three near-copies: the
@@ -16,37 +17,6 @@ import { Button } from '@/components/ui/Button'
 // only once it has loaded, so if this file ever disappears from TMDB the
 // pages keep the tint, which is what they show while it is on its way anyway.
 export const AUTH_BACKDROP = 'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg'
-
-// The mark from the reference sidebar, the same markup as components/Sidebar.tsx:
-// a light rounded square with the "D" and its counter cut out. app/icon.tsx
-// draws the same shape with literals because Satori resolves no CSS variables.
-function Mark() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" className="shrink-0">
-      <rect x="0.5" y="0.5" width="31" height="31" rx="10" fill="var(--text-primary)" />
-      <path d="M10.5 8h5.7a8 8 0 0 1 0 16h-5.7z" fill="var(--ink)" />
-      <circle cx="16.2" cy="16" r="2.6" fill="var(--text-primary)" />
-    </svg>
-  )
-}
-
-const WORDMARK: CSSProperties = {
-  fontSize: 17,
-  lineHeight: '22px',
-  fontWeight: 'var(--weight-heading)',
-  letterSpacing: '-0.02em',
-  color: 'var(--text-primary)',
-}
-
-/** Mark plus "DorfMovies", for the pages that render outside the shell. */
-export function Wordmark() {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <Mark />
-      <span style={WORDMARK}>DorfMovies</span>
-    </span>
-  )
-}
 
 export function AuthShell({
   title,

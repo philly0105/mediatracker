@@ -4,6 +4,8 @@ export interface SegmentedControlOption<T extends string> {
   id: T
   label: string
   icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  /** A muted tally after the label, e.g. the items in a bucket. */
+  count?: number
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -50,6 +52,8 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={isSelected}
+            // The visible tally is decoration; the name carries it instead.
+            aria-label={option.count != null ? `${option.label} · ${option.count}` : undefined}
             onClick={() => onChange(option.id)}
             className={`relative flex items-center justify-center gap-1.5 h-9 rounded-[var(--radius-thumb)] transition-colors duration-200 ${sizeClasses} ${
               isSelected
@@ -59,6 +63,11 @@ export function SegmentedControl<T extends string>({
           >
             {Icon && <Icon className="w-4 h-4" strokeWidth={1.8} />}
             <span>{option.label}</span>
+            {option.count != null && (
+              <span aria-hidden="true" className="tabular font-medium text-[var(--text-muted)]">
+                {option.count}
+              </span>
+            )}
           </button>
         )
       })}

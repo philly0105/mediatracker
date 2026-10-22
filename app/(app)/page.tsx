@@ -172,7 +172,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <HomeHeader email={user.email} />
+      <HomeHeader email={user.email} name={user.name} />
 
       <Suspense fallback={<HeroFallback />}>
         <HeroSection

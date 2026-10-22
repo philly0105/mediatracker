@@ -40,6 +40,8 @@ export interface TitleHeroProps {
   preload?: boolean
   /** The page uses h1; the modal, which already has a page heading behind it, h2. */
   headingLevel?: 1 | 2
+  /** Put on the title heading, so a dialog can name itself with aria-labelledby. */
+  headingId?: string
 }
 
 // The reference darkens the bottom and right edges of the art so the slab's
@@ -86,6 +88,7 @@ export function TitleHero({
   actions,
   preload = false,
   headingLevel = 1,
+  headingId,
 }: TitleHeroProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h1'
   const art = backdropUrl ?? posterUrl ?? null
@@ -109,9 +112,11 @@ export function TitleHero({
       // The frame takes .glass-panel for the one sanctioned blur and overrides
       // its gradient, radius and shadow with the hero's own (the reference's
       // 32, not the panel's 28); it is the only tier-1 surface here besides
-      // the slab.
-      className="glass-panel glass-rim p-2 shadow-[var(--shadow-xl)]"
-      style={{ borderRadius: 32, background: 'var(--glass-hero)' }}
+      // the slab. The gradient goes in by retargeting the token .glass-panel
+      // paints with, not as an inline background, so the opaque fallback
+      // under reduced transparency and without backdrop-filter still wins.
+      className="glass-panel glass-rim [--glass-panel:var(--glass-hero)] p-2 shadow-[var(--shadow-xl)]"
+      style={{ borderRadius: 32 }}
     >
       <div
         // Inner radius is the frame's 32 minus its 8px padding. min-height,
@@ -162,6 +167,7 @@ export function TitleHero({
           </div>
 
           <Heading
+            id={headingId}
             style={{
               margin: '24px 0 0',
               color: 'var(--text-primary)',

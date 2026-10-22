@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useId } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Plus,
@@ -7,9 +7,7 @@ import {
   Loader2,
   Tv,
   X,
-  Flame,
   Sparkles,
-  Inbox,
   Trash2,
   Bookmark,
   Play,
@@ -20,11 +18,12 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
-import type { TmdbWatchProviders } from '@/lib/tmdb'
+import type { TmdbCastCredit, TmdbWatchProviders } from '@/lib/tmdb'
+import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
 import SimilarModal from './SimilarModal'
-import RatingStars from './RatingStars'
 import AmbientBackdrop from './AmbientBackdrop'
 import { TitleHero } from '@/components/title/TitleHero'
+import { TitleStatus } from '@/components/title/TitleStatus'
 import { CastStrip } from '@/components/title/CastStrip'
 import { StreamingRow } from '@/components/title/StreamingRow'
 import { Button } from '@/components/ui/Button'
@@ -40,11 +39,7 @@ const PRIORITY_LABELS: Record<WatchlistPriority, string> = {
   someday: 'Someday',
 }
 
-const PRIORITY_OPTIONS = [
-  { value: 'must_watch', icon: Flame },
-  { value: 'want_to_watch', icon: Sparkles },
-  { value: 'someday', icon: Inbox },
-] as const
+const PRIORITY_OPTIONS: WatchlistPriority[] = ['must_watch', 'want_to_watch', 'someday']
 
 // A modal under another sheet keeps its content but gives up its blur: the
 // sheet and the hero slab each carry a backdrop-filter, so a stacked title
@@ -68,14 +63,6 @@ const NESTED_PANEL_FLAT =
 // External links in the hero's action row: the same glass pill as a ghost
 // Button, on an <a>.
 const LINK_PILL = 'btn btn-ghost inline-flex items-center justify-center gap-2 px-4 text-[length:var(--text-sm)] font-semibold'
-
-const sectionTitle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 'var(--text-sm)',
-  lineHeight: '18px',
-  fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
-  color: 'var(--text-secondary)',
-}
 
 const bodyText: React.CSSProperties = {
   margin: 0,
@@ -111,11 +98,12 @@ interface FullDetails {
   runtime_mins: number | null
   director: string | null
   cast_members: string[]
+  cast_credits: TmdbCastCredit[]
   genres: string[]
   isWatched: boolean
   isWatchlisted: boolean
   isFollowed: boolean
-  watch_entry: { id: string; rating: number | null } | null
+  watch_entry: { id: string; rating: number | null; watched_at: string } | null
   trailer_url: string | null
   watch_providers?: TmdbWatchProviders | null
   vote_average?: number | null
@@ -161,6 +149,9 @@ export default function MediaInfoModal({
   const { toast } = useToast()
   const { containerRef } = useModal(onClose)
   const ratingRowRef = useRef<HTMLDivElement>(null)
+  // Not a fixed id: MediaModalStack keeps the modals under the top one
+  // mounted, and a shared id would name every dialog after the lowest title.
+  const titleId = useId()
 
   // Local optimistic edits have to reach the cache too, or reopening the modal
   // would paint the pre-action state for one frame before the revalidate lands.
@@ -210,6 +201,7 @@ export default function MediaInfoModal({
         runtime_mins: data.runtime_mins ?? null,
         director: data.director ?? null,
         cast_members: data.cast_members ?? [],
+        cast_credits: data.cast_credits ?? [],
         genres: data.genres ?? [],
         isWatched: data.isWatched ?? false,
         isWatchlisted: data.isWatchlisted ?? false,
@@ -278,7 +270,10 @@ export default function MediaInfoModal({
         toast(`Logged a rewatch of ${item.title}.`, { tone: 'success' })
       } else if (entry) {
         const base = detailsCache.get(cacheKey) ?? details
-        if (base) applyDetails({ ...base, isWatched: true, watch_entry: entry })
+        // A first log is dated today, the same UTC date useMediaActions posts,
+        // so the hero can show it without the refetch.
+        const watched_at = new Date().toISOString().split('T')[0]
+        if (base) applyDetails({ ...base, isWatched: true, watch_entry: { ...entry, watched_at } })
         setUserRating(entry.rating ?? null)
         toast(`Logged ${item.title} as watched — rate it below.`, {
           tone: 'success',
@@ -448,10 +443,15 @@ export default function MediaInfoModal({
   const flatrate = details?.watch_providers?.flatrate?.[0]
   const platform = flatrate ? { name: flatrate.provider_name, logoUrl: flatrate.logo_path } : null
   // The director leads the strip with a caption, so the person link the meta
-  // line used to carry still exists. An actor-director is listed once.
+  // line used to carry still exists. An actor-director is listed once. The
+  // credits carry the headshots and characters; the names alone are the
+  // fallback when TMDB has none.
+  const castMembers = details?.cast_credits.length
+    ? details.cast_credits.map((c) => ({ name: c.name, character: c.character, profileUrl: c.profile_url }))
+    : (details?.cast_members ?? []).map((name) => ({ name }))
   const cast = [
     ...(details?.director ? [{ name: details.director, character: 'Director' }] : []),
-    ...(details?.cast_members ?? []).filter((name) => name !== details?.director).map((name) => ({ name })),
+    ...castMembers.filter((member) => member.name !== details?.director),
   ]
 
   if (!mounted) return null
@@ -469,7 +469,7 @@ export default function MediaInfoModal({
         ref={containerRef}
         role="dialog"
         aria-modal="true"
-        aria-label={item.title}
+        aria-labelledby={titleId}
         // --glass-modal over the panel gradient: a sheet over a page full of
         // glass needs the more opaque fill or the page reads through it. Set
         // by retargeting the token .glass-panel paints with, not as an inline
@@ -506,24 +506,24 @@ export default function MediaInfoModal({
             runtimeMins={details?.runtime_mins}
             platform={platform}
             headingLevel={2}
+            headingId={titleId}
             status={
-              // Only once there's a watch entry to rate against. The ring is
-              // the one-shot pulse after "Mark as Watched".
+              // Only once there's a watch entry to date and rate against. The
+              // ring is the one-shot pulse after "Mark as Watched".
               details?.isWatched && details.watch_entry ? (
                 <div
                   ref={ratingRowRef}
                   className="-m-2 rounded-[var(--radius-md)] p-2 transition-shadow duration-500"
                   style={{ boxShadow: ratingPulse ? 'var(--accent-ring)' : 'none' }}
                 >
-                  <h3 style={sectionTitle}>Your Rating</h3>
-                  <div className="mt-2 flex items-center gap-3">
-                    <RatingStars value={userRating} onChange={handleRatingChange} />
-                    {userRating != null && (
-                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                        {userRating} / 5
-                      </span>
-                    )}
-                  </div>
+                  <TitleStatus
+                    status={{
+                      kind: 'watched',
+                      watchedAt: details.watch_entry.watched_at,
+                      rating: userRating,
+                      onRate: handleRatingChange,
+                    }}
+                  />
                 </div>
               ) : undefined
             }
@@ -567,7 +567,8 @@ export default function MediaInfoModal({
             <section aria-label="Watchlist Priority">
               <SectionHeader title="Watchlist Priority" />
               <div className="flex flex-wrap gap-2">
-                {PRIORITY_OPTIONS.map(({ value, icon: Icon }) => {
+                {PRIORITY_OPTIONS.map((value) => {
+                  const Icon = PRIORITY_CONFIG[value].icon
                   const isActive = currentPriority === value
                   const isActioning = actioning === `priority-${value}`
                   return (

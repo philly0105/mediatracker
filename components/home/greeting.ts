@@ -11,16 +11,23 @@ export function greetingFor(hour: number): string {
 }
 
 /**
- * "richard.dorf+films@example.com" → "Richard". The session only carries the
- * email (lib/supabase/server drops user_metadata), so the local part is the
- * best name on hand; null when there is nothing usable, and the greeting then
- * stands alone.
+ * "richard.dorf+films@example.com" → "Richard". The fallback when the session
+ * carries no display name: the local part is the best name on hand then; null
+ * when there is nothing usable, and the greeting stands alone.
  */
 export function firstNameFromEmail(email: string | null | undefined): string | null {
   const local = email?.split('@')[0] ?? ''
   const first = local.split(/[._\-+\d]/)[0]
   if (!first) return null
   return first[0].toUpperCase() + first.slice(1).toLowerCase()
+}
+
+/**
+ * The name the greeting uses: the first word of the account's display name
+ * ("Richard Dorf" → "Richard"), as written, or else the email's guess.
+ */
+export function greetingName(name: string | null | undefined, email: string | null | undefined): string | null {
+  return name?.trim().split(/\s+/)[0] || firstNameFromEmail(email)
 }
 
 /** "Thursday, October 22": the eyebrow over the greeting. */

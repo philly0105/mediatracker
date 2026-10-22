@@ -6,7 +6,7 @@ import {
 export interface QuickNavItem {
   name: string
   href: string
-  icon: ComponentType<{ className?: string }>
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>
   /**
    * The second key of the `g`-prefixed jump (g then l → Library). Chosen from
    * the destination's own name wherever the initial is free; Settings takes the

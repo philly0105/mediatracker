@@ -109,8 +109,16 @@ body {
 }
 
 /* The ambient image is decorative. Reduced transparency drops it and leaves
-   the tint; reduced motion drops its crossfade. */
+   the tint; reduced motion drops its crossfade. Forced colours drops it too:
+   an <img> keeps painting there, blurred art behind High Contrast text. The
+   tint and radial layers are gradients, which forced colours already removes. */
 @media (prefers-reduced-transparency: reduce) {
+  .ambient-img {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
   .ambient-img {
     display: none;
   }
@@ -421,6 +429,15 @@ body {
   background: var(--btn-primary-bg-hover);
 }
 
+/* Disabled, the white pill steps back to the glass one, so Button's 40%
+   opacity dims it like every other disabled button. A white pill at 40% let
+   warm art bleed through and read as a muddy grey one. */
+.btn-primary:disabled {
+  background: var(--btn-ghost-bg);
+  color: var(--text-primary);
+  box-shadow: var(--glass-btn-edge);
+}
+
 .btn-ghost {
   background: var(--btn-ghost-bg);
   color: var(--text-primary);
@@ -608,6 +625,14 @@ body {
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
+}
+
+/* No ring on a dialog: useModal focuses the sheet itself (tabindex -1) so
+   focus starts inside it, and a ring round the whole sheet says nothing.
+   Leaving dialogs out of the rule above is not enough, as the browser's own
+   focus-visible outline then draws instead. */
+:where([role="dialog"]):focus-visible {
+  outline: none;
 }
 
 @keyframes toast-enter {

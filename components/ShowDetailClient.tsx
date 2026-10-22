@@ -254,6 +254,11 @@ export default function ShowDetailClient({
   const logoUrl = art?.logo_url ?? media.logo_url ?? tmdb?.logo_url ?? null
   const genres = media.genres.length > 0 ? media.genres : tmdb?.genres ?? []
   const castNames = media.cast_members.length > 0 ? media.cast_members : tmdb?.cast_members ?? []
+  // TMDB's credits carry the headshots and characters; the names alone are
+  // the fallback when it has none.
+  const cast = tmdb?.cast_credits?.length
+    ? tmdb.cast_credits.map((c) => ({ name: c.name, character: c.character, profileUrl: c.profile_url }))
+    : castNames.map((name) => ({ name }))
   const flatrate = tmdb?.watch_providers?.flatrate?.[0]
   const platform = flatrate ? { name: flatrate.provider_name, logoUrl: flatrate.logo_path } : null
 
@@ -422,9 +427,9 @@ export default function ShowDetailClient({
         </div>
       )}
 
-      {castNames.length > 0 && (
+      {cast.length > 0 && (
         <Card as="section" variant="panel" aria-label="Cast">
-          <CastStrip cast={castNames.map((name) => ({ name }))} />
+          <CastStrip cast={cast} />
         </Card>
       )}
 

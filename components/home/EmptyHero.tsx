@@ -24,8 +24,11 @@ export default function EmptyHero({ recent, preload = false }: Props) {
   return (
     <section
       aria-labelledby="hero-title"
-      className="glass-panel glass-rim"
-      style={{ padding: 8, borderRadius: 32, background: 'var(--glass-hero)', boxShadow: 'var(--shadow-xl)' }}
+      // The hero tier through the panel's custom property, not an inline
+      // background, so the reduced-transparency and @supports fallbacks
+      // still reach it.
+      className="glass-panel glass-rim [--glass-panel:var(--glass-hero)]"
+      style={{ padding: 8, borderRadius: 32, boxShadow: 'var(--shadow-xl)' }}
     >
       <div
         className="relative flex flex-col overflow-hidden md:min-h-[360px] md:flex-row"

@@ -6,7 +6,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 export interface CastMember {
   name: string
   character?: string | null
-  /** TMDB profile image (w500). Without one the tile shows the initials. */
+  /** TMDB profile image (w185). Without one the tile shows the initials. */
   profileUrl?: string | null
 }
 
@@ -38,14 +38,15 @@ export function CastStrip({ cast, title = 'Cast', onNavigate, newTabLinks = fals
   return (
     <div>
       <SectionHeader title={title} />
-      {/* Bleeds through the panel's --space-5 padding like the poster rail,
-          so a cut-off tile sits at the rim and reads as scrollable. */}
+      {/* Bleeds through the panel's padding (--panel-pad, set by Card's panel
+          variant; --space-5 where no panel sets it) like the poster rail, so
+          a cut-off tile sits at the rim and reads as scrollable. */}
       <ul
         className="scrollbar-none"
         style={{
           listStyle: 'none',
-          margin: '0 calc(var(--space-5) * -1)',
-          padding: '0 var(--space-5) 4px',
+          margin: '0 calc(var(--panel-pad, var(--space-5)) * -1)',
+          padding: '0 var(--panel-pad, var(--space-5)) 4px',
           display: 'grid',
           gridAutoFlow: 'column',
           gridAutoColumns: 112,

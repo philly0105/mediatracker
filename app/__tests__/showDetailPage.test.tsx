@@ -9,6 +9,7 @@ import * as showDetailsModule from '@/lib/showDetails'
 import * as navigation from 'next/navigation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ShowDetails } from '@/lib/showDetails'
+import type { TmdbFullDetails } from '@/lib/tmdb'
 import type { ReactElement } from 'react'
 
 
@@ -193,5 +194,34 @@ describe('ShowDetailPage server page & cross-show navigation', () => {
     expect(screen.getByText('Mark show as watched')).toBeInTheDocument()
     expect(screen.queryByRole('slider', { name: 'Rating' })).not.toBeInTheDocument()
     expect(screen.queryByText('Breaking Bad')).not.toBeInTheDocument()
+  })
+
+  it('fills the cast strip from the TMDB credits, and falls back to the stored names', async () => {
+    const tmdb: TmdbFullDetails = {
+      tmdb_id: 1396, imdb_id: null, type: 'show', title: 'Breaking Bad', overview: '', poster_url: null,
+      genres: [], release_year: 2008, runtime_mins: 47, director: null, cast_members: ['Bryan Cranston'],
+      cast_credits: [{ name: 'Bryan Cranston', character: 'Walter White', profile_url: 'https://image.tmdb.org/t/p/w185/bc.jpg' }],
+      backdrop_url: null, logo_url: null, tagline: null, certification: null,
+    }
+    const renderClient = (details: TmdbFullDetails | null) =>
+      render(
+        <ToastProvider>
+          <MediaModalProvider>
+            <ShowDetailClient mediaId="show-1" initialDetails={show1Details} tmdb={details} />
+          </MediaModalProvider>
+        </ToastProvider>
+      )
+
+    let view!: ReturnType<typeof renderClient>
+    await act(async () => { view = renderClient(tmdb) })
+    const credited = screen.getByRole('link', { name: /Bryan Cranston/ })
+    expect(credited).toHaveTextContent('Walter White')
+    expect(credited.querySelector('img')).not.toBeNull()
+    view.unmount()
+
+    await act(async () => { renderClient(null) })
+    const named = screen.getByRole('link', { name: /Bryan Cranston/ })
+    expect(named).not.toHaveTextContent('Walter White')
+    expect(named.querySelector('img')).toBeNull()
   })
 })

@@ -98,6 +98,7 @@
      (.26 / .60 / .14); the spec's §5.5 figures (.22 / .35) were lighter, and
      the reference wins by its own rule. */
   --chart-bar: rgba(255, 255, 255, 0.26);
+  --chart-bar-strong: rgba(255, 255, 255, 0.60);    /* the stacked bar's base series */
   --chart-line: rgba(255, 255, 255, 0.60);          /* dashed average */
   --chart-baseline: rgba(255, 255, 255, 0.14);      /* the x axis under the bars */
   --chart-grid: rgba(255, 255, 255, 0.08);

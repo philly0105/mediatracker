@@ -46,9 +46,6 @@ function ShareRowSkeleton({ withUrl = false }: { withUrl?: boolean }) {
   )
 }
 
-// Panels tighten to 14px padding under the content breakpoint (spec 4.4).
-const PANEL = 'max-[760px]:p-3.5'
-
 export default function SettingsLoading() {
   return (
     <div className="max-w-[var(--content-narrow)] mx-auto md:mx-0">
@@ -59,7 +56,7 @@ export default function SettingsLoading() {
       </div>
 
       <div className="space-y-6">
-        <Card variant="panel" className={PANEL}>
+        <Card variant="panel">
           <PanelHeaderSkeleton />
           <Skeleton className="h-5 w-40 mb-5" />
           <div className="space-y-3">
@@ -69,7 +66,7 @@ export default function SettingsLoading() {
           <Skeleton className="h-11 mt-4 rounded-full" />
         </Card>
 
-        <Card variant="panel" className={PANEL}>
+        <Card variant="panel">
           <PanelHeaderSkeleton />
           <div className="space-y-1.5 mb-5">
             <Skeleton className="h-3 w-full max-w-xl" />
@@ -81,7 +78,7 @@ export default function SettingsLoading() {
           </div>
         </Card>
 
-        <Card variant="panel" className={PANEL}>
+        <Card variant="panel">
           <PanelHeaderSkeleton />
           <div className="space-y-3">
             <div className="glass-row hover:bg-[var(--glass-card)] flex items-start justify-between gap-4" style={{ padding: 16 }}>

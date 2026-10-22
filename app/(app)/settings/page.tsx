@@ -31,10 +31,6 @@ function PanelHeader({ id, icon: Icon, title }: { id: string; icon: ComponentTyp
   )
 }
 
-// Panels tighten to 14px padding under the content breakpoint (spec 4.4);
-// Card's panel variant only knows the 20px desktop padding.
-const PANEL = 'max-[760px]:p-3.5'
-
 const CARD_TITLE: CSSProperties = {
   margin: '0 0 16px',
   fontSize: 'var(--text-md)',
@@ -67,14 +63,14 @@ export default async function SettingsPage() {
 
       <div className="space-y-6">
         {/* Account Section */}
-        <Card as="section" variant="panel" className={PANEL} aria-labelledby="settings-account">
+        <Card as="section" variant="panel" aria-labelledby="settings-account">
           <PanelHeader id="settings-account" icon={KeyRound} title="Account" />
           <h3 style={CARD_TITLE}>Change Password</h3>
           <PasswordChangeForm />
         </Card>
 
         {/* Sharing Section */}
-        <Card as="section" variant="panel" className={PANEL} aria-labelledby="settings-sharing">
+        <Card as="section" variant="panel" aria-labelledby="settings-sharing">
           <PanelHeader id="settings-sharing" icon={Share2} title="Sharing" />
           <p
             className="mb-4"
@@ -99,7 +95,7 @@ export default async function SettingsPage() {
         </Card>
 
         {/* Import / Export Section */}
-        <Card as="section" variant="panel" id="import-export" className={`${PANEL} scroll-mt-8`} aria-labelledby="settings-import-export">
+        <Card as="section" variant="panel" id="import-export" className="scroll-mt-8" aria-labelledby="settings-import-export">
           <PanelHeader id="settings-import-export" icon={ArrowLeftRight} title="Import & Export" />
           <ImportExportPanel />
         </Card>

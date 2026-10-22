@@ -1,5 +1,4 @@
-import type { ComponentType } from 'react'
-import { Flame, Sparkles, Inbox } from 'lucide-react'
+import { Flame, Sparkles, Inbox, type LucideIcon } from 'lucide-react'
 import type { WatchlistPriority } from '@/types'
 
 // Priority badge colors + icons. Shared by the watchlist page's section headers
@@ -10,7 +9,7 @@ export interface PriorityConfigItem {
   textClass: string
   borderClass: string
   bgClass: string
-  icon: ComponentType<{ className?: string }>
+  icon: LucideIcon
 }
 
 export const PRIORITY_CONFIG: Record<WatchlistPriority, PriorityConfigItem> = {
