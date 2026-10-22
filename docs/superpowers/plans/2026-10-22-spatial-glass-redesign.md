@@ -29,9 +29,10 @@
 - [x] `git checkout -b redesign/spatial-glass`
 - [x] `npm ci` then run `npm run lint && npm run test:run && npm run build` and record the results. Fix nothing yet; note pre-existing failures in this file under Task 0.
   - Baseline at `c50a825` (2026-10-22), run on the home server (gmk1) rather than the dev PC, which can't spare the RAM: lint clean, 60 test files / 502 tests passing, `next build` succeeds. No pre-existing failures.
-- [ ] Start `npm run dev`, sign in, and screenshot `/`, `/library`, `/watchlist`, `/calendar`, `/stats`, one `/show/[id]` and the media modal at 1440 and 390 into `docs/designs/spatial-glass/baseline/`.
-- [ ] Record a Lighthouse mobile run for `/` and `/library` (Performance, Accessibility) in `docs/designs/spatial-glass/baseline/lighthouse.md`.
-- [ ] Commit: `chore: baseline screenshots and metrics before spatial-glass redesign`
+- [x] Start `npm run dev`, sign in, and screenshot `/`, `/library`, `/watchlist`, `/calendar`, `/stats`, one `/show/[id]` and the media modal at 1440 and 390 into `docs/designs/spatial-glass/baseline/`.
+- [x] Record a Lighthouse mobile run for `/` and `/library` (Performance, Accessibility) in `docs/designs/spatial-glass/baseline/lighthouse.md`.
+  - Signed-in shots and Lighthouse came from a mock Supabase and TMDB with fixture data mirroring the reference (`~/tools/mtg-mock` on gmk1), since the dev PC has no Supabase env and can't spare the RAM. Production build of `45db05b`, Lighthouse 13.5 mobile, median of 3: `/` 94 perf / 98 a11y, `/library` 86 / 92. Method and caveats in `baseline/lighthouse.md`.
+- [x] Commit: `chore: baseline screenshots and metrics before spatial-glass redesign`
 
 ## Task 1: Retune design tokens (skill → app sync)
 **Files:**
