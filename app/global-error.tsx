@@ -24,15 +24,15 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: '#100e09', color: '#e8e4dc', fontFamily: 'system-ui, sans-serif' }}>
+      <body style={{ margin: 0, background: '#061015', color: '#F3F8FA', fontFamily: 'system-ui, sans-serif' }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ maxWidth: 420, textAlign: 'center' }}>
             <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 12px' }}>DorfMovies could not start</h1>
-            <p style={{ fontSize: 14, lineHeight: 1.6, color: '#a8a196', margin: '0 0 20px' }}>
+            <p style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(236,245,249,.80)', margin: '0 0 20px' }}>
               Something failed before the app could render. Reloading usually clears it.
             </p>
             {error.digest && (
-              <p style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6f6a60' }}>
+              <p style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(236,245,249,.66)' }}>
                 Reference: {error.digest}
               </p>
             )}
@@ -41,7 +41,7 @@ export default function GlobalError({
               onClick={reset}
               style={{
                 marginTop: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600,
-                color: '#111609', background: '#7c9a6a', border: 'none', borderRadius: 8, cursor: 'pointer',
+                color: '#08161C', background: '#F3F8FA', border: 'none', borderRadius: 8, cursor: 'pointer',
               }}
             >
               Try again

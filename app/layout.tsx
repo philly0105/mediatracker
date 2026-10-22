@@ -1,9 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { Outfit } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/ToastProvider'
 
-const outfit = Outfit({ subsets: ['latin'] })
+// Inter variable with its optical-size axis: next/font only ships the weight
+// axis unless asked, and without `opsz` the 28px headings render with the 14px
+// text cut. `variable` exposes it as --font-inter, set on <html> so the
+// --font-sans token declared at :root can resolve it.
+const inter = Inter({ subsets: ['latin'], axes: ['opsz'], variable: '--font-inter', display: 'swap' })
 
 // `metadataBase` resolves the relative OG image paths below into absolute URLs;
 // without it Next warns and social cards fall back to no image at all.
@@ -29,8 +33,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // Matches --bg-base. It was #030303, a cold near-black the app never uses.
-  themeColor: '#100e09',
+  // Matches --surface-page, the canvas under the ambient layer.
+  themeColor: '#061015',
   // Without this the safe-area insets resolve to 0, so `pb-safe-bottom` on the
   // mobile nav has nothing to read and the bar sits under the home indicator.
   viewportFit: 'cover',
@@ -44,11 +48,11 @@ export const viewport: Viewport = {
 // app/(public).
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       {/* Canvas, grain and base text colour live in globals.css — an unlayered
           body rule outranks any Tailwind utility set here, so keeping both was
           only ever a way for the two to disagree. */}
-      <body className={`${outfit.className} min-h-screen relative antialiased`}>
+      <body className={`${inter.className} min-h-screen relative antialiased`}>
         {/* Page radial + the three ambient orbs, all of it one painted layer.
             It was four: a fixed-attachment body background and three blurred
             divs. See .ambient-layer in globals.css. */}

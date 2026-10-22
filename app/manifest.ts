@@ -7,10 +7,10 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Track your movies, TV shows, and watchlists.',
     start_url: '/',
     display: 'standalone',
-    // #030303 is a cold near-black; the app canvas is warm (--bg-base),
-    // so the PWA splash and status bar visibly disagreed with the app.
-    background_color: '#100e09',
-    theme_color: '#100e09',
+    // The canvas (--surface-page), so the PWA splash and status bar agree with
+    // the app instead of showing a different near-black.
+    background_color: '#061015',
+    theme_color: '#061015',
     // All three were the Vercel triangle the starter shipped, so installing the
     // app to a home screen gave you someone else's logo. Regenerated from the
     // same mark app/icon.tsx and app/apple-icon.tsx draw.
