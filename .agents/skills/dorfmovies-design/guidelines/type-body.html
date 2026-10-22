@@ -1,17 +1,26 @@
-<!-- @dsCard group="Type" viewport="700x180" name="Body, meta & eyebrow" subtitle="Medium body, muted meta, tiny tracked uppercase labels" -->
+<!-- @dsCard group="Type" viewport="700x210" name="Body, meta and eyebrow" subtitle="Body 15/22 at 500; meta 13/18; caption 12/16; eyebrows are plain case and muted" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary);padding:24px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
-  .eyebrow{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--violet-300);background:var(--glass-chip);border:1px solid var(--border-default);padding:5px 12px;border-radius:9999px}
-  .body{font-size:14px;font-weight:500;color:var(--text-primary);margin:0;max-width:520px;line-height:1.5}
-  .meta{font-size:13px;color:var(--text-secondary);margin:0}
-  .badge{align-self:flex-start;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--emerald-400);background:var(--emerald-tint-bg);border:1px solid var(--emerald-tint-border);padding:4px 8px;border-radius:9999px}
-</style></head>
-<body>
-  <span class="eyebrow">Welcome back</span>
-  <p class="body">Your personal media collection and viewing analytics. Track what you watch, rate and review it, and keep a prioritized watchlist.</p>
-  <p class="meta">2024 · TV Show · 42 watched</p>
-  <span class="badge">Watched</span>
-</body></html>
+  .page { padding: 22px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
+  .l { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+  .h { font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--text-muted); white-space: nowrap; }
+  .eyebrow { margin: 0; font-size: var(--eyebrow-size); line-height: 18px; font-weight: var(--eyebrow-weight); letter-spacing: var(--eyebrow-tracking); color: var(--text-muted); }
+  .body { margin: 0; font: var(--font-body); letter-spacing: var(--tracking-body); color: var(--text-secondary); max-width: 420px; }
+  .meta { margin: 0; font: var(--font-meta); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--glass-chip); box-shadow: var(--glass-chip-edge); font: 600 var(--text-xs)/16px var(--font-sans); color: var(--text-primary); }
+</style>
+</head>
+<body style="min-height: 100vh; background: var(--ambient-radial), var(--bg-void)">
+  <div class="page">
+    <div class="l"><p class="eyebrow">Thursday, October 22</p><span class="h">eyebrow · 13/18 · 500 · muted, no caps</span></div>
+    <div class="l"><p class="body">Mark is pulled into a mystery at Lumon after a colleague's message.</p><span class="h">body · 15/22 · 500 · secondary</span></div>
+    <div class="l"><p class="meta">2022 · Drama · 2 seasons · 54m</p><span class="h">meta · 13/18 · 500 · muted</span></div>
+    <div class="l"><span><span class="chip">Apple TV+</span> <span class="chip">Rewatch</span></span><span class="h">caption, chip · 12/16 · 500 to 600</span></div>
+  </div>
+</body>
+</html>

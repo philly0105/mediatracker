@@ -1,0 +1,208 @@
+/* DorfMovies glass tiers for static HTML: guideline cards and prototypes.
+   Link it after styles.css:
+
+     <link rel="stylesheet" href="styles.css" />
+     <link rel="stylesheet" href="glass.css" />
+
+   The app does not load this file. Its copy of these rules is the
+   `@layer components` glass block in app/globals.css, plus the body rule, the
+   global :focus-visible ring and components/AmbientBackdrop.tsx. This file
+   mirrors them so HTML pages render the same tiers. No test compares the two:
+   when you change one, change the other.
+
+   Budget: backdrop-filter only on tier 1 (.glass-panel, .glass-slab), at most
+   8 visible per viewport, never on items in a grid, rail or list, never
+   animated. Everything inside a panel is a tier-2 flat fill. */
+
+body {
+  margin: 0;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 22px;
+  letter-spacing: var(--tracking-body);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The ambient backdrop: one fixed layer of the featured title's art, blurred
+   80px, under the tint. In the app, AmbientHost paints it and pages register
+   their art with <AmbientBackdrop src />. In HTML:
+
+     <div class="ambient" aria-hidden="true">
+       <img class="ambient-img" src="backdrop.jpg" alt="" />
+       <div class="ambient-tint"></div>
+     </div>
+
+   Leave out the img for the no-art state; .ambient alone shows the aqua radial.
+   Page content goes in an element with position: relative and z-index: 1.
+   With no image to hand, a div.ambient-sample in place of the img stands in
+   for blurred art. The app has no such class. */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--ambient-radial), var(--bg-void);
+}
+
+.ambient-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  filter: blur(var(--ambient-blur)) saturate(var(--ambient-saturate));
+  transform: scale(1.15);
+}
+
+/* Stand-in for a blurred backdrop: soft colour fields, so specimens show what
+   glass does over art without shipping an image. Specimens and prototypes only. */
+.ambient-sample {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(48% 72% at 16% 28%, rgba(70, 150, 168, 0.95), transparent 72%),
+    radial-gradient(44% 70% at 64% 36%, rgba(206, 122, 64, 0.85), transparent 72%),
+    radial-gradient(40% 60% at 92% 80%, rgba(168, 186, 196, 0.80), transparent 72%),
+    radial-gradient(60% 70% at 40% 100%, rgba(26, 58, 84, 0.95), transparent 72%),
+    var(--bg-deep);
+}
+
+.ambient-tint {
+  position: absolute;
+  inset: 0;
+  background: var(--ambient-tint);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ambient-img {
+    display: none;
+  }
+}
+
+@layer components {
+  /* The 1px gradient edge on tier-1 and tier-2 containers: a masked ::before,
+     so it follows the element's own radius and never needs a real border. */
+  .glass-rim {
+    position: relative;
+  }
+
+  .glass-rim::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--glass-rim);
+    pointer-events: none;
+    z-index: 3;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .glass-panel {
+    background: var(--glass-panel);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-2xl);
+  }
+
+  /* The hero slab sits over the sharp artwork inside the hero frame, so it is
+     darker, a touch less saturated, and carries its own shorter shadow. */
+  .glass-slab {
+    --glass-saturate: 150%;
+    background: var(--glass-slab);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    box-shadow: var(--shadow-slab);
+    border-radius: var(--radius-slab);
+  }
+
+  .glass-row {
+    background: var(--glass-card);
+    box-shadow: var(--glass-row-edge);
+    border-radius: var(--radius-row);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  .glass-row:hover {
+    background: var(--glass-card-hover);
+  }
+
+  .glass-inset {
+    background: var(--glass-input);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-well);
+  }
+
+  .glass-btn {
+    background: var(--btn-ghost-bg);
+    box-shadow: var(--glass-btn-edge);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  .glass-btn:hover:not(:disabled) {
+    background: var(--btn-ghost-bg-hover);
+  }
+
+  /* Legacy name: an alias of .glass-row with the inset-card radius. */
+  .glass-card {
+    background: var(--glass-card);
+    box-shadow: var(--glass-row-edge);
+    border-radius: var(--radius-lg);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  .glass-card:hover {
+    background: var(--glass-card-hover);
+  }
+
+  /* Panels tighten to 24px below the content breakpoint. */
+  @media (max-width: 759px) {
+    .glass-panel {
+      border-radius: 24px;
+    }
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-panel,
+    .glass-slab {
+      background: var(--glass-fallback);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-panel,
+    .glass-slab {
+      background: var(--glass-fallback);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .glass-panel,
+    .glass-slab,
+    .glass-row,
+    .glass-inset,
+    .glass-btn,
+    .glass-card {
+      border: 1px solid CanvasText;
+    }
+  }
+}

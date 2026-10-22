@@ -1,19 +1,29 @@
-<!-- @dsCard group="Spacing" viewport="700x170" name="Corner radii" subtitle="Tight & editorial — 4 / 6 / 8 / 10 / 12 + pill (tags only)" -->
+<!-- @dsCard group="Spacing" viewport="700x170" name="Corner radii" subtitle="28 containers, 22 slab, 20 rows, 16 inset cards, 14 controls and posters, pills for buttons" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary);padding:24px 28px;box-sizing:border-box;display:flex;align-items:center;gap:16px}
-  .col{display:flex;flex-direction:column;align-items:center;gap:8px}
-  .box{width:74px;height:74px;background:var(--glass-card);border:1px solid var(--border-strong);backdrop-filter:blur(12px)}
-  .t{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
-  .pill{width:96px;height:40px;border-radius:9999px;background:var(--btn-primary-bg)}
-</style></head>
-<body>
-  <div class="col"><div class="box" style="border-radius:4px"></div><span class="t">sm · 4</span></div>
-  <div class="col"><div class="box" style="border-radius:6px"></div><span class="t">md · 6</span></div>
-  <div class="col"><div class="box" style="border-radius:8px"></div><span class="t">lg · 8</span></div>
-  <div class="col"><div class="box" style="border-radius:10px"></div><span class="t">xl · 10</span></div>
-  <div class="col"><div class="box" style="border-radius:12px"></div><span class="t">2xl · 12</span></div>
-  <div class="col"><div class="pill"></div><span class="t">pill · tags</span></div>
-</body></html>
+  .page { padding: 22px 20px; box-sizing: border-box; display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; align-items: end; }
+  .r { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .box { width: 56px; height: 56px; background: var(--glass-card-hover); box-shadow: var(--glass-row-edge); }
+  .n { font: var(--font-caption); font-weight: var(--weight-semibold); color: var(--text-primary); }
+  .h { font-family: var(--font-mono); font-size: 10px; line-height: 13px; color: var(--text-muted); text-align: center; white-space: nowrap; }
+</style>
+</head>
+<body style="min-height: 100vh; background: var(--ambient-radial), var(--bg-void)">
+  <div class="page">
+    <div class="r"><div class="box" style="border-radius: var(--radius-2xl)"></div><div class="n">28</div><div class="h">2xl<br>panels</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-slab)"></div><div class="n">22</div><div class="h">slab<br>hero text</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-row)"></div><div class="n">20</div><div class="h">row<br>rows</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-lg)"></div><div class="n">16</div><div class="h">lg<br>inset cards</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-md)"></div><div class="n">14</div><div class="h">md / xl<br>nav, poster</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-thumb)"></div><div class="n">12</div><div class="h">thumb<br>thumbs</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-sm)"></div><div class="n">8</div><div class="h">sm<br>skeletons</div></div>
+    <div class="r"><div class="box" style="border-radius: var(--radius-xs)"></div><div class="n">6</div><div class="h">xs<br>kbd</div></div>
+    <div class="r"><div class="box" style="width: 80px; height: 44px; border-radius: var(--radius-pill)"></div><div class="n">9999</div><div class="h">pill<br>buttons</div></div>
+  </div>
+</body>
+</html>

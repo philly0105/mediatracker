@@ -1,17 +1,36 @@
-<!-- @dsCard group="Colors" viewport="700x150" name="Canvas & surfaces" subtitle="Near-black layers from void to elevated" -->
+<!-- @dsCard group="Colors" viewport="700x180" name="Canvas and ambient" subtitle="Cool blue-black canvas; the featured title's art blurred 80px under a tint" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary);padding:20px;box-sizing:border-box;display:flex;gap:12px}
-  .sw{flex:1;border-radius:var(--radius-md);border:1px solid var(--border-soft);height:110px;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;box-sizing:border-box}
-  .n{font-size:12px;font-weight:700}
-  .h{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px}
-</style></head>
+  .page { padding: 20px 24px; box-sizing: border-box; display: flex; gap: 14px; }
+  .tile { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .sw { position: relative; overflow: hidden; height: 96px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+  .n { font: var(--font-meta); font-weight: var(--weight-semibold); color: var(--text-primary); }
+  .h { font-family: var(--font-mono); font-size: 10px; line-height: 13px; color: var(--text-muted); }
+</style>
+</head>
 <body>
-  <div class="sw" style="background:var(--bg-void)"><div class="n">void</div><div class="h">#100e09</div></div>
-  <div class="sw" style="background:var(--bg-base)"><div class="n">base / shell</div><div class="h">#15120c</div></div>
-  <div class="sw" style="background:var(--bg-raised)"><div class="n">raised / card</div><div class="h">#1b1711</div></div>
-  <div class="sw" style="background:var(--bg-elevated)"><div class="n">elevated</div><div class="h">#201b13</div></div>
-  <div class="sw" style="background:var(--bg-bar)"><div class="n">bar</div><div class="h">#241f17</div></div>
-</body></html>
+  <div class="page">
+    <div class="tile">
+      <div class="sw" style="background: var(--bg-void)"></div>
+      <div><div class="n">Canvas</div><div class="h">--bg-void #061015</div></div>
+    </div>
+    <div class="tile">
+      <div class="sw" style="background: var(--bg-deep)"></div>
+      <div><div class="n">Deep panel</div><div class="h">--bg-deep #0B1A21</div></div>
+    </div>
+    <div class="tile">
+      <div class="sw" style="background: var(--ambient-radial), var(--bg-void)"></div>
+      <div><div class="n">No art yet</div><div class="h">--ambient-radial</div></div>
+    </div>
+    <div class="tile">
+      <div class="sw"><div class="ambient-sample"></div><div class="ambient-tint"></div></div>
+      <div><div class="n">Featured art</div><div class="h">blur 80px, then tint</div></div>
+    </div>
+  </div>
+</body>
+</html>

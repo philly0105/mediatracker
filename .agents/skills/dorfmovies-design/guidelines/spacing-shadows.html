@@ -1,17 +1,28 @@
-<!-- @dsCard group="Spacing" viewport="700x190" name="Shadows & glows" subtitle="Deep black shadows; colored hover glows" -->
+<!-- @dsCard group="Spacing" viewport="700x200" name="Shadows and edges" subtitle="A light top edge over a deep, long drop; the only coloured ring marks the current item" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-void);background-image:var(--page-radial);font-family:var(--font-sans);color:var(--text-primary);padding:30px 28px;box-sizing:border-box;display:flex;align-items:center;gap:22px}
-  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
-  .box{width:96px;height:70px;border-radius:16px;background:var(--bg-raised);border:1px solid var(--border-soft)}
-  .t{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
-</style></head>
+  .page { position: relative; z-index: 1; padding: 22px 24px; box-sizing: border-box; display: flex; gap: 16px; }
+  .s { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .box { height: 84px; border-radius: var(--radius-lg); background: var(--glass-card); }
+  .n { font: var(--font-caption); font-weight: var(--weight-semibold); color: var(--text-primary); }
+  .h { font-family: var(--font-mono); font-size: 10px; line-height: 13px; color: var(--text-muted); }
+</style>
+</head>
 <body>
-  <div class="col"><div class="box" style="box-shadow:var(--shadow-md)"></div><span class="t">shadow-md</span></div>
-  <div class="col"><div class="box" style="box-shadow:var(--shadow-xl)"></div><span class="t">shadow-xl</span></div>
-  <div class="col"><div class="box" style="box-shadow:var(--glow-violet)"></div><span class="t">glow-violet</span></div>
-  <div class="col"><div class="box" style="box-shadow:var(--glow-rose)"></div><span class="t">glow-rose</span></div>
-  <div class="col"><div class="box" style="box-shadow:var(--glow-orange)"></div><span class="t">glow-orange</span></div>
-</body></html>
+  <div class="ambient" aria-hidden="true"><div class="ambient-sample"></div><div class="ambient-tint"></div></div>
+  <div class="page">
+    <div class="s"><div class="box" style="background: var(--glass-panel); box-shadow: var(--shadow-md); border-radius: var(--radius-2xl)"></div><div class="n">Container</div><div class="h">--shadow-md</div></div>
+    <div class="s"><div class="box" style="background: var(--glass-hero); box-shadow: var(--shadow-xl); border-radius: var(--radius-2xl)"></div><div class="n">Hero frame</div><div class="h">--shadow-xl</div></div>
+    <div class="s"><div class="box" style="background: var(--glass-slab); box-shadow: var(--shadow-slab); border-radius: var(--radius-slab)"></div><div class="n">Slab</div><div class="h">--shadow-slab</div></div>
+    <div class="s"><div class="box" style="width: 56px; background: var(--bg-deep); box-shadow: var(--shadow-poster); border-radius: var(--radius-md)"></div><div class="n">Poster</div><div class="h">--shadow-poster</div></div>
+    <div class="s"><div class="box" style="height: 48px; margin-top: 36px; background: var(--bg-deep); box-shadow: var(--shadow-sm); border-radius: var(--radius-thumb)"></div><div class="n">Thumb</div><div class="h">--shadow-sm</div></div>
+    <div class="s"><div class="box" style="height: 44px; margin-top: 40px; background: var(--glass-input); box-shadow: var(--shadow-well); border-radius: var(--radius-md)"></div><div class="n">Inset well</div><div class="h">--shadow-well</div></div>
+    <div class="s"><div class="box" style="height: 52px; margin-top: 32px; box-shadow: var(--glass-row-edge), var(--accent-ring); border-radius: var(--radius-row)"></div><div class="n">Current</div><div class="h">--accent-ring</div></div>
+  </div>
+</body>
+</html>

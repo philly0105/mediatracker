@@ -1,209 +1,470 @@
-# DorfMovies — Design System
+# DorfMovies design system: Spatial Glass
 
-A design system for **DorfMovies**, a personal movie & TV tracking app. You log what
-you've watched, rate and review it, keep a prioritized watchlist, track episode
-progress, browse stats, and pit titles against each other in "Versus." The product is
-**dark-first and poster-art-driven**, styled in an **"Autumn Pine" earthy** direction: a
-warm brown-black canvas with a **film-grain** wash, flat solid cards with crisp hairline
-borders, soft low contrast, a **deep pine-green** hero with a small playful accent set
-(amber, rust, dusty-teal), and **all-sans** type (Outfit).
+DorfMovies is a personal movie and TV tracker (Next.js 16, Supabase, TMDB). You log what
+you watched, rate it, keep a watchlist, follow episode progress and browse stats. The
+product is dark only and led by artwork.
 
-> Note: the product is referred to as "MediaTracker" in the project brief, but the
-> shipping brand name in the codebase is **DorfMovies** (see `layout.tsx` metadata and
-> the sidebar wordmark). This system uses **DorfMovies** throughout.
+The visual language is Spatial Glass. Translucent glass panels float over a heavily
+blurred backdrop of the title the page is about. Type is Inter, the canvas is a cool
+blue-black, and there is one aqua accent. It replaced the Autumn Pine look (warm brown,
+pine green, Outfit) in October 2026. Autumn Pine material is archived in
+`explorations/autumn-pine/`; don't use it.
 
----
+Sources of truth, in order:
 
-## Sources
+1. `docs/designs/spatial-glass/reference/home.html`, the approved mock. Open it in a
+   browser; images are in `reference/assets/`. If anything here disagrees with it, the
+   reference wins.
+2. `docs/superpowers/specs/2026-10-22-spatial-glass-redesign.md`, the spec. Section 5.5
+   has the recipe for every component and 5.6 the direction for every route.
+3. The token files in `tokens/` for exact values, and `components/ui/` for the real
+   components.
 
-This system was reverse-engineered from the real product. If you have access, explore
-these to go deeper:
+## Where things live
 
-- **GitHub repo:** https://github.com/philly0105/mediatracker — Next.js 16 + Supabase +
-  TMDB. Key reads: `app/globals.css`, `app/layout.tsx`, `app/page.tsx` (dashboard),
-  `components/Sidebar.tsx`, `components/MediaCard.tsx`, `components/ui/SpotlightCard.tsx`,
-  `components/ui/BentoGrid.tsx`, `components/RatingStars.tsx`,
-  `components/MediaInfoModal.tsx`, `components/EditEntryModal.tsx`.
-- **Local codebase:** `app/` (the Next.js App Router tree — pages for dashboard, search,
-  movies, shows, watchlist, collections, stats, calendar, versus, settings, login).
+- `tokens/*.css` here is where tokens are authored. Each file is copied byte for byte to
+  `app/styles/design-system/tokens/`, and
+  `app/styles/design-system/__tests__/designSystemSync.test.ts` fails if a copy differs.
+  Edit here, then copy (commands in `app/styles/design-system/README.md`).
+- `app/globals.css` imports the token files one by one: colors, typography, spacing,
+  effects, textures, keyframes. It does not import `styles.css`, because `styles.css`
+  also pulls in `fonts.css` and its Google Fonts `@import`, and the app already gets
+  Inter from `next/font` (exposed as `--font-inter`). A new token file has to be added to
+  both `styles.css` and `app/globals.css`.
+- `styles.css` and `glass.css` here are for static HTML only: the guideline cards and
+  throwaway prototypes. `styles.css` loads every token file plus Inter from Google Fonts.
+  `glass.css` copies the glass tier classes, the body rule, the focus ring and the
+  ambient layer from the app so HTML renders the same. No test compares `glass.css` with
+  `app/globals.css`, so change both together.
+- The glass tiers and other component classes (`.glass-*`, `.card-surface`, `.btn-*`,
+  `.nav-item`, `.input-field`, `.poster-card*`, `.clear-filters`, `.tabular`) are in
+  `app/globals.css`. Tailwind v4's `@theme inline` block there bridges the `zinc`,
+  `green`, `teal`, `amber` and `rust` ramps into Tailwind utilities, and maps
+  `--color-white` to `--zinc-100`, so `bg-white/5` is `--glass-card` and
+  `border-white/10` is `--border-soft`.
+- Components are in `components/ui/` (one file each), plus `components/RatingStars.tsx`
+  and `components/AmbientBackdrop.tsx`. Each `components/<group>/*.prompt.md` in this
+  skill is the recipe for one or two of them.
 
-The repo `README.md` is unmodified create-next-app boilerplate (mentions Geist, but the
-app actually loads **Outfit** via `next/font/google`).
+## Principles
 
-### Tech context
-- **Framework:** Next.js 16 (App Router, server components) + Supabase auth/DB + TMDB API.
-- **Styling:** Tailwind CSS v4 (`@import "tailwindcss"`) with a small set of hand-written
-  utility classes in `globals.css` (`.glass-card`, `.glass-panel`, `.bg-grid`).
-- **Motion:** framer-motion (spring hovers, layout animations, fade-up entrances).
-- **Icons:** lucide-react.
-- **Charts:** recharts (stats page).
+1. Content is the colour. The page tint comes from the featured title's backdrop,
+   blurred 80px. The UI has almost no colour of its own.
+2. Glass is layered. Blur only the top-level containers (tier 1). Everything inside them
+   is a flat translucent fill (tier 2).
+3. Light edges, deep shadows. Every glass container gets a 1px top highlight, a gradient
+   rim and a long soft shadow. Never a hard border.
+4. One accent. Aqua `#8FE3F0` marks progress, "next", current state and focus. Gold
+   `#F2C46D` is for star ratings and nothing else. Destructive text is `--danger`
+   `#FF9B9B`. Nothing else is coloured.
+5. Quiet chrome, big art. Radius 28 for containers and 14 for rows and controls, 24px
+   gutters, white or translucent-white text.
+6. Tabular numbers. Every count, date, runtime and stat uses
+   `font-variant-numeric: tabular-nums` (the `.tabular` class or the `tabular-nums`
+   utility).
 
----
+## Glass tiers
 
-## CONTENT FUNDAMENTALS
+| Class | Tier | Use | Recipe |
+| --- | --- | --- | --- |
+| `.glass-panel` | 1, blurred | sidebar, section panels, mobile bars, modals, popovers, toasts | `--glass-panel`, `blur(var(--glass-blur)) saturate(var(--glass-saturate))` (40px, 160%), `--shadow-md`, radius 28 (24 under 760px) |
+| `.glass-slab` | 1, blurred | text over artwork, the hero content slab | `--glass-slab` (darker base), same blur at 150% saturation, `--shadow-slab`, radius 22 |
+| `.glass-row` | 2, flat | rows and cards inside a panel | `--glass-card`, hover `--glass-card-hover`, `--glass-row-edge`, radius 20 |
+| `.glass-inset` | 2, flat | search, text inputs, the segmented track | `--glass-input`, `--shadow-well`, radius 14 |
+| `.glass-btn` | 2, flat | secondary buttons, chips, icon buttons | `--btn-ghost-bg`, hover `--btn-ghost-bg-hover`, `--glass-btn-edge` |
+| `.glass-rim` | edge | add to a tier-1 or tier-2 container | a masked `::before` painting `--glass-rim` as a 1px gradient edge; follows the element's radius |
+| `.glass-card` | 2, legacy | older call sites | `.glass-row` with radius 16 |
+| `.card-surface` | no blur | a standalone card that may repeat per item | the panel gradient and shadow without the blur, radius 28 |
 
-**Voice — plain, second-person, encouraging.** Copy speaks to *you* about *your*
-collection: "Your personal media collection and viewing analytics." / "Track your movies,
-TV shows, and watchlists." It is functional and warm, never clever or jargon-heavy. No
-exclamation-mark hype except a single friendly nudge ("Ready for a new show?").
+In React, use `Card` from `components/ui/Card.tsx` rather than the classes:
+`variant="panel"` is `glass-panel glass-rim p-5`, `slab` is `glass-slab glass-rim p-7`,
+`row` is `glass-row p-3`, `inset` is `glass-inset p-4`, and the default `surface` is
+`card-surface`.
 
-**Casing:**
-- **Sentence case** for body copy, descriptions, empty states ("Nothing watched yet.",
-  "No movies logged yet.").
-- **Title Case** for nav items, page titles, and primary buttons ("Dashboard", "Sign In",
-  "Save Changes", "Must Watch").
-- **ALL-CAPS, tracked** for micro eyebrow labels and badges only ("WELCOME BACK", "LIVE
-  NOW", "PRIORITY", "YEAR 2026", "WATCHED", "WATCHLIST"). These are tiny (10–11px), bold,
-  with wide letter-spacing.
+Fallbacks are built into the classes. Without `backdrop-filter` support, and under
+`prefers-reduced-transparency: reduce`, tier 1 switches to the opaque `--glass-fallback`
+(reduced transparency also hides the ambient art). Under `forced-colors: active` every
+tier draws a `1px solid CanvasText` border.
 
-**Person:** Second person ("you / your") in marketing-ish surfaces; otherwise the UI is
-label-driven and impersonal ("Date watched", "Review (optional)", "12 watched").
+### Performance budget
 
-**Tone examples (verbatim from product):**
-- Eyebrow + hero: `WELCOME BACK` → "Dashboard" → "Your personal media collection and
-  viewing analytics."
-- Status pill: `● LIVE NOW`, label "Continuing", title, "Updated today".
-- Empty state: "Nothing watched yet." + a "Start searching →" button.
-- Counts as quiet meta: "{n} watched", "{year} · TV Show".
-- Buttons are short verbs/verb-phrases: "Sign In", "Save Changes", "Cancel",
-  "Add to Watchlist", "Mark as Watched", "View all".
+These are hard rules. Blur is the most expensive thing in this design, and phones pay
+for it first.
 
-**Numbers are heroes.** Big stats (watched-this-year, must-watch count, hours) are
-rendered enormous (60px, black weight, often gradient-filled). Counts elsewhere are quiet
-zinc-500 meta.
+- `backdrop-filter` goes on tier-1 elements only, and no more than 8 may be visible in
+  one viewport.
+- Never on an element inside a poster grid, a rail, a virtualised list or any long
+  list. Those use tier-2 fills or `card-surface`. `Card variant="panel"` and `"slab"`
+  are never rendered per item.
+- Never animate `backdrop-filter` or `filter`. Animate `opacity` and `transform` only.
+- No `background-attachment: fixed` and no body background pinned to the viewport. The
+  ambient art is one fixed element (next section).
+- To soften blur on one element, set the variable (`[--glass-blur:24px]`, as the mobile
+  bars do) rather than writing a new `backdrop-filter`.
 
-**Emoji:** none in the UI chrome. The only non-icon glyph used as UI is the **★ star**
-(U+2605) in the rating control. No emoji in labels, buttons, or copy.
+## Ambient backdrop
 
----
+`AmbientHost` (in `components/AmbientBackdrop.tsx`) is mounted once in `app/layout.tsx`
+and paints the only ambient layer: the featured backdrop blurred `--ambient-blur` (80px)
+and saturated `--ambient-saturate` (1.3), scaled 1.15, under `--ambient-tint`. With no
+art it shows `--ambient-radial` over the canvas.
 
-## VISUAL FOUNDATIONS
+A page picks its art by rendering the default export, `<AmbientBackdrop src={url} />`.
+It renders nothing. It registers the image while mounted, and the newest page
+registration wins. `RecentAmbient` in `app/(app)/layout.tsx` registers the latest watch
+as the fallback with `<AmbientBackdrop src={url} fallback />`. Art changes crossfade
+over 400ms (opacity only, none under reduced motion). Never paint a second ambient layer
+of your own.
 
-**Overall vibe:** earthy, muted, film-warm. A warm brown-black canvas with a fine grain
-wash and solid cards edged in faint hairlines; soft and low-contrast so nothing shouts.
-Pine green leads, with amber / rust / dusty-teal as a small playful supporting cast, and
-poster artwork providing the saturated color. Think a vintage repertory-cinema program
-on aged paper, rendered dark.
+Backdrop and logo URLs come from `fetchMediaArt(supabase, mediaIds)` in
+`lib/mediaArt.ts`, which returns a `Map<string, { backdrop_url, logo_url }>`. Don't add
+`backdrop_url` or `logo_url` to a page's main select. Until migration 014 is applied,
+PostgREST rejects a select that names a missing column, and the whole page query fails.
 
-**Color:**
-- Canvas is a flat, **warm brown-black**, never pure black: `#100e09` (void) → `#15120c`
-  (shell/sidebar) → `#1b1711` (cards) → `#201b13` (modals). A subtle radial gradient warms
-  the top of the page (`radial-gradient(circle at 50% -10%, #2a2114, #100e09 55%)`), and a
-  **film-grain** layer (`--grain`, fractal-noise SVG, ~13% opacity, `mix-blend: overlay`)
-  sits fixed over everything.
-- **Pine green `#7c9a6a` is the hero** — buttons, active nav, eyebrows, focus rings, the
-  primary stat. Around it sits a **small playful set**: **amber `#d3a85c`** (the "this
-  year" / rating warmth), **rust `#c4805f`** (reserved for **"live / now-watching"**), and
-  **dusty-teal `#6f9089`** ("watched" success). Four hues total, all muted — soft, not loud.
-- Text is a **warm stone** ramp: `#e9e2d3` primary → `#9d9079` secondary → `#7a6f5b`
-  muted → `#564e3f` faint. Low contrast against the brown base is intentional.
-- Accents appear as **low-alpha tints** for fills (`bg/14`) with stronger borders
-  (`border/30`); pine green is the one hue that also shows as a solid block (primary button).
+Some backdrops are very light (The Bear, Bugonia). Secondary text must stay at 4.5:1 or
+better over them, so check new surfaces against the lightest art in the library.
 
-**Backgrounds:** mostly flat, plus grain. (1) the gentle warm page radial; (2) the
-fixed **film-grain** overlay; (3) three large **ambient warmth orbs** behind content (pine
-top-left, rust bottom-right, amber center — very low opacity, 120–150px blur) peeking
-through gaps; (4) on "now watching," the show's **poster at ~10% opacity with
-`mix-blend-luminosity`** bleeding through the card. No hand-drawn illustrations or
-skeuomorphic textures — grain is the only texture.
+## Tokens
 
-**Surfaces are flat and solid — no glassmorphism.** Cards/panels/modals are opaque warm
-fills with a crisp hairline border and a deep, low-spread shadow. Backdrop-blur tokens are
-set to `0`.
-- `glass-card` (legacy name, now solid): `#16130f`, hover `#1e1a13`, `1px` warm hairline.
-- `glass-panel`: `#14110d`. modal: `#1a1610` over a `rgba(8,6,4,.82)` scrim.
-- `SpotlightCard`: solid `#16130f` with a faint **gold mouse-following spotlight** on hover.
+Names and values from `tokens/`. White alpha values are written in the token files and
+nowhere else. App `.ts` and `.tsx` files must not contain `rgba(255,255,255,…)` or
+palette hex literals (`app/__tests__/palette.test.ts` fails on them), so use the token.
+Gradient tokens go through `background`, never `bg-[var(--x)]`: Tailwind emits that as
+`background-color`, where a gradient is invalid.
 
-**Borders:** warm cream at low alpha — `.04 / .07 / .10 / .13` resting; the *strong* and
-*focus* borders are **pine green** (`green/.42`, `green/.65`), so emphasis reads as a thin
-green edge rather than a glow.
+### Canvas and surfaces
 
-**Corner radii are tight and editorial.** `4px` buttons/inputs/chips, `6px` nav/rows,
-`8px` cards, `10px` poster cards, `12px` modals/spotlight cards. Pills (`9999px`) are now
-reserved for **badges and eyebrows only** — buttons are squared-off.
+| Token | Value | Use |
+| --- | --- | --- |
+| `--bg-void`, `--surface-page` | `#061015` | canvas, `themeColor`, end of the ambient tint |
+| `--bg-deep` | `#0B1A21` | solid surface behind artwork |
+| `--bg-base`, `--surface-shell` | `rgba(9, 20, 27, 0.46)` | glass tint under the shell and panels |
+| `--bg-raised` | `rgba(255, 255, 255, 0.05)` | rows and cards inside panels |
+| `--bg-bar` | `rgba(255, 255, 255, 0.09)` | bars, chips, row hover |
+| `--bg-elevated`, `--glass-modal` | `linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04)), rgba(9, 20, 27, 0.72)` | modals, popovers |
+| `--surface-modal` | `rgba(9, 20, 27, 0.72)` | flat, for `bg-[var(--surface-modal)]` call sites |
+| `--surface-card` | `var(--glass-card)` | |
+| `--surface-input` | `var(--glass-input)` | |
+| `--scrim` | `rgba(3, 9, 12, 0.62)` | behind modals and drawers |
+| `--black`, `--white` | `#000000`, `#ffffff` | |
 
-**Shadows & rings:** resting shadows are deep, neutral, low-spread
-(`0 28px 64px -24px rgba(0,0,0,.85)`). On hover, cards add a slightly stronger shadow plus a
-**thin pine-green ring** (`0 0 0 1px green/.30`; rust for live) — no soft colored haze. The
-"live" dot keeps a small rust ring + glow.
+### Glass
 
-**Hover states:** cards **lift only** (`translateY(-3px)`, no scale); posters scale `1.02`
-with a slight rotate; the border goes pine green and the icon chip scales to 110%. Title
-links shift toward green (poster titles) or stay white→rust (the "now watching" card). Ghost
-buttons lighten their fill; the green primary button brightens to `#97b27e`. Arrow icons
-translate right on hover.
+| Token | Value | Use |
+| --- | --- | --- |
+| `--glass-panel` | `linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)), rgba(9, 20, 27, 0.46)` | `.glass-panel` |
+| `--glass-slab` | `radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 60%), linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)), rgba(6, 15, 21, 0.66)` | `.glass-slab` |
+| `--glass-hero` | `linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)), rgba(9, 20, 27, 0.34)` | hero frame |
+| `--glass-card` | `rgba(255, 255, 255, 0.05)` | `.glass-row` |
+| `--glass-card-hover` | `rgba(255, 255, 255, 0.09)` | `.glass-row:hover` |
+| `--glass-input` | `rgba(0, 0, 0, 0.24)` | `.glass-inset` |
+| `--glass-chip` | `rgba(255, 255, 255, 0.10)` | `Badge` |
+| `--glass-inset-card` | `rgba(255, 255, 255, 0.06)` | a card inside a slab or row (next episode) |
+| `--glass-badge` | `rgba(6, 15, 21, 0.62)` | `PosterBadge`, a badge over a poster |
+| `--glass-fallback` | `rgba(12, 24, 31, 0.94)` | tier 1 with no blur or reduced transparency |
+| `--glass-rim` | `linear-gradient(160deg, rgba(255, 255, 255, 0.40), rgba(255, 255, 255, 0.10) 28%, rgba(255, 255, 255, 0.04) 62%, rgba(255, 255, 255, 0.16))` | `.glass-rim` |
+| `--glass-blur` | `40px` | tier-1 blur |
+| `--glass-saturate` | `160%` | tier-1 saturation (150% on the slab) |
+| `--ambient-blur` | `80px` | ambient art |
+| `--ambient-saturate` | `1.3` | ambient art |
+| `--ambient-tint` | `linear-gradient(180deg, rgba(4, 12, 17, 0.50) 0%, rgba(4, 12, 17, 0.62) 55%, rgba(5, 13, 18, 0.84) 100%)` | over the ambient art |
+| `--ambient-radial` | `radial-gradient(1200px 600px at 20% -10%, rgba(143, 227, 240, 0.10), transparent 60%)` | the no-art state |
 
-**Press / active:** subtle — settles back to rest, no hard color flash.
+### Interaction fills and charts
 
-**Typography is all-sans (Outfit).** Headings run heavy — extrabold/black, tight
-`-0.02/-0.04em` tracking; big stat numerals are extrabold. Body/nav/meta are medium. Tiny
-uppercase eyebrows keep wide `0.12em` tracking. No serif — the feel is clean and modern,
-with warmth carried by color and grain rather than type.
+| Token | Value | Use |
+| --- | --- | --- |
+| `--glass-fill-hover` | `rgba(255, 255, 255, 0.08)` | ghost, nav and link hover; kbd |
+| `--glass-fill-selected` | `rgba(255, 255, 255, 0.12)` | keyboard-highlighted result, header pill |
+| `--glass-fill-active` | `rgba(255, 255, 255, 0.15)` | active nav item, selected segment |
+| `--skeleton-bg` | `rgba(255, 255, 255, 0.06)` | skeleton block |
+| `--skeleton-shimmer` | `rgba(255, 255, 255, 0.10)` | skeleton shimmer |
+| `--progress-track` | `rgba(255, 255, 255, 0.16)` | ring track, unwatched segments |
+| `--chart-bar` | `rgba(255, 255, 255, 0.26)` | bars (the current or peak bar is `--accent`) |
+| `--chart-line` | `rgba(255, 255, 255, 0.60)` | dashed average |
+| `--chart-baseline` | `rgba(255, 255, 255, 0.14)` | x axis |
+| `--chart-grid` | `rgba(255, 255, 255, 0.08)` | gridlines |
+| `--chart-axis` | `rgba(236, 245, 249, 0.70)` | axis labels, 12px |
 
-**Motion:** entrances **fade up** (`opacity 0→1, y 20→0`) on the house easing
-`cubic-bezier(0.22, 1, 0.36, 1)`; transitions `0.18–0.6s`. The brick status dot pulses.
-Reduced-motion should drop transforms.
+### Text
 
-**Imagery vibe:** real TMDB **poster art** — full-color, portrait `2:3`, carrying the
-color in an otherwise warm-neutral UI. When used as background it's desaturated (low
-opacity, luminosity blend). Aspect is strictly `2:3`; rows pair a 16×24 poster thumb with text.
+| Token | Value | Use |
+| --- | --- | --- |
+| `--text-primary` | `var(--zinc-100)`, `#F3F8FA` | headings, primary labels |
+| `--text-strong` | `rgba(236, 245, 249, 0.86)` | emphasised meta, kbd |
+| `--text-secondary` | `rgba(236, 245, 249, 0.80)` | body and meta |
+| `--text-muted` | `rgba(236, 245, 249, 0.74)` | captions, timestamps, eyebrows |
+| `--text-faint` | `rgba(236, 245, 249, 0.66)` | placeholders only |
+| `--ink`, `--text-inverse` | `#08161C` | text on the white primary button and the logo mark |
 
-**Layout rules:** fixed 256px left sidebar (desktop). Content max-widths: `1280px` bento
-dashboard, `672px` search/forms. Generous section rhythm (48px). Bento grids mix 1–2 column
-spans. 28px interior padding on big cards.
+Neutral ramp (`--zinc-*`, solid so Tailwind alpha modifiers work): 100 `#F3F8FA`,
+200 `#DCE6EA`, 300 `#C3D1D7`, 400 `#A9B9C0`, 500 `#93A4AB`, 600 `#74868E`, 700
+`#3A4A51`, 800 `#1E2E35`, 900 `#0F1D23`. On the canvas, 100 to 600 all pass WCAG AA
+(17.95 down to 5.07). 700 and darker are for borders and disabled states, never text.
 
----
+### Accent, rating and status
 
-## ICONOGRAPHY
+| Token | Value | Use |
+| --- | --- | --- |
+| `--accent` | `var(--green-500)`, `#8FE3F0` | progress, "next", current state |
+| `--accent-hover` | `var(--green-400)`, `#B4EEF6` | |
+| `--accent-tint` | `rgba(143, 227, 240, 0.38)` | the track under an accent fill |
+| `--accent-ring` | `0 0 0 3px rgba(143, 227, 240, 0.20)` | selected or current outline |
+| `--brand-mark`, `--live`, `--success` | the accent | |
+| `--rating` | `var(--amber-400)`, `#F2C46D` | filled stars |
+| `--rating-empty` | `rgba(236, 245, 249, 0.30)` | empty stars |
+| `--danger` | `#FF9B9B` | destructive text on a glass button |
+| `--border-focus` | `#9BE7F5` | the focus ring |
 
-**System:** [**lucide-react**](https://lucide.dev) exclusively — clean 1.5–2px stroke,
-rounded line-caps, no fills (except a few deliberately filled play/star glyphs). Icons are
-small (`w-3.5`–`w-5`, i.e. 14–20px) and tinted to match context: zinc-500 resting, the
-accent on active/hover. Icon "chips" are a `40px` round tint well (`bg/10 + border/20`) with
-the icon centered, scaling to 110% on hover.
+Ramps: `--green-300` `#C6F2F8`, `--green-400` `#B4EEF6`, `--green-500` `#8FE3F0`,
+`--green-600` `#5FC4D6`, `--green-700` `#3C8E9C` (aqua, despite the name). `--amber-300`
+`#F7D899`, `--amber-400` `#F2C46D`, `--amber-500` `#D9A94E`, `--amber-yellow` `#F2C46D`
+(gold). `--teal-300` to `--teal-500` and `--rust-300` to `--rust-600` alias the green
+steps. Rust is deprecated; don't use it in new code.
 
-For HTML artifacts, load Lucide from CDN:
+Tints: `--green-tint-bg` `rgba(143, 227, 240, 0.14)`, `--green-tint-border`
+`rgba(143, 227, 240, 0.30)`, `--amber-tint-bg` `rgba(242, 196, 109, 0.14)`,
+`--amber-tint-border` `rgba(242, 196, 109, 0.30)`. The rust and teal tints alias the
+green ones.
+
+### Buttons and borders
+
+| Token | Value |
+| --- | --- |
+| `--btn-primary-bg` | `var(--zinc-100)` |
+| `--btn-primary-fg` | `var(--ink)` |
+| `--btn-primary-bg-hover` | `var(--white)` |
+| `--btn-ghost-bg` | `rgba(255, 255, 255, 0.16)` |
+| `--btn-ghost-bg-hover` | `rgba(255, 255, 255, 0.22)` |
+| `--border-faint` | `rgba(255, 255, 255, 0.04)` |
+| `--border-subtle` | `rgba(255, 255, 255, 0.07)` |
+| `--border-divider` | `rgba(255, 255, 255, 0.08)` |
+| `--border-soft` | `rgba(255, 255, 255, 0.10)` |
+| `--border-medium` | `rgba(255, 255, 255, 0.12)` |
+| `--border-default` | `rgba(255, 255, 255, 0.14)` |
+| `--border-strong` | `rgba(143, 227, 240, 0.42)` |
+
+### Radii
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--radius-2xl` | `28px` | sidebar, panels, hero frame, modals (24 under 760px) |
+| `--radius-slab` | `22px` | hero slab |
+| `--radius-row` | `20px` | rows inside panels |
+| `--radius-lg` | `16px` | inset cards |
+| `--radius-md` | `14px` | nav items, search, inputs, rows, stills |
+| `--radius-xl` | `14px` | poster cards |
+| `--radius-thumb` | `12px` | small thumbs |
+| `--radius-sm` | `8px` | small controls |
+| `--radius-xs` | `6px` | kbd |
+| `--radius-pill` | `9999px` | buttons, chips |
+
+Icon buttons and the avatar are circles. Progress segments use a 2px radius.
+
+### Shadows and edges
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--shadow-sm` | `0 0 0 1px rgba(255, 255, 255, 0.10), 0 6px 14px -6px rgba(0, 0, 0, 0.60)` | thumb or still |
+| `--shadow-md` | `inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 30px 60px -24px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.16)` | container |
+| `--shadow-xl` | `inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 40px 80px -32px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.20)` | hero frame |
+| `--shadow-slab` | `inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 24px 48px -16px rgba(0, 0, 0, 0.50)` | hero slab |
+| `--shadow-poster` | `0 18px 32px -14px rgba(0, 0, 0, 0.70)` | poster |
+| `--shadow-well` | `inset 0 1px 2px rgba(0, 0, 0, 0.30), inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 1px 0 rgba(255, 255, 255, 0.06)` | inset well |
+| `--glass-row-edge` | `inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.06)` | `.glass-row` |
+| `--glass-btn-edge` | `inset 0 1px 0 rgba(255, 255, 255, 0.20), inset 0 0 0 1px rgba(255, 255, 255, 0.06)` | `.glass-btn` |
+| `--glass-chip-edge` | `inset 0 0 0 1px rgba(255, 255, 255, 0.12)` | `Badge` |
+| `--glass-inset-card-edge` | `inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 0 0 1px rgba(255, 255, 255, 0.04)` | inset card |
+| `--glass-badge-edge` | `inset 0 0 0 1px rgba(255, 255, 255, 0.16)` | `PosterBadge` |
+| `--glow-violet` | `0 0 0 1px rgba(255, 255, 255, 0.12), 0 18px 32px -14px rgba(0, 0, 0, 0.70)` | the generic hover ring; the name is old, the ring is white |
+| `--glow-rose`, `--glow-orange` | `var(--glow-violet)` | back-compat names |
+| `--glow-live` | `var(--accent-ring)` | current or selected item |
+| `--inset-hairline` | `inset 0 1px 0 rgba(255, 255, 255, 0.14)` | top highlight (active nav item) |
+
+Blur scale: `--blur-sm` 12px, `--blur-md` 24px (mobile bars), `--blur-lg` 40px (tier 1),
+`--blur-xl` 80px (ambient).
+
+### Motion
+
+`--ease-out-expo` is `cubic-bezier(0.22, 1, 0.36, 1)` and `--ease-standard` is
+`cubic-bezier(0.4, 0, 0.2, 1)`. Durations: `--dur-fast` 0.18s, `--dur-base` 0.26s,
+`--dur-slow` 0.4s, `--dur-slower` 0.6s. Hover transforms: `--lift-hover`
+`translateY(-2px)` for cards, `--lift-poster` `scale(1.02)` for posters. Keyframes in
+`tokens/keyframes.css`: `dorf-pulse`, `dorf-fade-up`, `dorf-spin`, `dorf-shimmer`.
+`app/globals.css` turns transitions, shimmers and hover transforms off under
+`prefers-reduced-motion`.
+
+### Type
+
+One typeface, Inter, variable with optical sizing. `--font-sans` is
+`var(--font-inter, 'Inter'), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif`.
+`--font-serif` aliases it, and `--font-mono` is `ui-monospace, Menlo, monospace`.
+
+Weights in use are 500, 600 and 650. 400 is for long body copy only. `--weight-light`
+and `--weight-regular` are 400, `--weight-medium` is 500, `--weight-semibold` and
+`--weight-bold` are 600, and `--weight-heading`, `--weight-extrabold` and
+`--weight-black` are 650.
+
+| Role | Token | Size / line | Weight | Tracking |
+| --- | --- | --- | --- | --- |
+| Page H1, greeting | `--font-display` | 28 / 34 (24 / 30 under 760px) | 650 | `--tracking-tight` -0.02em |
+| Big stat numeral | `--font-stat` | 28 / 34 | 650 | `--tracking-tighter` -0.025em |
+| Section title | `--font-h2` | 20 / 26 | 650 | `--tracking-snug` -0.015em |
+| Card title | `--font-card-title` | 16 / 24 | 600 | `--tracking-text` -0.01em |
+| Body | `--font-body` | 15 / 22 | 500 | `--tracking-body` -0.006em |
+| Nav, buttons, inputs | | 14 / 20 | 500 to 600 | -0.01em |
+| Meta, eyebrow | `--font-meta`, `--eyebrow-*` | 13 / 18 | 500 | 0 |
+| Caption, kbd, chip | `--font-caption` | 12 / 16 | 500 to 600 | 0 |
+
+Size scale (px): `--text-2xs` 11, `--text-xs` 12, `--text-sm` 13, `--text-base` 14,
+`--text-body` 15, `--text-md` 16, `--text-lg` 18, `--text-xl` 20, `--text-2xl` 24,
+`--text-3xl` 28, `--text-4xl` 36, `--text-5xl` 44, `--text-6xl` 60. Leading:
+`--leading-none` 1, `--leading-tight` 1.2, `--leading-snug` 1.3, `--leading-normal` 1.5,
+`--leading-relaxed` 1.65. Tracking also has `--tracking-normal` 0, `--tracking-wide`
+0.02em and `--tracking-widest` 0.12em. Nothing in Spatial Glass uses wide tracking.
+
+### Spacing and layout
+
+4px grid (px): `--space-0` 0, `--space-1` 4, `--space-2` 8, `--space-3` 12,
+`--space-4` 16, `--space-5` 20, `--space-6` 24, `--space-7` 28, `--space-8` 32,
+`--space-10` 40, `--space-12` 48, `--space-16` 64. Gaps run 2, 6, 8, 12, 16 and 24.
+Panels pad 20 to 28.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--shell-pad` | `24px` | page padding and panel gap (12 under 760px) |
+| `--sidebar-width` | `232px` | glass sidebar, `lg` and up |
+| `--rail-width` | `76px` | icon rail, `md` to `lg` |
+| `--shell-max` | `1720px` | sidebar plus content |
+| `--content-max` | `1440px` | content column |
+| `--content-narrow` | `720px` | settings and import column |
+| `--content-pad-x` | `24px` | main padding |
+| `--poster-ratio` | `2 / 3` | posters |
+
+Below 768px the app keeps its mobile top bar, bottom tab bar and More drawer, as glass
+bars blurred 24px. Below 760px the hero stacks and panels use radius 24.
+
+### Retired
+
+`--grain` is kept with `--grain-opacity: 0`; the film-grain layer is gone. These no
+longer exist, so don't reference them: `--page-radial`, `--orb-*`, the `--violet-*`,
+`--rose-*`, `--emerald-*` and `--orange-*` ramps, the Outfit typeface, and the Autumn
+Pine hexes `#100e09`, `#15120c`, `#1b1711`, `#7c9a6a`, `#c4805f` and `#d3a85c`.
+
+## Components
+
+The recipes are spec section 5.5. Each prompt file names the real component, its props
+and the rules that matter at call sites.
+
+| Component | File | Prompt |
+| --- | --- | --- |
+| `Card` | `components/ui/Card.tsx` | `components/surfaces/Card.prompt.md` |
+| `StatTile` | `components/ui/StatTile.tsx` | `components/surfaces/StatTile.prompt.md` |
+| `PageHeader`, `SectionHeader` | `components/ui/PageHeader.tsx`, `SectionHeader.tsx` | `components/surfaces/Headers.prompt.md` |
+| `EmptyState`, `SectionError`, `Skeleton` | `components/ui/EmptyState.tsx`, `SectionError.tsx`, `Skeleton.tsx` | `components/surfaces/States.prompt.md` |
+| `Button` | `components/ui/Button.tsx` | `components/core/Button.prompt.md` |
+| `Badge`, `PosterBadge` | `components/ui/Badge.tsx`, `PosterCard.tsx` | `components/core/Badge.prompt.md` |
+| `Input`, `Select` | `components/ui/Input.tsx`, `Select.tsx` | `components/core/Input.prompt.md` |
+| `SegmentedControl` | `components/ui/SegmentedControl.tsx` | `components/core/SegmentedControl.prompt.md` |
+| `Eyebrow` | `components/ui/Eyebrow.tsx` | `components/core/Eyebrow.prompt.md` |
+| `Kbd`, `Avatar` | `components/ui/Kbd.tsx`, `Avatar.tsx` | `components/core/Kbd.prompt.md` |
+| `PosterCard` | `components/ui/PosterCard.tsx` | `components/media/PosterCard.prompt.md` |
+| `MediaRow` | `components/ui/MediaRow.tsx` | `components/media/MediaRow.prompt.md` |
+| `RatingStars` | `components/RatingStars.tsx` | `components/media/RatingStars.prompt.md` |
+| `ProgressRing`, `SegmentedProgress`, `DateStack` | `components/ui/ProgressRing.tsx`, `SegmentedProgress.tsx`, `DateStack.tsx` | `components/media/Progress.prompt.md` |
+| `NavItem` | `components/ui/NavItem.tsx` | `components/navigation/NavItem.prompt.md` |
+| `AmbientBackdrop` | `components/AmbientBackdrop.tsx` | the ambient section above |
+
+Also in `components/ui/`: `ClearFilters` (`onClear`), a glass pill with danger text that
+shows only while a filter is active, and `BentoGrid`, kept for older layouts.
+
+## Content and voice
+
+The redesign changes no copy. When you write new copy:
+
+- Plain and direct. Second person where the UI talks about the user's things ("Search
+  your library"); label-driven elsewhere ("Date watched", "12 watched").
+- Sentence case for body copy, section titles, empty states and new buttons, as in the
+  reference: "Up next", "Coming soon", "Log a watch", "See all". Some older labels are
+  Title Case ("Add to Watchlist"); leave them.
+- No uppercase eyebrows and no tracked caps anywhere. The eyebrow is the muted line
+  above a page title, usually the date, in plain case.
+- Empty states state the fact, then the next step: "Nothing watched yet." followed by
+  "Log your first film or show and your stats, streak and recommendations start building
+  from here."
+- Short verbs on buttons: "Mark watched", "Sign in", "Remove".
+- No emoji. No exclamation-mark hype.
+
+## Iconography
+
+lucide-react only, `strokeWidth={1.8}`, 18 to 20px, `currentColor`. Nav icons are 20px.
+No emoji, icon font or custom illustration set. Stars are the Lucide `Star` filled with
+`--rating` or `--rating-empty`, not the U+2605 glyph.
+
+Nav glyphs (from `components/Sidebar.tsx`): `Home`, `Search`, `Library`, `ListTodo`,
+`Clapperboard`, `Sparkles`, `CalendarDays`, `Layers`, `BarChart3`, `Settings`,
+`MoreHorizontal`.
+
+For HTML, paste the icon's SVG from lucide.dev inline and set `stroke-width="1.8"`, as
+the guideline cards do:
+
 ```html
-<script src="https://unpkg.com/lucide@latest"></script>
-<!-- use <i data-lucide="film"></i> then lucide.createIcons() -->
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M20 6 9 17l-5-5" />
+</svg>
 ```
-The brand glyph vocabulary (from the sidebar/nav): `home, search, calendar, film, tv,
-list-todo, library, sparkles, swords, layers, bar-chart-3, upload, settings, user,
-play, flame, clock, star, trending-up, monitor-play, plus, check, bookmark, x, pencil,
-trash-2, loader-2, more-horizontal, arrow-right`.
 
-- **★ star (U+2605)** is the one Unicode glyph used as UI — it powers the rating control
-  (gray track ★ with an amber overlay ★ clipped by width for half-stars).
-- **Avatars:** generated from DiceBear `notionists` (`api.dicebear.com/7.x/notionists/svg`)
-  seeded on the user's email — a placeholder, not a brand asset.
-- **No emoji.** No icon font / sprite. No custom SVG illustration set.
+If you load the Lucide script from a CDN instead, pin a version and add an `integrity`
+hash; don't load `lucide@latest`.
 
-**Logo / wordmark:** there is no image logo. The brand is a **text wordmark** — `Dorf`
-in warm cream + `Movies` in pine green (`#7c9a6a`), Outfit extrabold, tight tracking:
-`Dorf` + `<span style="color:#7c9a6a">Movies</span>`. See `assets/wordmark.html`.
+## Brand mark
 
----
+A rounded square with a "D" cut from it, then "DorfMovies" at 17/22, weight 650,
+-0.02em, in `--text-primary`. The sidebar draws it in `components/Sidebar.tsx`
+(`Mark()`), 28px:
 
-## VISUAL INDEX (root manifest)
+```html
+<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+  <rect x="0.5" y="0.5" width="31" height="31" rx="10" fill="var(--text-primary)" />
+  <path d="M10.5 8h5.7a8 8 0 0 1 0 16h-5.7z" fill="var(--ink)" />
+  <circle cx="16.2" cy="16" r="2.6" fill="var(--text-primary)" />
+</svg>
+```
 
-- `styles.css` — global entry; `@import`s every token + font file. **Consumers link this.**
-- `tokens/`
-  - `fonts.css` — Outfit `@font-face`/import (Google Fonts).
-  - `colors.css` — canvas, zinc ramp, accents, glass surfaces, borders, semantic aliases.
-  - `typography.css` — Outfit scale, weights, tracking, type roles.
-  - `spacing.css` — 4px grid, layout widths, poster ratio.
-  - `effects.css` — radii, blur, shadows/glows, motion easings.
-  - `textures.css` — the film-grain token (`--grain`, `--grain-opacity`).
-- `assets/` — `wordmark.html` (the DorfMovies logotype) + icon usage notes.
-- `components/` — reusable primitives (see below).
-- `ui_kits/dorfmovies/` — full-screen click-through recreation of the app.
-- `guidelines/` — foundation specimen cards (Type / Colors / Spacing / Brand).
-- `SKILL.md` — Agent-Skill manifest.
+The favicon and app icons (`app/icon.tsx`, `app/apple-icon.tsx`, `public/icon-*.png`)
+draw the same mark in `#EAF6F9` and `#08161C`. The favicon and the 192 and 512 PNGs put
+the rounded square on a transparent canvas. The Apple icon fills the canvas with
+`#EAF6F9`, because iOS applies its own corner mask, and the maskable PNG does the same
+with the glyph at 0.8 scale so it stays in Android's safe zone. The PNGs are rendered
+from the SVG with headless Chromium. See `assets/wordmark.html`.
 
-### Components
-`core/` — `Button`, `Badge`, `IconChip`, `Eyebrow`, `Input`, `GlassCard`, `SpotlightCard`,
-`StarRating`, `StatTile`, `PosterCard`, `MediaRow`, `NavItem`.
+## Accessibility
 
-### UI Kit
-`ui_kits/dorfmovies/` — `Dashboard`, `Search`, `Library`, `Detail` screens composed from
-the primitives, with an interactive `index.html`.
+- Text tokens hold 4.5:1 on their glass surface. Recheck over the lightest backdrops.
+- Every interactive element gets the global `:focus-visible` ring, `2px solid
+  var(--border-focus)` with a 2px offset. Never remove an outline without a replacement.
+- Touch targets are at least 44px, and every `Button` size is. Icon-only buttons need an
+  `aria-label` (`variant="icon"` requires it in the type).
+- Decorative art gets `alt=""` and `aria-hidden`.
+- Respect `prefers-reduced-motion`, `prefers-reduced-transparency` and `forced-colors`.
+  The glass classes already handle the last two.
+
+## Files in this skill
+
+- `SKILL.md`: the skill manifest.
+- `readme.md`: this file.
+- `styles.css`: entry point for HTML. Imports every token file, including `fonts.css`.
+- `glass.css`: glass tiers, page base and ambient layer for HTML.
+- `tokens/`: `colors.css`, `typography.css`, `spacing.css`, `effects.css`,
+  `textures.css`, `keyframes.css`, and `fonts.css` (the Inter `@import`, used through
+  `styles.css` only).
+- `guidelines/`: specimen cards for colour, glass, type, spacing, radii and shadows.
+  Each has a `@dsCard` header and links `../styles.css` and `../glass.css`.
+- `assets/wordmark.html`: the mark and wordmark.
+- `components/<group>/*.prompt.md`: one recipe card per real component or pair.
+- `_ds_manifest.json`, `_adherence.oxlintrc.json`: Claude Design export metadata
+  (cards, tokens, fonts) and lint hints for generated HTML and JSX. Both are derived
+  from `tokens/` and the `@dsCard` headers, so they go stale when either changes.
+- `.thumbnail`: a 720x480 WebP preview of `guidelines/colors-glass.html`.
+- `explorations/autumn-pine/`: the archived Autumn Pine kit, cards and docs.

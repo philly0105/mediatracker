@@ -752,16 +752,18 @@ mutation-checked. **Watch out:** the first assertion scans comments too, so a co
 quoting an old `rgba(255,255,255,…)` value trips it — write "5% cold white" in prose.
 
 **PWA icons regenerated.** `public/icon-192.png` and `icon-512.png` overwritten (the user
-approved replacing them), plus a new `public/icon-maskable-512.png`. All three are the
-same mark `app/icon.tsx` and `app/apple-icon.tsx` draw — `#100e09` canvas, `#7c9a6a` D —
-rendered by driving `next/og`'s `ImageResponse` from a throwaway node script, so the
-installed icon cannot drift from the tab icon. The maskable one sizes the glyph at 0.44
-of the canvas so Android's circular crop (inscribed in the middle 80%) does not cut it;
-the other two use 0.75, matching `app/icon.tsx`'s 24-of-32. `app/manifest.ts` now names
-`purpose: 'any'` explicitly on the first two and points `maskable` at its own file.
+approved replacing them), plus a new `public/icon-maskable-512.png`. The Spatial Glass
+redesign redrew all three in October 2026 (commit `e253735`). They are now the mark
+`app/icon.tsx` and `app/apple-icon.tsx` draw: an `#EAF6F9` rounded square with the
+`#08161C` "D" and its counter cut out. The PNGs are rendered from that SVG with headless
+Chromium, so the installed icon matches the tab icon. The 192 and 512 put the rounded
+square on a transparent canvas at the SVG's full 32-unit grid. The maskable 512 fills the
+whole canvas with `#EAF6F9` and draws the glyph at 0.8 scale, centred, so it stays inside
+the safe zone Android's circular crop keeps (the middle 80%). `app/manifest.ts` names
+`purpose: 'any'` on the first two and points `maskable` at its own file.
 
-To regenerate, `next/og` is importable from a plain `.mjs` script via
-`createRequire(<repo>/package.json)` — resolving it relative to the script fails.
+To regenerate, render the SVG from `app/icon.tsx` in headless Chromium at each size, with
+a transparent page background for the 192 and 512, and overwrite the three files.
 
 ### 7.9 F-45 is not fully fixed
 

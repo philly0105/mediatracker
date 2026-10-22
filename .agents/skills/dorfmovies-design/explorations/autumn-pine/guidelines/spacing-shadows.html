@@ -1,0 +1,17 @@
+<!-- @dsCard group="Spacing" viewport="700x190" name="Shadows & glows" subtitle="Deep black shadows; colored hover glows" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:var(--bg-void);background-image:var(--page-radial);font-family:var(--font-sans);color:var(--text-primary);padding:30px 28px;box-sizing:border-box;display:flex;align-items:center;gap:22px}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .box{width:96px;height:70px;border-radius:16px;background:var(--bg-raised);border:1px solid var(--border-soft)}
+  .t{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
+</style></head>
+<body>
+  <div class="col"><div class="box" style="box-shadow:var(--shadow-md)"></div><span class="t">shadow-md</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--shadow-xl)"></div><span class="t">shadow-xl</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--glow-violet)"></div><span class="t">glow-violet</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--glow-rose)"></div><span class="t">glow-rose</span></div>
+  <div class="col"><div class="box" style="box-shadow:var(--glow-orange)"></div><span class="t">glow-orange</span></div>
+</body></html>

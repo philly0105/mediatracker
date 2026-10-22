@@ -1,30 +1,35 @@
 ---
 name: dorfmovies-design
-description: Use this skill to generate well-branded interfaces and assets for DorfMovies (a dark, poster-art-driven personal movie/TV tracking app), either for production or throwaway prototypes/mocks/etc. Contains essential design guidelines, colors, type, fonts, assets, and UI kit components for prototyping.
+description: DorfMovies design system ("Spatial Glass"). Use when building or restyling DorfMovies UI, choosing its tokens, glass tiers or components, or making HTML mocks, prototypes or assets on-brand.
 user-invocable: true
 ---
 
-Read the `readme.md` file within this skill, and explore the other available files
-(`styles.css` + `tokens/` for foundations, `components/` for primitives,
-`ui_kits/dorfmovies/` for full screens, `guidelines/` for specimen cards,
-`assets/wordmark.html` for the logotype).
+DorfMovies is a dark, artwork-led movie and TV tracker. Its look is Spatial Glass:
+translucent glass panels over the featured title's backdrop blurred 80px, a cool
+blue-black canvas (`#061015`), one aqua accent (`#8FE3F0`) for progress, "next", current
+state and focus, gold (`#F2C46D`) for star ratings only, and Inter at weights 500, 600
+and 650. Containers are radius 28, rows and controls 14, buttons pills. Numbers are
+tabular.
 
-If creating visual artifacts (slides, mocks, throwaway prototypes, etc), copy assets out
-and create static HTML files for the user to view: link `styles.css`, load Lucide from CDN
-(`https://unpkg.com/lucide@latest` + `lucide.createIcons()`), and the design-system bundle
-(`_ds_bundle.js`, namespace `window.DorfMoviesDesignSystem_f30e74`). If working on
-production code, copy assets and read the rules here to become an expert in designing with
-this brand.
+1. Read `readme.md` in this skill. It has the principles, the glass tiers and their
+   performance budget, the ambient backdrop, every token with its value, the component
+   index, voice, icons and the brand mark. Done when you know which tier each surface in
+   your task is and which tokens it reads.
+2. For production code, build from the real components in `components/ui/` (plus
+   `components/RatingStars.tsx` and `components/AmbientBackdrop.tsx`). Before using one,
+   read its recipe in `components/<group>/*.prompt.md`. Colours, radii, shadows and type
+   come from tokens through `var(--…)`; the glass classes live in `app/globals.css`.
+3. For HTML (mocks, prototypes, slides), link `styles.css` then `glass.css` from this
+   skill, use the `.glass-*` classes and the `.ambient` markup described in `glass.css`,
+   and draw icons as inline Lucide SVGs at stroke width 1.8. `guidelines/*.html` and
+   `assets/wordmark.html` are working examples.
+4. Check the result against `docs/designs/spatial-glass/reference/home.html`, the
+   approved mock, which wins any disagreement with this skill. The spec is
+   `docs/superpowers/specs/2026-10-22-spatial-glass-redesign.md`; section 5.5 has the
+   component recipes. Done when the screen matches the reference's tiers, type, spacing
+   and colour, and nothing references a retired token (`readme.md`, "Retired").
 
-Key brand cues ("Autumn Pine"): warm brown-black canvas (`#100e09`) under a fixed film-grain
-overlay, with faint pine/rust/amber warmth orbs; **flat opaque** cards (`#1b1711`, hairline
-warm border, no backdrop-blur — the blur tokens are deliberately `0`); a warm-stone text ramp
-rather than cold grey; pine green `#7c9a6a` as the single accent, with amber for ratings and
-rust for destructive; the Outfit typeface (extrabold/black headings, tiny tracked uppercase
-eyebrows); tight 4–12px radii, pills reserved for tags and filter chips; poster artwork
-carrying the colour; lift-and-hairline hover, never a coloured haze. The wordmark is `Dorf`
-(warm cream) + `Movies` (pine green `#7c9a6a`). Lucide icons only; no emoji.
+`explorations/autumn-pine/` is the archived previous look. Leave it out of new work.
 
-If the user invokes this skill without any other guidance, ask them what they want to build
-or design, ask some questions, and act as an expert designer who outputs HTML artifacts
-_or_ production code, depending on the need.
+If the user invokes this skill with no other request, ask what they want to build, then
+work as the designer and produce HTML or production code to suit.

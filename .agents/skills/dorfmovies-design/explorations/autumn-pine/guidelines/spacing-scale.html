@@ -1,0 +1,20 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Spacing scale" subtitle="4px base grid — 4 / 8 / 12 / 16 / 24 / 28 / 48" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<style>
+  html,body{margin:0}
+  body{background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary);padding:24px 28px;box-sizing:border-box;display:flex;align-items:flex-end;gap:18px}
+  .col{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .bar{background:linear-gradient(180deg,var(--violet-400),var(--violet-600));width:26px;border-radius:6px}
+  .t{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
+</style></head>
+<body>
+  <div class="col"><div class="bar" style="height:4px"></div><span class="t">1·4</span></div>
+  <div class="col"><div class="bar" style="height:8px"></div><span class="t">2·8</span></div>
+  <div class="col"><div class="bar" style="height:12px"></div><span class="t">3·12</span></div>
+  <div class="col"><div class="bar" style="height:16px"></div><span class="t">4·16</span></div>
+  <div class="col"><div class="bar" style="height:24px"></div><span class="t">6·24</span></div>
+  <div class="col"><div class="bar" style="height:28px"></div><span class="t">7·28</span></div>
+  <div class="col"><div class="bar" style="height:48px"></div><span class="t">12·48</span></div>
+  <div class="col"><div class="bar" style="height:64px"></div><span class="t">16·64</span></div>
+</body></html>

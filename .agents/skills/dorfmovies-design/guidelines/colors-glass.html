@@ -1,20 +1,53 @@
-<!-- @dsCard group="Colors" viewport="700x180" name="Flat surfaces, borders & grain" subtitle="Solid warm fills, hairline borders (green emphasis), film grain" -->
+<!-- @dsCard group="Colors" viewport="700x300" name="Glass tiers" subtitle="Tier 1 blurs (panel, slab); everything inside is a flat tier-2 fill (row, inset, button)" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-void);background-image:var(--page-radial);font-family:var(--font-sans);color:var(--text-primary);padding:20px;box-sizing:border-box;position:relative}
-  body::after{content:'';position:fixed;inset:0;pointer-events:none;background-image:var(--grain);background-size:180px;opacity:var(--grain-opacity);mix-blend-mode:overlay}
-  .wrap{position:relative;display:flex;gap:14px;z-index:2}
-  .g{flex:1;height:130px;border-radius:var(--radius-lg);padding:14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:flex-end}
-  .n{font-size:12px;font-weight:700}
-  .h{font-size:10px;color:var(--text-secondary);font-family:var(--font-mono);margin-top:3px}
-</style></head>
+  .page { position: relative; z-index: 1; padding: 22px 24px; box-sizing: border-box; display: flex; gap: 20px; align-items: flex-start; }
+  .panel { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .slab { flex: 0 0 210px; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+  .tag { font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--text-muted); }
+  .title { font: var(--font-card-title); letter-spacing: var(--tracking-text); }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; }
+  .inset { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 14px; color: var(--text-faint); font-size: var(--text-base); }
+  .kbd { height: 22px; padding: 0 5px; display: inline-flex; align-items: center; border-radius: var(--radius-xs); background: var(--glass-fill-hover); border: 1px solid var(--border-default); box-sizing: border-box; font-size: var(--text-xs); line-height: 16px; font-weight: var(--weight-medium); color: var(--text-strong); }
+  .btns { display: flex; gap: 10px; align-items: center; }
+  .pill { height: 44px; padding: 0 18px; border: 0; border-radius: var(--radius-pill); font: 600 var(--text-base)/20px var(--font-sans); letter-spacing: var(--tracking-text); color: var(--text-primary); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .primary { background: var(--btn-primary-bg); color: var(--btn-primary-fg); box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.50); }
+  .icon { width: 44px; padding: 0; justify-content: center; }
+  .icon svg { width: 20px; height: 20px; }
+</style>
+</head>
 <body>
-  <div class="wrap">
-    <div class="g" style="background:var(--glass-card);border:1px solid var(--border-subtle)"><div class="n">card</div><div class="h">#1b1711 · solid</div></div>
-    <div class="g" style="background:var(--glass-panel);border:1px solid var(--border-soft)"><div class="n">panel</div><div class="h">#18140e · solid</div></div>
-    <div class="g" style="background:var(--glass-modal);border:1px solid var(--border-default)"><div class="n">modal</div><div class="h">#201b13 · solid</div></div>
-    <div class="g" style="background:var(--glass-input);border:1px solid var(--border-focus)"><div class="n">input · focus</div><div class="h">#211c14 · green border</div></div>
+  <div class="ambient" aria-hidden="true"><div class="ambient-sample"></div><div class="ambient-tint"></div></div>
+  <div class="page">
+    <section class="glass-panel glass-rim panel">
+      <div class="tag">.glass-panel · tier 1 · blur 40px · radius 28</div>
+      <div class="glass-row glass-rim row">
+        <span class="title">Severance</span>
+        <span class="tag">.glass-row · tier 2 · radius 20</span>
+      </div>
+      <div class="glass-inset inset">
+        <span>Search</span>
+        <span class="kbd">Ctrl K</span>
+      </div>
+      <div class="btns">
+        <button class="pill primary" type="button">Mark watched</button>
+        <button class="pill glass-btn" type="button">Add to list</button>
+        <button class="pill glass-btn icon" type="button" aria-label="Mark episode watched">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+        <span class="tag" style="white-space: nowrap">.glass-btn</span>
+      </div>
+    </section>
+    <section class="glass-slab glass-rim slab">
+      <div class="tag">.glass-slab · radius 22</div>
+      <div class="title">Text over artwork</div>
+      <div class="tag">Darker base than a panel, so text holds 4.5:1 over bright art.</div>
+    </section>
   </div>
-</body></html>
+</body>
+</html>

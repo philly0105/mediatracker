@@ -1,17 +1,26 @@
-<!-- @dsCard group="Type" viewport="700x200" name="Display & headings" subtitle="Outfit extrabold/black, tight tracking, gradient hero" -->
+<!-- @dsCard group="Type" viewport="700x210" name="Headings" subtitle="Inter at 650 and 600; tracking tightens as the size grows" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-base);background-image:var(--page-radial);font-family:var(--font-sans);color:var(--text-primary);padding:24px 28px;box-sizing:border-box}
-  .hero{font-size:48px;font-weight:800;letter-spacing:-0.04em;line-height:1.05;background:linear-gradient(160deg,var(--zinc-100) 40%,var(--zinc-400));-webkit-background-clip:text;background-clip:text;color:transparent;margin:0}
-  .h2{font-size:24px;font-weight:800;letter-spacing:-0.02em;margin:14px 0 0}
-  .h3{font-size:18px;font-weight:700;margin:10px 0 0}
-  .meta{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:10px}
-</style></head>
-<body>
-  <p class="hero">Dashboard</p>
-  <p class="h2">Recently Watched</p>
-  <p class="h3">Dune: Part Two</p>
-  <p class="meta">Outfit 800 display -0.04em · 800 h2 · 700 card-title</p>
-</body></html>
+  .page { padding: 22px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+  .l { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; }
+  .h { font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--text-muted); white-space: nowrap; }
+  .h1 { margin: 0; font: var(--font-display); letter-spacing: var(--tracking-tight); }
+  .h2 { margin: 0; font: var(--font-h2); letter-spacing: var(--tracking-snug); }
+  .h3 { margin: 0; font: var(--font-card-title); letter-spacing: var(--tracking-text); }
+  .nav { margin: 0; font: 500 var(--text-base)/20px var(--font-sans); letter-spacing: var(--tracking-text); color: var(--text-secondary); }
+</style>
+</head>
+<body style="min-height: 100vh; background: var(--ambient-radial), var(--bg-void)">
+  <div class="page">
+    <div class="l"><p class="h1">Good evening</p><span class="h">page H1 · 28/34 · 650 · -0.02em (24/30 under 760px)</span></div>
+    <div class="l"><p class="h2">Up next</p><span class="h">section title · 20/26 · 650 · -0.015em</span></div>
+    <div class="l"><p class="h3">Severance</p><span class="h">card title · 16/24 · 600 · -0.01em</span></div>
+    <div class="l"><p class="nav">Library</p><span class="h">nav, buttons · 14/20 · 500 to 600 · -0.01em</span></div>
+  </div>
+</body>
+</html>

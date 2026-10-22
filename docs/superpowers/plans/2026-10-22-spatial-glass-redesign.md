@@ -295,10 +295,11 @@ alter table media add column if not exists logo_url text;
 ## Task 13: Design skill update
 **Files:** `.agents/skills/dorfmovies-design/{SKILL.md,readme.md,guidelines/*,components/**/*.prompt.md}`, plus `app/styles/design-system/README.md` if wording changes
 
-- [ ] Rewrite the skill's description of the visual language from Autumn Pine to Spatial Glass: principles, the tier rules and performance budget, the token table, and component recipes (point to spec §5.5). Remove the warm-brown and pine guidance. Archive the old explorations and UI kits under `explorations/autumn-pine/` or remove them.
-- [ ] Update each `components/**/*.prompt.md` to the new recipe.
-- [ ] Confirm the token copies are still byte-identical (sync test).
-- [ ] Verify, then commit: `docs(design-skill): describe spatial glass`
+- [x] Rewrite the skill's description of the visual language from Autumn Pine to Spatial Glass: principles, the tier rules and performance budget, the token table, and component recipes (point to spec §5.5). Remove the warm-brown and pine guidance. Archive the old explorations and UI kits under `explorations/autumn-pine/` or remove them.
+  - The old explorations, UI kits, JSX components and bundle moved to `explorations/autumn-pine/`.
+- [x] Update each `components/**/*.prompt.md` to the new recipe.
+- [x] Confirm the token copies are still byte-identical (sync test).
+- [x] Verify, then commit: `docs(design-skill): describe spatial glass`
 
 ## Task 14: QA, performance and PR
 - [ ] Visual pass: every route at 1440, 1100, 900, 768 and 390. Save screenshots to `docs/designs/spatial-glass/after/` and compare with the reference and the baseline. No horizontal overflow anywhere.

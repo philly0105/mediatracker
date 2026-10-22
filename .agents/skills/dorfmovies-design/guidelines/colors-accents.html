@@ -1,34 +1,48 @@
-<!-- @dsCard group="Colors" viewport="700x160" name="Pine green & playful accents" subtitle="Pine-green hero + amber / rust / dusty-teal set" -->
+<!-- @dsCard group="Colors" viewport="700x200" name="Aqua accent, gold ratings" subtitle="One accent for progress, next and focus; gold only on stars" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-base);background-image:var(--page-radial);font-family:var(--font-sans);color:var(--text-primary);padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px}
-  .grp{display:flex;align-items:center;gap:10px}
-  .lbl{width:72px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-secondary)}
-  .sw{flex:1;height:30px;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:10px;font-weight:700;font-family:var(--font-mono);color:#11160d}
-</style></head>
+  .page { padding: 18px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
+  .ramp { display: flex; gap: 8px; }
+  .s { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .c { height: 40px; border-radius: var(--radius-sm); box-shadow: var(--glass-chip-edge); }
+  .h { font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--text-muted); }
+  .use { display: flex; align-items: center; gap: 22px; font: var(--font-caption); color: var(--text-secondary); }
+  .bar { width: 120px; height: 4px; border-radius: 2px; background: var(--accent-tint); overflow: hidden; }
+  .bar i { display: block; width: 60%; height: 100%; background: var(--accent); }
+  .ring { padding: 6px 12px; border-radius: var(--radius-md); background: var(--glass-card); box-shadow: var(--glass-row-edge), var(--accent-ring); color: var(--text-primary); }
+  .stars { display: inline-flex; gap: 2px; }
+  .stars svg { width: 14px; height: 14px; }
+  .danger { color: var(--danger); font-weight: var(--weight-semibold); }
+</style>
+</head>
 <body>
-  <div class="grp"><span class="lbl">Pine</span>
-    <div class="sw" style="background:var(--green-300)">300</div>
-    <div class="sw" style="background:var(--green-400)">400</div>
-    <div class="sw" style="background:var(--green-500)">500 · #7c9a6a</div>
-    <div class="sw" style="background:var(--green-600);color:#e9e2d3">600</div>
-    <div class="sw" style="background:var(--green-700);color:#e9e2d3">700</div>
+  <div class="page">
+    <div class="ramp">
+      <div class="s"><div class="c" style="background: var(--green-300)"></div><div class="h">300 #C6F2F8</div></div>
+      <div class="s"><div class="c" style="background: var(--green-400)"></div><div class="h">400 #B4EEF6 hover</div></div>
+      <div class="s"><div class="c" style="background: var(--green-500)"></div><div class="h">500 #8FE3F0 accent</div></div>
+      <div class="s"><div class="c" style="background: var(--green-600)"></div><div class="h">600 #5FC4D6</div></div>
+      <div class="s"><div class="c" style="background: var(--green-700)"></div><div class="h">700 #3C8E9C</div></div>
+      <div class="s"><div class="c" style="background: var(--amber-400)"></div><div class="h">gold #F2C46D</div></div>
+      <div class="s"><div class="c" style="background: var(--danger)"></div><div class="h">danger #FF9B9B</div></div>
+    </div>
+    <div class="use">
+      <span class="bar"><i></i></span>
+      <span class="ring">Next · E7</span>
+      <span class="stars" role="img" aria-label="Rated 3 out of 5">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="var(--rating)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="var(--rating)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="var(--rating)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="var(--rating-empty)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="var(--rating-empty)"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </span>
+      <span class="danger">Remove from Watchlist</span>
+    </div>
   </div>
-  <div class="grp"><span class="lbl">Amber</span>
-    <div class="sw" style="background:var(--amber-300)">300</div>
-    <div class="sw" style="background:var(--amber-400)">400 · #d3a85c</div>
-    <div class="sw" style="background:var(--amber-500)">500</div>
-  </div>
-  <div class="grp"><span class="lbl">Rust · live</span>
-    <div class="sw" style="background:var(--rust-300)">300</div>
-    <div class="sw" style="background:var(--rust-400)">400 · #c4805f</div>
-    <div class="sw" style="background:var(--rust-500);color:#e9e2d3">500</div>
-  </div>
-  <div class="grp"><span class="lbl">Teal · watched</span>
-    <div class="sw" style="background:var(--teal-300)">300</div>
-    <div class="sw" style="background:var(--teal-400)">400 · #6f9089</div>
-    <div class="sw" style="background:var(--teal-500);color:#e9e2d3">500</div>
-  </div>
-</body></html>
+</body>
+</html>

@@ -1,28 +1,40 @@
-<!-- @dsCard group="Colors" viewport="700x150" name="Semantic & neutral ramp" subtitle="Amber rating, emerald success, zinc text scale" -->
+<!-- @dsCard group="Colors" viewport="700x210" name="Text and hairlines" subtitle="Translucent-white text ramp; white hairlines, aqua only for emphasis and focus" -->
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" /><link rel="stylesheet" href="../styles.css" />
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../glass.css" />
 <style>
-  html,body{margin:0}
-  body{background:var(--bg-base);font-family:var(--font-sans);color:var(--text-primary);padding:20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
-  .row{display:flex;align-items:center;gap:10px}
-  .lbl{width:72px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-secondary)}
-  .sw{height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 10px;font-size:10px;font-weight:700;font-family:var(--font-mono);flex:1}
-  .dot{display:flex;align-items:center;gap:8px;font-size:12px}
-  .c{width:18px;height:18px;border-radius:50%}
-</style></head>
+  .page { position: relative; z-index: 1; padding: 20px 24px; box-sizing: border-box; }
+  .panel { padding: 18px 20px; display: flex; gap: 28px; }
+  .text { flex: 1.2; display: flex; flex-direction: column; gap: 4px; }
+  .t { display: flex; justify-content: space-between; align-items: baseline; font: var(--font-body); }
+  .h { font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--text-muted); }
+  .lines { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; align-content: start; }
+  .b { height: 26px; border-radius: var(--radius-sm); display: flex; align-items: center; padding: 0 10px; }
+</style>
+</head>
 <body>
-  <div class="row"><span class="lbl">Semantic</span>
-    <div class="dot"><span class="c" style="background:var(--amber-400)"></span>Amber — rating ★</div>
-    <div class="dot"><span class="c" style="background:var(--emerald-400)"></span>Emerald — watched</div>
-    <div class="dot"><span class="c" style="background:var(--white)"></span>White — primary button</div>
+  <div class="ambient" aria-hidden="true"><div class="ambient-sample"></div><div class="ambient-tint"></div></div>
+  <div class="page">
+    <section class="glass-panel glass-rim panel">
+      <div class="text">
+        <div class="t" style="color: var(--text-primary)">Primary <span class="h">#F3F8FA</span></div>
+        <div class="t" style="color: var(--text-strong)">Strong <span class="h">.86</span></div>
+        <div class="t" style="color: var(--text-secondary)">Secondary <span class="h">.80</span></div>
+        <div class="t" style="color: var(--text-muted)">Muted <span class="h">.74</span></div>
+        <div class="t" style="color: var(--text-faint)">Placeholder only <span class="h">.66</span></div>
+      </div>
+      <div class="lines">
+        <div class="b h" style="box-shadow: inset 0 0 0 1px var(--border-faint)">faint .04</div>
+        <div class="b h" style="box-shadow: inset 0 0 0 1px var(--border-subtle)">subtle .07</div>
+        <div class="b h" style="box-shadow: inset 0 0 0 1px var(--border-soft)">soft .10</div>
+        <div class="b h" style="box-shadow: inset 0 0 0 1px var(--border-default)">default .14</div>
+        <div class="b h" style="box-shadow: inset 0 0 0 1px var(--border-strong)">strong aqua .42</div>
+        <div class="b h" style="outline: 2px solid var(--border-focus); outline-offset: 2px">focus #9BE7F5</div>
+      </div>
+    </section>
   </div>
-  <div class="row"><span class="lbl">Zinc text</span>
-    <div class="sw" style="background:var(--zinc-100);color:#222">100</div>
-    <div class="sw" style="background:var(--zinc-300);color:#222">300</div>
-    <div class="sw" style="background:var(--zinc-400);color:#222">400</div>
-    <div class="sw" style="background:var(--zinc-500)">500</div>
-    <div class="sw" style="background:var(--zinc-600)">600</div>
-    <div class="sw" style="background:var(--zinc-800)">800</div>
-    <div class="sw" style="background:var(--zinc-900)">900</div>
-  </div>
-</body></html>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!-- @dsCard group="Brand" viewport="700x150" name="Wordmark" subtitle="Dorf + Movies — Outfit extrabold, pine-green accent" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; }
+  body {
+    background: var(--bg-base);
+    background-image: var(--page-radial);
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 56px;
+    padding: 0 40px;
+    height: 150px;
+    box-sizing: border-box;
+  }
+  .mark { font-weight: 800; letter-spacing: 0.01em; line-height: 1; }
+  .mark .o { color: var(--brand-mark); }
+  .lg { font-size: 40px; }
+  .md { font-size: 26px; }
+  .sm { font-size: 18px; }
+  .stack { display: flex; flex-direction: column; gap: 18px; }
+  .knockout {
+    background: var(--bg-void); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg); padding: 14px 20px;
+  }
+</style>
+</head>
+<body>
+  <div class="mark lg">Dorf<span class="o">Movies</span></div>
+  <div class="stack">
+    <div class="mark md">Dorf<span class="o">Movies</span></div>
+    <div class="knockout"><span class="mark sm">Dorf<span class="o">Movies</span></span></div>
+  </div>
+</body>
+</html>
