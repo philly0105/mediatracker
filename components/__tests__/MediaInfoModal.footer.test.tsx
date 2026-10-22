@@ -146,3 +146,46 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
     expect(footer().innerHTML).not.toMatch(/hover:!/)
   })
 })
+
+// The hero took over the score, which used to double as the IMDb link, and
+// StreamingRow took over the JustWatch attribution, which it only renders with
+// a provider. Both links are the modal's own responsibility now.
+describe('MediaInfoModal external links', () => {
+  beforeEach(() => {
+    mockFetch.mockReset()
+    global.fetch = mockFetch
+    HTMLElement.prototype.scrollIntoView = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('links to the IMDb page when the details carry an imdb id', async () => {
+    mockDetails({ ...movie, imdb_id: 'tt0113277' })
+    render(
+      <ToastProvider>
+        <MediaInfoModal item={movie} onClose={vi.fn()} onAddToWatchlist={vi.fn()} onMarkAsWatched={vi.fn()} />
+      </ToastProvider>,
+    )
+
+    const imdb = await screen.findByRole('link', { name: 'IMDb' })
+    expect(imdb).toHaveAttribute('href', 'https://www.imdb.com/title/tt0113277')
+    expect(imdb).toHaveAttribute('target', '_blank')
+  })
+
+  it('keeps the JustWatch link when nothing streams the title', async () => {
+    mockDetails({ ...movie, watch_providers: { link: 'https://www.themoviedb.org/movie/550/watch', flatrate: [] } })
+    render(
+      <ToastProvider>
+        <MediaInfoModal item={movie} onClose={vi.fn()} onAddToWatchlist={vi.fn()} onMarkAsWatched={vi.fn()} />
+      </ToastProvider>,
+    )
+
+    await screen.findByText('Not available to stream.')
+    expect(screen.getByRole('link', { name: /Provided by JustWatch/ })).toHaveAttribute(
+      'href',
+      'https://www.themoviedb.org/movie/550/watch',
+    )
+  })
+})

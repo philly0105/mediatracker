@@ -6,10 +6,11 @@ import type { Season, Episode, EpisodeProgress } from '@/types'
 
 const season: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 5 }
 
-function episode(n: number, name: string | null, air_date: string | null): Episode {
+function episode(n: number, name: string | null, air_date: string | null, extra: Partial<Episode> = {}): Episode {
   return {
     id: `e${n}`, season_id: 's1', episode_number: n, name, air_date,
     overview: null, runtime_mins: null, still_url: null,
+    ...extra,
   }
 }
 
@@ -206,15 +207,16 @@ describe('EpisodeTracker unaired episodes', () => {
 })
 
 describe('EpisodeTracker default open season', () => {
+  afterEach(() => { vi.useRealTimers() })
+
   const season1: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 2 }
   const season2: Season = { id: 's2', media_id: 'm1', season_number: 2, episode_count: 2 }
+  const progress: EpisodeProgress[] = [
+    { id: 'p1', user_id: 'u1', season_id: 's1', episode_number: 1, watched_at: '2026-01-01' },
+    { id: 'p2', user_id: 'u1', season_id: 's1', episode_number: 2, watched_at: '2026-01-02' },
+  ]
 
   it('defaults to opening the season containing the nextUp unwatched episode', () => {
-    const progress: EpisodeProgress[] = [
-      { id: 'p1', user_id: 'u1', season_id: 's1', episode_number: 1, watched_at: '2026-01-01' },
-      { id: 'p2', user_id: 'u1', season_id: 's1', episode_number: 2, watched_at: '2026-01-02' },
-    ]
-
     render(
       <EpisodeTracker
         seasons={[season1, season2]}
@@ -226,5 +228,98 @@ describe('EpisodeTracker default open season', () => {
     // Season 1 is fully watched, so Season 2 should be open by default.
     // In Season 2, episodes are not watched, so "Mark whole season watched" is visible for Season 2.
     expect(screen.getByText('Mark whole season watched')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Season 2' })).toBeChecked()
+  })
+
+  it('switches seasons from the segmented control', () => {
+    render(
+      <EpisodeTracker
+        seasons={[season1, season2]}
+        progress={progress}
+        onProgressChange={onProgressChange}
+      />
+    )
+    fireEvent.click(screen.getByRole('radio', { name: 'Season 1' }))
+
+    expect(screen.getByRole('radio', { name: 'Season 1' })).toBeChecked()
+    expect(screen.getByText('Unmark whole season')).toBeInTheDocument()
+    expect(screen.getByText('2/2')).toBeInTheDocument()
+  })
+
+  it('marks finished seasons with a check in the control', () => {
+    render(
+      <EpisodeTracker
+        seasons={[season1, season2]}
+        progress={progress}
+        onProgressChange={onProgressChange}
+      />
+    )
+    // The accordion header used to show each season's bar; the control's
+    // check is what tells a finished season from an unfinished one now,
+    // without opening it.
+    expect(screen.getByRole('radio', { name: 'Season 1' }).querySelector('svg')).not.toBeNull()
+    expect(screen.getByRole('radio', { name: 'Season 2' }).querySelector('svg')).toBeNull()
+  })
+
+  it('counts a season with an unaired episode as finished once the aired ones are watched', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 6, 10))
+    const three: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 3 }
+    render(
+      <EpisodeTracker
+        seasons={[three, season2]}
+        progress={watched(1, 2)}
+        episodes={[episode(1, 'One', '2026-07-01'), episode(2, 'Two', '2026-07-08'), episode(3, 'Three', '2026-07-15')]}
+        onProgressChange={onProgressChange}
+      />
+    )
+    expect(screen.getByRole('radio', { name: 'Season 1' }).querySelector('svg')).not.toBeNull()
+  })
+})
+
+describe('EpisodeTracker rows', () => {
+  beforeEach(() => { onProgressChange.mockReset() })
+
+  it('names each toggle with its cascade and reports the watched state', () => {
+    render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={watched(1, 2)}
+        episodes={[episode(1, 'Pilot', '2008-01-20'), episode(3, 'And the Bag\'s in the River', '2008-02-10')]}
+        onProgressChange={onProgressChange}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Unmark S1 E1–E5 (Pilot)' })).toHaveAttribute('aria-pressed', 'true')
+    const third = screen.getByRole('button', { name: "Mark S1 E1–E3 watched (And the Bag's in the River)" })
+    expect(third).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(third)
+    expect(onProgressChange).toHaveBeenCalledWith('s1', 3, true)
+  })
+
+  it('rings the next episode to watch and moves it as progress changes', () => {
+    const { rerender } = render(
+      <EpisodeTracker seasons={[season]} progress={watched(1, 2)} onProgressChange={onProgressChange} />
+    )
+    const ringed = () => screen.getAllByRole('listitem').filter((li) => li.style.boxShadow.includes('accent-ring'))
+    expect(ringed()).toHaveLength(1)
+    expect(ringed()[0]).toContainElement(screen.getByText('E3'))
+
+    rerender(<EpisodeTracker seasons={[season]} progress={watched(1, 2, 3)} onProgressChange={onProgressChange} />)
+    expect(ringed()[0]).toContainElement(screen.getByText('E4'))
+  })
+
+  it('shows the runtime and a one-line synopsis when the fill has them', () => {
+    render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={[]}
+        episodes={[episode(1, 'Pilot', '2008-01-20', { runtime_mins: 58, overview: 'A chemistry teacher is diagnosed.' })]}
+        onProgressChange={onProgressChange}
+      />
+    )
+    expect(screen.getByText('58m')).toBeInTheDocument()
+    expect(screen.getByText('A chemistry teacher is diagnosed.')).toBeInTheDocument()
   })
 })

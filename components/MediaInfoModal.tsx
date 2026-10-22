@@ -1,12 +1,7 @@
 'use client'
-import Image from 'next/image'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Calendar,
-  Clock,
-  User,
-  Star,
   Plus,
   Check,
   Loader2,
@@ -25,10 +20,16 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
-import type { TmdbWatchProviders, TmdbWatchProvider } from '@/lib/tmdb'
+import type { TmdbWatchProviders } from '@/lib/tmdb'
 import SimilarModal from './SimilarModal'
 import RatingStars from './RatingStars'
+import AmbientBackdrop from './AmbientBackdrop'
+import { TitleHero } from '@/components/title/TitleHero'
+import { CastStrip } from '@/components/title/CastStrip'
+import { StreamingRow } from '@/components/title/StreamingRow'
 import { Button } from '@/components/ui/Button'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ToastProvider'
 import { useModal } from '@/lib/useModal'
 import { isAlreadyWatchedError } from '@/lib/useMediaActions'
@@ -37,6 +38,50 @@ const PRIORITY_LABELS: Record<WatchlistPriority, string> = {
   must_watch: 'Must Watch',
   want_to_watch: 'Want to Watch',
   someday: 'Someday',
+}
+
+const PRIORITY_OPTIONS = [
+  { value: 'must_watch', icon: Flame },
+  { value: 'want_to_watch', icon: Sparkles },
+  { value: 'someday', icon: Inbox },
+] as const
+
+// A modal under another sheet keeps its content but gives up its blur: the
+// sheet and the hero slab each carry a backdrop-filter, so a stacked title
+// modal or the Similar sheet over this one would pile two to four onto
+// whatever the page behind them already blurs. Only the top sheet is being
+// looked at. Arbitrary variants rather than a globals.css rule, on the dialog
+// itself so the drop reaches it and the slab inside it while the Similar sheet
+// rendered beside it keeps its own.
+const COVERED_CLASS =
+  '[backdrop-filter:none] [-webkit-backdrop-filter:none] ' +
+  '[&_.glass-slab]:[backdrop-filter:none] [&_.glass-slab]:[-webkit-backdrop-filter:none]'
+
+// The hero frame is a .glass-panel inside a sheet that already blurs the page,
+// so its own blur has nothing but the sheet's flat fill to work on (spec §3,
+// principle 2: blur only the top-level containers). Dropped for good on the
+// scroll area, which leaves the slab over the sharp art as the hero's one
+// blurred surface in here.
+const NESTED_PANEL_FLAT =
+  '[&_.glass-panel]:[backdrop-filter:none] [&_.glass-panel]:[-webkit-backdrop-filter:none]'
+
+// External links in the hero's action row: the same glass pill as a ghost
+// Button, on an <a>.
+const LINK_PILL = 'btn btn-ghost inline-flex items-center justify-center gap-2 px-4 text-[length:var(--text-sm)] font-semibold'
+
+const sectionTitle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--text-sm)',
+  lineHeight: '18px',
+  fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+  color: 'var(--text-secondary)',
+}
+
+const bodyText: React.CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--text-body)',
+  lineHeight: '22px',
+  color: 'var(--text-strong)',
 }
 
 interface Props {
@@ -55,6 +100,8 @@ interface Props {
   /** Set by <Presence> once this modal has been closed: swap the enter
    *  animation for the exit one for as long as it stays mounted. */
   exiting?: boolean
+  /** Set by MediaModalStack while another modal sits on top of this one. */
+  covered?: boolean
 }
 
 interface FullDetails {
@@ -72,6 +119,10 @@ interface FullDetails {
   trailer_url: string | null
   watch_providers?: TmdbWatchProviders | null
   vote_average?: number | null
+  backdrop_url: string | null
+  logo_url: string | null
+  tagline: string | null
+  certification: string | null
 }
 
 // The most-opened surface in the app used to refetch on every single open,
@@ -92,7 +143,8 @@ export default function MediaInfoModal({
   onRemoveFromWatchlist,
   newTabLinks = false,
   onNavigateAway,
-  exiting = false
+  exiting = false,
+  covered = false
 }: Props) {
   const cacheKey = `${item.type}-${item.tmdb_id}`
   const cachedDetails = detailsCache.get(cacheKey) ?? null
@@ -166,6 +218,10 @@ export default function MediaInfoModal({
         trailer_url: data.trailer_url ?? null,
         watch_providers: data.watch_providers ?? null,
         vote_average: data.vote_average ?? null,
+        backdrop_url: data.backdrop_url ?? null,
+        logo_url: data.logo_url ?? null,
+        tagline: data.tagline ?? null,
+        certification: data.certification ?? null,
       }
       applyDetails(fresh)
       setUserRating(data.watch_entry?.rating ?? null)
@@ -358,16 +414,7 @@ export default function MediaInfoModal({
     }
   }
 
-  function formatRuntime(mins: number | null) {
-    if (!mins) return null
-    const hrs = Math.floor(mins / 60)
-    const remainingMins = mins % 60
-    if (hrs === 0) return `${remainingMins}m`
-    return `${hrs}h ${remainingMins}m`
-  }
-
   const score = details?.vote_average ?? item.vote_average
-  const showScore = score !== undefined && score !== null && score > 0
 
   // Read statically so Next can inline it at build time. Unset (the default for
   // anyone who isn't running the IPTV server locally) hides the button entirely.
@@ -394,10 +441,27 @@ export default function MediaInfoModal({
       ? null
       : 'watched'
 
+  // Recommendations already carry a backdrop; everything else waits for the
+  // details. The ambient layer takes it too (spec §5.6: "Ambient = this
+  // title"), and gives the page its own back when this unmounts.
+  const backdropUrl = details?.backdrop_url ?? item.backdrop_url ?? null
+  const flatrate = details?.watch_providers?.flatrate?.[0]
+  const platform = flatrate ? { name: flatrate.provider_name, logoUrl: flatrate.logo_path } : null
+  // The director leads the strip with a caption, so the person link the meta
+  // line used to carry still exists. An actor-director is listed once.
+  const cast = [
+    ...(details?.director ? [{ name: details.director, character: 'Director' }] : []),
+    ...(details?.cast_members ?? []).filter((name) => name !== details?.director).map((name) => ({ name })),
+  ]
+
   if (!mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)' }}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center md:p-6"
+      style={{ background: 'var(--scrim)' }}
+    >
+      <AmbientBackdrop src={backdropUrl} />
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -405,296 +469,188 @@ export default function MediaInfoModal({
         ref={containerRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="media-info-title"
-        style={{ background: 'var(--surface-modal)' }}
-        className={`${exiting ? 'dialog-out' : 'dialog-in'} glass-card rounded-[var(--radius-2xl)] w-full max-w-2xl overflow-hidden relative border border-white/15 max-h-[calc(100dvh-2rem)] md:max-h-[90vh] flex flex-col shadow-2xl`}
+        aria-label={item.title}
+        // --glass-modal over the panel gradient: a sheet over a page full of
+        // glass needs the more opaque fill or the page reads through it. Set
+        // by retargeting the token .glass-panel paints with, not as an inline
+        // background: an inline value would also beat the opaque fallback
+        // globals.css swaps in under prefers-reduced-transparency and where
+        // backdrop-filter is unsupported.
+        // A full-screen sheet under md; the 960 sheet at radius 28 above it.
+        className={`${exiting ? 'dialog-out' : 'dialog-in'} glass-panel glass-rim [--glass-panel:var(--glass-modal)] relative flex w-full flex-col overflow-hidden shadow-[var(--shadow-xl)] max-md:h-dvh max-md:rounded-none md:max-h-[calc(100dvh-3rem)] md:max-w-[960px] md:rounded-[var(--radius-2xl)]${covered || showSimilar ? ` ${COVERED_CLASS}` : ''}`}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
+        <Button
+          variant="icon"
           aria-label="Close"
-          className="absolute top-5 right-5 z-10 p-2 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
+          onClick={onClose}
+          className="absolute right-3 top-3 z-10 md:right-4 md:top-4"
         >
-          <X className="w-4 h-4" />
-        </button>
+          <X className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+        </Button>
 
-        {/* Content Area */}
-        <div className="overflow-y-auto p-6 md:p-8 flex-1 space-y-6 scrollbar-none">
-          {/* Header Layout */}
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Poster */}
-            {item.poster_url ? (
-              <Image
-                src={item.poster_url}
-                alt={item.title}
-                width={160}
-                height={240}
-                sizes="(max-width: 768px) 128px, 160px"
-                className="w-32 md:w-40 h-auto rounded-[var(--radius-xl)] object-cover shadow-2xl shadow-black/50 border border-white/5 mx-auto md:mx-0 shrink-0 self-start"
-              />
-            ) : (
-              <div className="w-32 h-48 md:w-40 md:h-60 rounded-[var(--radius-xl)] bg-zinc-900 border border-white/5 flex items-center justify-center text-xs text-zinc-600 mx-auto md:mx-0 shrink-0">
-                No Poster
-              </div>
-            )}
-
-            {/* Basic Info */}
-            <div className="flex-1 space-y-3.5 text-center md:text-left self-center">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.04] px-2 py-0.5 rounded">
-                  {item.type === 'show' ? 'TV Show' : 'Movie'}
-                </span>
-                {showScore && (
-                  details?.imdb_id ? (
-                    <a
-                      href={`https://www.imdb.com/title/${details.imdb_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-amber-400/10 hover:border-amber-400/20 transition-colors"
-                    >
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{score!.toFixed(1)} TMDB / IMDb</span>
-                    </a>
-                  ) : (
-                    <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-400/5 border border-amber-400/10 px-2 py-0.5 rounded flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{score!.toFixed(1)} TMDB / IMDb</span>
-                    </span>
-                  )
-                )}
-              </div>
-
-              <h2 id="media-info-title" className="text-2xl md:text-3xl font-black text-white leading-tight">
-                {item.title}
-              </h2>
-
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1.5 text-xs text-zinc-400">
-                {item.release_year && (
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-zinc-500" />
-                    <span>{item.release_year}</span>
-                  </span>
-                )}
-                {details?.runtime_mins && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-zinc-500" />
-                    <span>{formatRuntime(details.runtime_mins)}</span>
-                  </span>
-                )}
-                {details?.director && (
-                  <span className="flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-zinc-500" />
-                    <span>Dir: <Link href={`/person/${encodeURIComponent(details.director)}`} {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })} onNavigate={dismissOnNavigate} className="hover:text-white hover:underline transition-colors">{details.director}</Link></span>
-                  </span>
-                )}
-              </div>
-
-              {/* Genres list inside modal */}
-              {details?.genres && details.genres.length > 0 && (
-                <div className="flex flex-wrap justify-center md:justify-start gap-1.5 pt-1">
-                  {details.genres.map((g) => (
-                    <span
-                      key={g}
-                      className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-zinc-400 bg-white/[0.02] border border-white/5"
-                    >
-                      {g}
-                    </span>
-                  ))}
+        {/* p-5 on every width: the cast strip bleeds --space-5 into the
+            padding, and a narrower inset would hand the scroll area a
+            sideways scrollbar. */}
+        <div className={`scrollbar-none flex-1 space-y-5 overflow-y-auto p-5 ${NESTED_PANEL_FLAT}`}>
+          <TitleHero
+            title={item.title}
+            type={item.type}
+            backdropUrl={backdropUrl}
+            logoUrl={details?.logo_url}
+            posterUrl={item.poster_url}
+            tagline={details?.tagline}
+            certification={details?.certification}
+            year={item.release_year}
+            genres={details?.genres ?? item.genres ?? []}
+            tmdbScore={score}
+            runtimeMins={details?.runtime_mins}
+            platform={platform}
+            headingLevel={2}
+            status={
+              // Only once there's a watch entry to rate against. The ring is
+              // the one-shot pulse after "Mark as Watched".
+              details?.isWatched && details.watch_entry ? (
+                <div
+                  ref={ratingRowRef}
+                  className="-m-2 rounded-[var(--radius-md)] p-2 transition-shadow duration-500"
+                  style={{ boxShadow: ratingPulse ? 'var(--accent-ring)' : 'none' }}
+                >
+                  <h3 style={sectionTitle}>Your Rating</h3>
+                  <div className="mt-2 flex items-center gap-3">
+                    <RatingStars value={userRating} onChange={handleRatingChange} />
+                    {userRating != null && (
+                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                        {userRating} / 5
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-              
-              {/* Watch Trailer Button */}
-              <div className="pt-3 flex flex-wrap gap-2">
+              ) : undefined
+            }
+            actions={
+              <>
                 {details?.trailer_url && (
-                  <a
-                    href={details.trailer_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--live)]/10 hover:bg-[var(--live)]/20 text-[var(--live)] font-bold text-xs transition-colors border border-[var(--live)]/20"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-[var(--live)]" />
+                  <a href={details.trailer_url} target="_blank" rel="noopener noreferrer" className={LINK_PILL}>
+                    <Play className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--live)', fill: 'var(--live)' }} />
                     Watch Trailer
                   </a>
                 )}
                 {iptvUrl && (
-                  <a
-                    href={iptvUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs transition-colors border border-[var(--accent)]/20"
-                  >
-                    <Tv className="w-3.5 h-3.5" />
+                  <a href={iptvUrl} target="_blank" rel="noopener noreferrer" className={LINK_PILL}>
+                    <Tv className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                     Watch on IPTV
                   </a>
                 )}
-                <a
-                  href={cinejoyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-sm bg-white/[0.03] hover:bg-white/[0.07] text-zinc-400 hover:text-zinc-200 font-bold text-xs transition-colors border border-white/5"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
+                <a href={cinejoyUrl} target="_blank" rel="noopener noreferrer" className={LINK_PILL}>
+                  <ExternalLink className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                   Cinejoy
                 </a>
-              </div>
-            </div>
-          </div>
-
-          <hr className="border-white/5" />
-
-          {/* Your Rating — only once there's a watch entry to rate against. */}
-          {details?.isWatched && details.watch_entry && (
-            <div
-              ref={ratingRowRef}
-              className={`space-y-2.5 rounded-[var(--radius-md)] transition-shadow duration-500 ${ratingPulse ? 'ring-2 ring-[var(--accent)]/60 ring-offset-4 ring-offset-transparent' : ''}`}
-            >
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                Your Rating
-              </h3>
-              <div className="flex items-center gap-3">
-                <RatingStars value={userRating} onChange={handleRatingChange} />
-                {userRating != null && (
-                  <span className="text-xs text-zinc-500">{userRating} / 5</span>
+                {/* The score badge used to be this link; the score now sits in
+                    the hero's meta line, so the link stands on its own. */}
+                {details?.imdb_id && (
+                  <a href={`https://www.imdb.com/title/${details.imdb_id}`} target="_blank" rel="noopener noreferrer" className={LINK_PILL}>
+                    <ExternalLink className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                    IMDb
+                  </a>
                 )}
-              </div>
-            </div>
-          )}
+              </>
+            }
+          />
 
-          {/* Watchlist Priority Switcher */}
+          {/* Watchlist Priority Switcher: the toolbar chip recipe FilterPills
+              uses, with the spinner standing in for the icon while one saves.
+              The chip's icon takes the accent on the pressed one, where
+              FilterPills adds a dot: the fill alone is a 6% step. A bare .btn
+              is not in the forced-colours border list, and that mode drops
+              the chip edge, so the chips draw their own border there. */}
           {currentPriority && (
-            <div className="space-y-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                Watchlist Priority
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: 'must_watch' as WatchlistPriority, label: 'Must Watch', icon: Flame, color: 'hover:text-rust-400 hover:bg-rust-500/5 hover:border-rust-500/20', activeColor: 'text-rust-400 bg-rust-500/10 border-rust-500/30' },
-                  { value: 'want_to_watch' as WatchlistPriority, label: 'Want to Watch', icon: Sparkles, color: 'hover:text-amber-400 hover:bg-amber-400/5 hover:border-amber-400/20', activeColor: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
-                  { value: 'someday' as WatchlistPriority, label: 'Someday', icon: Inbox, color: 'hover:text-zinc-300 hover:bg-zinc-800/20 hover:border-zinc-700', activeColor: 'text-zinc-300 bg-zinc-800/50 border-zinc-700' }
-                ].map(({ value, label, icon: Icon, color, activeColor }) => {
+            <section aria-label="Watchlist Priority">
+              <SectionHeader title="Watchlist Priority" />
+              <div className="flex flex-wrap gap-2">
+                {PRIORITY_OPTIONS.map(({ value, icon: Icon }) => {
                   const isActive = currentPriority === value
                   const isActioning = actioning === `priority-${value}`
                   return (
-                    <Button
+                    <button
                       key={value}
+                      type="button"
+                      aria-pressed={isActive}
                       disabled={actioning !== null}
                       onClick={() => handlePriorityClick(value)}
-                      style={{
-                        flex: 1,
-                        fontSize: 'var(--text-xs)',
-                        padding: '10px 12px',
-                        ...(isActive ? {} : {
-                          background: 'var(--btn-ghost-bg)',
-                          borderColor: 'var(--border-subtle)',
-                          color: 'var(--text-muted)'
-                        })
-                      }}
-                      className={`transition-all duration-300 active:scale-95 disabled:opacity-50 ${
-                        isActive 
-                          ? activeColor
-                          : color
+                      className={`btn inline-flex min-h-11 flex-auto items-center justify-center gap-2 px-4 text-[length:var(--text-sm)] font-semibold whitespace-nowrap transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 forced-colors:border forced-colors:border-[color:CanvasText] ${
+                        isActive
+                          ? 'glass-btn text-[var(--text-primary)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                          : 'bg-[var(--glass-chip)] shadow-[var(--glass-chip-edge)] text-[var(--text-secondary)] hover:bg-[var(--glass-fill-selected)] hover:text-[var(--text-primary)]'
                       }`}
                     >
                       {isActioning ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
                       ) : (
-                        <Icon className="w-3.5 h-3.5" />
+                        <Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" style={isActive ? { color: 'var(--accent)' } : undefined} />
                       )}
-                      <span>{label}</span>
-                    </Button>
+                      <span>{PRIORITY_LABELS[value]}</span>
+                    </button>
                   )
                 })}
               </div>
-            </div>
+            </section>
           )}
 
-          {/* Detailed Info */}
           {loading ? (
-            /* Frost loading shimmer */
-            <div className="space-y-4 animate-pulse">
-              <div className="h-4 bg-zinc-900 rounded w-1/3" />
-              <div className="space-y-2">
-                <div className="h-3.5 bg-zinc-900 rounded w-full" />
-                <div className="h-3.5 bg-zinc-900 rounded w-full" />
-                <div className="h-3.5 bg-zinc-900 rounded w-4/5" />
-              </div>
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
             </div>
           ) : error ? (
-            <p className="text-sm text-zinc-500 italic">Could not fetch casting details.</p>
+            <p style={{ ...bodyText, color: 'var(--text-muted)' }}>Could not fetch casting details.</p>
           ) : (
-            <div className="space-y-5">
-              {/* Overview */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                  Overview
-                </h3>
-                <p className="text-sm text-zinc-300 leading-relaxed text-left">
+            <>
+              {/* The hero shows the tagline; the synopsis lives here in full,
+                  so a long one is never clamped behind it. */}
+              <section aria-label="Overview">
+                <SectionHeader title="Overview" />
+                <p style={{ ...bodyText, paddingLeft: 4 }}>
                   {details?.overview || item.overview || 'No description available.'}
                 </p>
-              </div>
+              </section>
 
-              {/* Casting */}
-              {details?.cast_members && details.cast_members.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                    Starring
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {details.cast_members.map((actor) => (
-                      <Link
-                        key={actor}
-                        href={`/person/${encodeURIComponent(actor)}`}
-                        {...(newTabLinks && { target: '_blank', rel: 'noopener noreferrer' })}
-                        onNavigate={dismissOnNavigate}
-                        className="px-3 py-1 rounded-sm text-xs font-medium text-zinc-300 bg-white/5 border border-white/[0.04] hover:bg-white/10 hover:text-white transition-colors"
+              <CastStrip cast={cast} onNavigate={dismissOnNavigate} newTabLinks={newTabLinks} />
+
+              <section aria-label="Where to watch">
+                <SectionHeader title="Where to watch" />
+                {platform ? (
+                  <StreamingRow provider={platform} link={details?.watch_providers?.link} />
+                ) : (
+                  // StreamingRow carries the JustWatch link only with a
+                  // provider; without one the link is still the way to the
+                  // rent and buy options, so it stays, in the row's own style.
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1" style={{ paddingLeft: 4 }}>
+                    <p style={{ ...bodyText, color: 'var(--text-muted)' }}>Not available to stream.</p>
+                    {details?.watch_providers?.link && (
+                      <a
+                        href={details.watch_providers.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-[var(--text-secondary)] transition-colors hover:bg-[var(--glass-fill-hover)] hover:text-[var(--text-primary)]"
+                        style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'] }}
                       >
-                        {actor}
-                      </Link>
-                    ))}
+                        Provided by JustWatch
+                        <ExternalLink size={14} strokeWidth={1.8} aria-hidden="true" />
+                      </a>
+                    )}
                   </div>
-                </div>
-              )}
-
-              {/* Watch Providers */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                    <Tv className="w-3.5 h-3.5" /> Where to Watch
-                  </h3>
-                  {details?.watch_providers?.link && (
-                    <a href={details.watch_providers.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[var(--accent)] hover:underline">
-                      Provided by JustWatch
-                    </a>
-                  )}
-                </div>
-                
-                <div className="space-y-3">
-                  {details?.watch_providers?.flatrate && details.watch_providers.flatrate.length > 0 ? (
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] font-semibold text-zinc-400">Stream</span>
-                      <div className="flex flex-wrap gap-2">
-                        {details.watch_providers.flatrate.map((p: TmdbWatchProvider) => (
-                          <div key={p.provider_id} className="w-8 h-8 rounded-lg overflow-hidden bg-white/5 border border-white/10" title={p.provider_name}>
-                            {p.logo_path ? (
-                              <Image src={p.logo_path} alt={p.provider_name} width={32} height={32} className="w-full h-full object-cover" unoptimized />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-0.5">{p.provider_name}</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-zinc-400 italic">Not available to stream.</div>
-                  )}
-                </div>
-              </div>
-            </div>
+                )}
+              </section>
+            </>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3 flex-wrap">
+        {/* Footer Actions. Under md the sheet is the whole screen, so the
+            footer clears the home indicator the way the shell's bottom bar
+            does (viewportFit is `cover`; the inset is 0 elsewhere). */}
+        <div className="border-t flex gap-3 flex-wrap p-4 md:p-5 max-md:pb-[calc(var(--space-4)+env(safe-area-inset-bottom,0px))]" style={{ borderTopColor: 'var(--border-divider)' }}>
           {currentPriority || details?.isWatchlisted ? (
             currentPriority || onRemoveFromWatchlist ? (
               <Button
@@ -702,12 +658,12 @@ export default function MediaInfoModal({
                 tone="destructive"
                 disabled={loading || actioning !== null}
                 onClick={handleRemoveClick}
-                style={{ flex: 1 }}
+                style={{ flex: '1 1 auto' }}
               >
                 {actioning === 'remove' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
                 ) : (
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 )}
                 <span>Remove from Watchlist</span>
               </Button>
@@ -715,9 +671,9 @@ export default function MediaInfoModal({
               <Button
                 variant="ghost"
                 disabled
-                style={{ flex: 1, opacity: 0.6 }}
+                style={{ flex: '1 1 auto', opacity: 0.6 }}
               >
-                <Bookmark className="w-4 h-4" />
+                <Bookmark className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 <span>On Watchlist</span>
               </Button>
             )
@@ -726,12 +682,12 @@ export default function MediaInfoModal({
               variant="ghost"
               disabled={loading || actioning !== null}
               onClick={handleWatchlistClick}
-              style={{ flex: 1 }}
+              style={{ flex: '1 1 auto' }}
             >
               {actioning === 'watchlist' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
               ) : (
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               )}
               <span>Add to Watchlist</span>
             </Button>
@@ -747,12 +703,12 @@ export default function MediaInfoModal({
               // opacity, or an enabled control keeps reading as greyed out.
               variant="ghost"
               tone="success"
-              style={{ flex: 1 }}
+              style={{ flex: '1 1 auto' }}
             >
               {actioning === 'watched' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
               ) : (
-                <Check className="w-4 h-4" />
+                <Check className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               )}
               <span>Log rewatch</span>
             </Button>
@@ -761,12 +717,12 @@ export default function MediaInfoModal({
               variant={primaryAction === 'watched' ? 'primary' : 'ghost'}
               disabled={loading || actioning !== null}
               onClick={() => handleWatchedClick()}
-              style={{ flex: 1 }}
+              style={{ flex: '1 1 auto' }}
             >
               {actioning === 'watched' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
               ) : (
-                <Check className="w-4 h-4" />
+                <Check className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               )}
               <span>Mark as Watched</span>
             </Button>
@@ -776,16 +732,16 @@ export default function MediaInfoModal({
             <Button
               disabled={loading || actioning !== null}
               onClick={handleFollowToggle}
-              fullWidth
               variant="ghost"
               tone={details?.isFollowed ? 'success' : 'default'}
+              style={{ flex: '1 1 auto' }}
             >
               {actioning === 'follow' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
               ) : details?.isFollowed ? (
-                <BellOff className="w-4 h-4" />
+                <BellOff className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               ) : (
-                <Bell className="w-4 h-4" />
+                <Bell className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               )}
               <span>{details?.isFollowed ? 'Unfollow Show' : 'Follow Show'}</span>
             </Button>
@@ -800,9 +756,10 @@ export default function MediaInfoModal({
               onNavigate={dismissOnNavigate}
               // Not a Button, but it is one of the footer's actions, so it takes
               // the same `.btn-*` classes rather than a hand-rolled copy of them.
-              className={`btn ${primaryAction === 'track' ? 'btn-primary' : 'btn-ghost'} w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-sm`}
+              className={`btn ${primaryAction === 'track' ? 'btn-primary' : 'btn-ghost'} inline-flex items-center justify-center gap-2 px-[18px] text-[length:var(--text-base)] font-semibold`}
+              style={{ flex: '1 1 auto' }}
             >
-              <ListVideo className="w-4 h-4" />
+              <ListVideo className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               <span>Track Episodes</span>
             </Link>
           )}
@@ -810,9 +767,9 @@ export default function MediaInfoModal({
           <Button
             variant="ghost"
             onClick={() => setShowSimilar(true)}
-            fullWidth
+            style={{ flex: '1 1 auto' }}
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
             <span>Similar {item.type === 'movie' ? 'Movies' : 'TV Shows'}</span>
           </Button>
         </div>
@@ -822,6 +779,7 @@ export default function MediaInfoModal({
         <SimilarModal
           tmdbId={item.tmdb_id}
           type={item.type}
+          covered={covered}
           onClose={() => setShowSimilar(false)}
           onNavigateAway={dismissOnNavigate}
         />

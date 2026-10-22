@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { Dices, Info, X } from 'lucide-react'
@@ -10,7 +10,12 @@ import { useModal } from '@/lib/useModal'
 import { pickTonight } from '@/lib/tonightPick'
 import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
 import { FilterPills } from '@/components/FilterPills'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { formatMinutes } from '@/components/title/format'
 
 const BUDGET_OPTIONS = [
   { id: 'any', label: 'Any time' },
@@ -95,15 +100,9 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
     setPick((prev) => pickTonight(pool, { budget: id, avoidId: prev?.id ?? null }))
   }
 
-  function formatRuntime(mins: number | null) {
-    if (!mins) return null
-    const hrs = Math.floor(mins / 60)
-    const remainingMins = mins % 60
-    if (hrs === 0) return `${remainingMins}m`
-    return `${hrs}h ${remainingMins}m`
-  }
-
   if (!mounted) return null
+
+  const PriorityIcon = pick ? PRIORITY_CONFIG[pick.priority].icon : null
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)' }}>
@@ -117,31 +116,27 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
         role="dialog"
         aria-modal="true"
         aria-labelledby="tonight-pick-title"
-        style={{ background: 'var(--surface-modal)' }}
-        className="dialog-in relative w-full max-w-md rounded-[var(--radius-2xl)] border border-white/15 p-6 shadow-2xl"
+        // The modal sheet; a short card, so centred on phones too. The modal
+        // fill goes in through the token .glass-panel paints with, so the
+        // reduced-transparency fallback still wins over it.
+        className="dialog-in glass-panel glass-rim [--glass-panel:var(--glass-modal)] relative w-full max-w-md p-6 shadow-[var(--shadow-xl)]"
       >
-        {/* Close Button — same treatment as MediaInfoModal's */}
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-5 right-5 z-10 p-2 rounded-full bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <Button variant="icon" aria-label="Close" onClick={onClose} className="absolute right-3 top-3 z-10">
+          <X className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+        </Button>
 
         <div className="space-y-4">
-          <h2 id="tonight-pick-title" className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-            Tonight&apos;s Pick
-          </h2>
+          <SectionHeader id="tonight-pick-title" title="Tonight's Pick" style={{ paddingLeft: 0, paddingRight: 44, minHeight: 44 }} />
 
           <FilterPills options={BUDGET_OPTIONS} active={budget} onSelect={handleBudgetSelect} />
           {loading ? (
-            <div className="flex gap-4 animate-pulse">
-              <div className="w-28 h-42 rounded-[var(--radius-xl)] bg-[var(--bg-void)] shrink-0" />
-              <div className="flex-1 min-w-0 space-y-2 pt-1">
-                <div className="h-4 bg-[var(--bg-void)] rounded w-2/3" />
-                <div className="h-3 bg-[var(--bg-void)] rounded w-1/4" />
-                <div className="h-3 bg-[var(--bg-void)] rounded w-1/2" />
+            <div className="flex gap-4">
+              <Skeleton className="h-42 w-28 shrink-0 rounded-[var(--radius-md)]" />
+              <div className="flex-1 min-w-0 space-y-3 pt-1">
+                <Skeleton className="h-6 w-24 rounded-[var(--radius-pill)]" />
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-3.5 w-1/3" />
+                <Skeleton className="h-3.5 w-1/2" />
               </div>
             </div>
           ) : pick ? (
@@ -155,71 +150,83 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
                     alt={pick.media.title ?? ''}
                     width={112}
                     height={168}
-                    className="rounded-[var(--radius-xl)] border border-white/5 shadow-lg object-cover shrink-0 bg-[var(--bg-void)]"
+                    className="shrink-0 rounded-[var(--radius-md)] object-cover shadow-[var(--shadow-poster)]"
+                    style={{ background: 'var(--zinc-900)' }}
                   />
                 ) : (
-                  <div className="w-28 h-42 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-white/5 flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                    No Poster
+                  <div
+                    className="flex h-42 w-28 shrink-0 items-center justify-center rounded-[var(--radius-md)] p-3 text-center"
+                    style={{
+                      background: 'linear-gradient(150deg, var(--zinc-800), var(--bg-void))',
+                      color: 'var(--text-secondary)',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+                    }}
+                  >
+                    {pick.media?.title}
                   </div>
                 )}
 
                 <div className="min-w-0 flex-1 space-y-2">
-                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${PRIORITY_CONFIG[pick.priority].color}`}>
-                    {(() => {
-                      const Icon = PRIORITY_CONFIG[pick.priority].icon
-                      return <Icon className="w-3 h-3" />
-                    })()}
+                  {/* Must Watch carries the accent; the other two are the
+                      neutral chip. The retired rust and amber tints are gone. */}
+                  <Badge tone={pick.priority === 'must_watch' ? 'accent' : 'neutral'}>
+                    {PriorityIcon && <PriorityIcon className="h-3.5 w-3.5" />}
                     {pick.priority === 'must_watch' ? 'Must Watch' : pick.priority === 'want_to_watch' ? 'Want to Watch' : 'Someday'}
-                  </span>
+                  </Badge>
 
-                  <h3 className="text-xl font-black text-white leading-tight">
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: 'var(--text-xl)',
+                      lineHeight: '26px',
+                      fontWeight: 'var(--weight-heading)' as React.CSSProperties['fontWeight'],
+                      letterSpacing: 'var(--tracking-snug)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     {pick.media?.title}
                   </h3>
 
-                  <p className="text-xs text-zinc-400">
+                  <p style={{ margin: 0, fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
                     {[
                       pick.media?.release_year ? String(pick.media.release_year) : null,
                       pick.media?.type === 'show' ? 'TV Show' : 'Movie',
-                      formatRuntime(pick.media?.runtime_mins ?? null),
+                      pick.media?.runtime_mins ? formatMinutes(pick.media.runtime_mins) : null,
                     ].filter(Boolean).join(' · ')}
                   </p>
 
                   {pick.media?.genres && pick.media.genres.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {pick.media.genres.slice(0, 4).map((g) => (
-                        <span
-                          key={g}
-                          className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-zinc-400 bg-white/[0.02] border border-white/5"
-                        >
-                          {g}
-                        </span>
+                        <Badge key={g}>{g}</Badge>
                       ))}
                     </div>
                   )}
 
                   {pick.media?.overview && (
-                    <p className="text-sm text-zinc-400 leading-relaxed line-clamp-3">
+                    <p className="line-clamp-3" style={{ margin: 0, fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-secondary)' }}>
                       {pick.media.overview}
                     </p>
                   )}
                 </div>
             </div>
           ) : (
-            <div className="py-10 text-center text-sm text-zinc-400">
-              Nothing on your watchlist matches.
-              {budget !== 'any' && (
-                <div className="mt-1 text-xs text-zinc-500">Try a longer time budget.</div>
-              )}
-            </div>
+            <EmptyState
+              size="compact"
+              title="Nothing on your watchlist matches."
+              hint={budget !== 'any' ? 'Try a longer time budget.' : undefined}
+            />
           )}
           {pick && (
+            // Details is the next step, so it is the one solid button.
             <div className="flex gap-3 pt-5">
-              <Button onClick={reroll} style={{ flex: 1 }}>
-                <Dices className="w-4 h-4" />
+              <Button variant="ghost" onClick={reroll} style={{ flex: 1 }}>
+                <Dices className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 <span>Reroll</span>
               </Button>
               <Button onClick={() => showPickDetails()} style={{ flex: 1 }}>
-                <Info className="w-4 h-4" />
+                <Info className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 <span>Details</span>
               </Button>
             </div>

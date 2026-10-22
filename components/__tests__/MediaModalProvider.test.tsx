@@ -6,6 +6,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { MediaModalProvider, useMediaModal } from '../MediaModalProvider'
 import { ToastProvider } from '../ToastProvider'
+import { AmbientHost } from '../AmbientBackdrop'
 import type { TmdbSearchResult } from '@/types'
 
 vi.mock('next/dynamic', () => ({
@@ -49,7 +50,7 @@ const bb: TmdbSearchResult = { ...heat, tmdb_id: 1396, type: 'show', title: 'Bre
 
 const mockFetch = vi.fn()
 
-function detailsResponse() {
+function detailsResponse(over: Record<string, unknown> = {}) {
   return {
     ok: true,
     json: async () => ({
@@ -64,6 +65,7 @@ function detailsResponse() {
       trailer_url: null,
       watch_providers: null,
       vote_average: 8.3,
+      ...over,
     }),
   }
 }
@@ -73,7 +75,7 @@ function bodyOf(call: unknown[]): Record<string, unknown> {
 }
 
 /** Renders a host that exposes the context so tests can drive it directly. */
-function renderHost() {
+function renderHost(extra?: React.ReactNode) {
   const api: { open: ReturnType<typeof useMediaModal>['openMedia'] | null } = { open: null }
 
   function Host() {
@@ -88,6 +90,7 @@ function renderHost() {
     <ToastProvider>
       <MediaModalProvider>
         <Host />
+        {extra}
       </MediaModalProvider>
     </ToastProvider>,
   )
@@ -144,6 +147,55 @@ describe('MediaModalProvider', () => {
     await waitFor(() => expect(dialogs().length).toBe(1))
     expect(screen.queryByText('Breaking Bad')).toBeNull()
     expect(screen.queryByText('Heat')).toBeTruthy()
+  })
+
+  // Spec §5.2: blur is budgeted per viewport. A modal is two blurred surfaces
+  // (sheet and hero slab; the hero frame inside the sheet never blurs), so
+  // the one underneath a stacked modal gives its blur up until it is on top
+  // again.
+  it('drops the blur on a modal while another is stacked over it', async () => {
+    const host = renderHost()
+
+    await act(async () => { host.open(heat) })
+    await screen.findByText('Heat')
+    await act(async () => { host.open(bb) })
+    await screen.findByText('Breaking Bad')
+
+    // The drop sits on the dialog itself: the sheet and the slab inside it
+    // lose their blur, nothing rendered beside it does.
+    const [under, top] = dialogs()
+    expect(under.className).toMatch(/backdrop-filter:none/)
+    expect(top.className).not.toMatch(/backdrop-filter:none/)
+    // The hero frame's blur is dropped on the scroll area whether or not the
+    // modal is covered: a panel inside a blurred sheet has only the sheet's
+    // flat fill behind it.
+    expect(top.querySelector('.overflow-y-auto')?.className).toMatch(/\[&_\.glass-panel\]:\[backdrop-filter:none\]/)
+
+    const closes = screen.getAllByLabelText('Close')
+    await act(async () => { fireEvent.click(closes[closes.length - 1]) })
+
+    await waitFor(() => expect(dialogs().length).toBe(1))
+    expect(dialogs()[0].className).not.toMatch(/backdrop-filter:none/)
+  })
+
+  // Spec §5.6: "Ambient = this title". The page's own registration survives
+  // underneath and paints again once the modal has gone.
+  it('hands the ambient layer the open title and gives it back on close', async () => {
+    mockFetch.mockImplementation(async (url: string) =>
+      url.includes('details')
+        ? detailsResponse({ backdrop_url: 'https://image.tmdb.org/t/p/w1280/heat.jpg' })
+        : { ok: true, json: async () => ({}) },
+    )
+    const host = renderHost(<AmbientHost />)
+    const ambientSrc = () => document.querySelector('img.ambient-img')?.getAttribute('src') ?? null
+
+    expect(ambientSrc()).toBeNull()
+    await act(async () => { host.open(heat) })
+    await screen.findByText('Heat')
+    await waitFor(() => expect(ambientSrc()).toBe('https://image.tmdb.org/t/p/w780/heat.jpg'))
+
+    await act(async () => { fireEvent.click(screen.getByLabelText('Close')) })
+    await waitFor(() => expect(ambientSrc()).toBeNull())
   })
 
   // The ⌘K overlay takes focus back in onClosed. Firing it at close time rather

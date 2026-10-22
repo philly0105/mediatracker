@@ -1,26 +1,29 @@
 import { Skeleton } from '@/components/ui/Skeleton'
-import { Card } from '@/components/ui/Card'
 
 // Without this boundary, clicking a person in the search overlay froze on the
 // old view until Vercel returned the segment's RSC payload — People clicks
 // navigate, unlike Titles clicks which open a modal in place. The router shows
 // this instantly on navigation, so the click responds immediately. Mirrors the
-// page's own shell (back link, profile card, credit grid) for a seamless swap.
+// page's own shell (back pill, header panel, poster grid) for a seamless swap.
 export default function PersonLoading() {
   return (
-    <div className="space-y-10 pb-12 animate-pulse">
-      <Skeleton className="h-5 w-16" />
-      <Card className="flex flex-col md:flex-row items-center md:items-start gap-6 p-6">
-        <Skeleton className="w-24 h-24 md:w-32 md:h-32 rounded-full shrink-0" />
-        <div className="flex-1 space-y-3 pt-2 w-full">
+    <div className="space-y-8 pb-12">
+      <Skeleton className="h-11 w-24 rounded-[var(--radius-pill)]" />
+      <div className="glass-panel flex flex-col items-center gap-5 p-5 md:flex-row">
+        <Skeleton className="h-24 w-24 shrink-0 rounded-full md:h-32 md:w-32" />
+        <div className="w-full flex-1 space-y-3 max-md:flex max-md:flex-col max-md:items-center">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="h-4 w-72" />
         </div>
-      </Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Skeleton key={i} className="h-32 rounded-[var(--radius-lg)]" />
-        ))}
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-32" />
+        {/* The same grid string as page.tsx's GRID; keep the two in sync. */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 md:gap-6 lg:grid-cols-5 xl:grid-cols-6">
+          {Array.from({ length: 12 }, (_, i) => (
+            <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
+          ))}
+        </div>
       </div>
     </div>
   )

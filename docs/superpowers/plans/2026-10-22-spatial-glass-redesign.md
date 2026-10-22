@@ -247,11 +247,13 @@ alter table media add column if not exists logo_url text;
 ## Task 9: Title experience
 **Files:** `app/(app)/show/[id]/page.tsx`, `components/{ShowDetailClient,MediaInfoModal,EpisodeTracker,EditEntryModal,SimilarModal,MediaModalStack,TonightPickModal}.tsx`, `app/(app)/person/[name]/page.tsx`
 
-- [ ] Show page and modal per spec §5.6: hero composition with the title's backdrop and logo, status (ring or watched date and rating), actions, season `SegmentedControl`, episode `MediaRow`s with `still_url` (number, name, runtime, air date, synopsis, watched toggle; the next episode gets the accent ring), your rating and review panel, cast strip, "More like this" rail, and the "Streaming on X" row (first flatrate provider from the existing providers data).
-- [ ] Modals: `.glass-panel` sheet, max-width 960, radius 28, scrim `var(--scrim)`; a full-screen sheet under `md`. Keep the existing focus trap, scroll lock, Escape handling and stack behaviour.
-- [ ] Person page: header with the headshot and name, then a filmography grid of `PosterCard`s.
-- [ ] Update `MediaInfoModal.footer.test.tsx` and `MediaInfoModal.rewatch.test.tsx` assertions if they target old classes.
-- [ ] Verify, then commit: `style(detail): spatial-glass title page and media modal`
+- [x] Show page and modal per spec §5.6: hero composition with the title's backdrop and logo, status (ring or watched date and rating), actions, season `SegmentedControl`, episode `MediaRow`s with `still_url` (number, name, runtime, air date, synopsis, watched toggle; the next episode gets the accent ring), your rating and review panel, cast strip, "More like this" rail, and the "Streaming on X" row (first flatrate provider from the existing providers data).
+  - The hero, status block, cast strip, More like this rail and Streaming row live in `components/title/` and serve both the show page and the media modal.
+  - Inside an open modal the nested hero frame drops its blur, so each modal level adds two blurred surfaces (sheet and slab).
+- [x] Modals: `.glass-panel` sheet, max-width 960, radius 28, scrim `var(--scrim)`; a full-screen sheet under `md`. Keep the existing focus trap, scroll lock, Escape handling and stack behaviour.
+- [x] Person page: header with the headshot and name, then a filmography grid of `PosterCard`s.
+- [x] Update `MediaInfoModal.footer.test.tsx` and `MediaInfoModal.rewatch.test.tsx` assertions if they target old classes.
+- [x] Verify, then commit: `style(detail): spatial-glass title page and media modal`
 
 ## Task 10: Library and grid pages
 **Files:** `components/{LibraryView,LibraryFilterDrawer,FilterPills,SelectableOverlay,MediaCard,CollectionMovieCard,PopularCollectionsFeed}.tsx`, `components/ui/ClearFilters.tsx`, `app/(app)/{library,watchlist,collections,collections/[id],recommendations,streaming,search}/page.tsx`, `components/SearchOverlay.tsx`

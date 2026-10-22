@@ -83,6 +83,42 @@ describe('Similar modal inside the provider-owned modal stack', () => {
     // fix this render threw "useMultiSelect must be used within MultiSelectProvider".
     expect(await screen.findByRole('dialog', { name: /similar/i })).toBeInTheDocument()
   })
+
+  // Spec §5.2: one blurred sheet per modal level. The Similar sheet sits beside
+  // its title modal, not in the stack, so the title modal has to notice it on
+  // its own; and a poster opened from Similar covers the Similar sheet in turn.
+  it('leaves only the top sheet blurred as Similar and a title open over each other', async () => {
+    const similar: TmdbSearchResult = { ...movie, tmdb_id: 680, title: 'Pulp Fiction', release_year: 1994 }
+    vi.mocked(fetch).mockImplementation(async (url) => {
+      if (String(url).includes('/api/tmdb/similar')) {
+        return { ok: true, json: async () => [similar] } as Response
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          isWatched: false, isWatchlisted: false, isFollowed: false, watch_entry: null,
+          director: null, cast_members: [], genres: [], runtime_mins: 170,
+          trailer_url: null, watch_providers: null, vote_average: null, media_id: null,
+        }),
+      } as Response
+    })
+    render(<AppShell><Opener /></AppShell>)
+
+    await act(async () => { fireEvent.click(screen.getByText('open')) })
+    const heat = await screen.findByRole('dialog', { name: 'Heat' })
+    expect(heat.className).not.toMatch(/backdrop-filter:none/)
+
+    await act(async () => { fireEvent.click(await screen.findByText(/Similar Movies/)) })
+    const similarSheet = await screen.findByRole('dialog', { name: /similar/i })
+    expect(heat.className).toMatch(/backdrop-filter:none/)
+    expect(similarSheet.className).not.toMatch(/backdrop-filter:none/)
+
+    // Anchored: the select chip over the poster is "Select Pulp Fiction".
+    await act(async () => { fireEvent.click(await screen.findByRole('button', { name: /^Pulp Fiction/ })) })
+    const top = await screen.findByRole('dialog', { name: 'Pulp Fiction' })
+    expect(similarSheet.className).toMatch(/backdrop-filter:none/)
+    expect(top.className).not.toMatch(/backdrop-filter:none/)
+  })
 })
 
 describe('app layout provider order', () => {

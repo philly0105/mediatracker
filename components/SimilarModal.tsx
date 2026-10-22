@@ -1,7 +1,6 @@
 'use client'
-import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Star, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
+import { X, Loader2, CheckCircle2, Bookmark } from 'lucide-react'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { mediaKey } from '@/lib/mediaKey'
 import { useMediaModal } from '@/components/MediaModalProvider'
@@ -9,6 +8,12 @@ import { useModal } from '@/lib/useModal'
 import type { TmdbSearchResult, MediaType } from '@/types'
 import SelectableOverlay from './SelectableOverlay'
 import { useMultiSelect } from './MultiSelectProvider'
+import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { PosterBadge, PosterCard } from '@/components/ui/PosterCard'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { tmdbPercent } from '@/components/title/format'
 
 interface Props {
   tmdbId: number
@@ -17,9 +22,15 @@ interface Props {
   // Forwarded straight to the layered MediaInfoModal: a cast link two modals
   // deep still has to collapse the whole stack, not just its own layer.
   onNavigateAway?: () => void
+  // Set by the title modal that owns this sheet while a poster opened from
+  // here has put another title modal on top of it.
+  covered?: boolean
 }
 
-export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: Props) {
+// Three across on a phone, five on the 720 sheet.
+const GRID = 'grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5'
+
+export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway, covered = false }: Props) {
   const [items, setItems] = useState<TmdbSearchResult[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -106,101 +117,78 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway }: 
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim)]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center md:p-6" style={{ background: 'var(--scrim)' }} onClick={onClose}>
       <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="similar-modal-title"
-        className="dialog-in rounded-[var(--radius-2xl)] w-full max-w-lg overflow-hidden relative border border-white/5 bg-[var(--surface-modal)] max-h-[calc(100dvh-2rem)] md:max-h-[80vh] flex flex-col shadow-2xl"
+        // The same sheet as the title modal, at the width five posters want,
+        // with the modal fill set the same way (the token .glass-panel paints
+        // with, so the reduced-transparency fallback still wins). Under a
+        // stacked title modal it gives up its blur the way that modal does:
+        // one blurred sheet per level, and only the top one is read.
+        className={`dialog-in glass-panel glass-rim [--glass-panel:var(--glass-modal)] relative flex w-full flex-col overflow-hidden shadow-[var(--shadow-xl)] max-md:h-dvh max-md:rounded-none md:max-h-[calc(100dvh-3rem)] md:max-w-[720px] md:rounded-[var(--radius-2xl)]${covered ? ' [backdrop-filter:none] [-webkit-backdrop-filter:none]' : ''}`}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-          <h2 id="similar-modal-title" className="font-bold text-white text-sm">
-            Similar {type === 'movie' ? 'Movies' : 'TV Shows'}
-          </h2>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="p-1.5 rounded-sm text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="flex items-start justify-between gap-3 px-5 pt-5">
+          <SectionHeader
+            id="similar-modal-title"
+            title={`Similar ${type === 'movie' ? 'Movies' : 'TV Shows'}`}
+            style={{ marginBottom: 0, paddingLeft: 0, minHeight: 44, flex: 1 }}
+          />
+          <Button variant="icon" aria-label="Close" onClick={onClose}>
+            <X className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+          </Button>
         </div>
 
-        <div ref={scrollRef} className="overflow-y-auto p-4 scrollbar-none">
+        {/* Full-screen under md, so the last row clears the home indicator. */}
+        <div ref={scrollRef} className="scrollbar-none flex-1 overflow-y-auto p-5 max-md:pb-[calc(var(--space-5)+env(safe-area-inset-bottom,0px))]">
           {loading ? (
-            <div className="grid grid-cols-4 gap-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="animate-pulse space-y-2">
-                  <div className="aspect-[2/3] rounded-[var(--radius-xl)] bg-[var(--bg-void)]" />
-                  <div className="h-2.5 bg-[var(--bg-void)] rounded w-3/4" />
-                </div>
+            <div className={GRID}>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
               ))}
             </div>
           ) : items.length === 0 ? (
-            <p className="text-sm text-zinc-500 text-center py-8">No similar titles found.</p>
+            <EmptyState size="compact" title="No similar titles found." />
           ) : (
-            <div className="grid grid-cols-4 gap-3">
+            // PosterCards in a grid: nothing in here blurs; the sheet already does.
+            <div className={GRID}>
               {items.slice(0, visibleCount).map(item => {
                 const key = mediaKey(item.type, item.tmdb_id)
+                const watched = watchedIds.has(key)
+                const percent = tmdbPercent(item.vote_average)
                 return (
-                <SelectableOverlay key={item.tmdb_id} item={item}>
-                <button
-                  onClick={() => { if (!isSelectMode) openDetails(item) }}
-                  className="text-left space-y-1.5 group w-full h-full"
-                >
-                  <div className="relative">
-                    {item.poster_url ? (
-                      <Image
-                        src={item.poster_url}
-                        alt={item.title}
-                        width={200}
-                        height={300}
-                        sizes="(max-width: 640px) 33vw, 160px"
-                        className="w-full aspect-[2/3] rounded-[var(--radius-xl)] object-cover border border-white/5 group-hover:border-white/20 group-hover:scale-[1.02] transition-all duration-200"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[2/3] rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-white/5 flex items-center justify-center text-[10px] text-zinc-600">
-                        No Poster
-                      </div>
-                    )}
-                    
-                    <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
-                      {watchedIds.has(key) && (
-                        <div className="bg-[var(--teal-tint-bg)] p-1 rounded-sm shadow-md border border-[var(--teal-tint-border)]">
-                          <CheckCircle2 className="w-3 h-3 text-[var(--teal-300)]" />
-                        </div>
+                  <SelectableOverlay key={item.tmdb_id} item={item}>
+                    <PosterCard
+                      title={item.title}
+                      year={[item.release_year, percent && `TMDB ${percent}`].filter(Boolean).join(' · ') || undefined}
+                      posterUrl={item.poster_url}
+                      onClick={() => { if (!isSelectMode) openDetails(item) }}
+                    >
+                      {/* Top-right, clear of the select chip in the other corner. */}
+                      {(watched || watchlistIds.has(key)) && (
+                        <span style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                          <PosterBadge>
+                            {watched ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+                            ) : (
+                              <Bookmark className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+                            )}
+                            <span className="sr-only">{watched ? 'Watched' : 'On your watchlist'}</span>
+                          </PosterBadge>
+                        </span>
                       )}
-                      {!watchedIds.has(key) && watchlistIds.has(key) && (
-                        <div className="bg-[var(--green-tint-bg)] p-1 rounded-sm shadow-md border border-[var(--green-tint-border)]">
-                          <Bookmark className="w-3 h-3 text-[var(--accent)]" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-[11px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-[var(--accent)] transition-colors">
-                    {item.title}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    {item.release_year && (
-                      <span className="text-[10px] text-zinc-500">{item.release_year}</span>
-                    )}
-                    {item.vote_average != null && item.vote_average > 0 && (
-                      <span className="text-[10px] text-amber-400 flex items-center gap-0.5 ml-auto">
-                        <Star className="w-2.5 h-2.5 fill-amber-400" />
-                        {item.vote_average.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-                </button>
-                </SelectableOverlay>
-              )})}
+                    </PosterCard>
+                  </SelectableOverlay>
+                )
+              })}
             </div>
           )}
           {!loading && (visibleCount < items.length || hasMore) && (
-            <div ref={sentinelRef} className="mt-4 h-8 flex items-center justify-center">
-              {loadingMore && <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />}
+            <div ref={sentinelRef} className="mt-4 flex h-8 items-center justify-center">
+              {loadingMore && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />}
             </div>
           )}
         </div>

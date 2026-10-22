@@ -25,14 +25,19 @@ export default function MediaModalStack({
   // Built as data rather than JSX children: <Presence> needs to hold on to a
   // closed modal's render function to play it out, and a detached React
   // element cannot be re-rendered with new props.
-  const children: PresenceChild[] = entries.map((entry) => {
+  const children: PresenceChild[] = entries.map((entry, index) => {
     const { item, options } = entry
+    // Every entry but the last has another modal over it, and drops its blur
+    // while it does. A departing entry renders from its old closure, where it
+    // was still the last one, so it keeps its blur as it fades.
+    const covered = index < entries.length - 1
     return {
       key: entry.key,
       render: (exiting) => (
         <MediaInfoModal
           item={item}
           exiting={exiting}
+          covered={covered}
           onClose={onClose}
           onNavigateAway={onNavigateAway}
           newTabLinks={options.newTabLinks}

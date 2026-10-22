@@ -1,30 +1,51 @@
 'use client'
 
-import Image from 'next/image'
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import EpisodeTracker from '@/components/EpisodeTracker'
 import BackButton from '@/components/BackButton'
-import { formatAirDate, isUnaired } from '@/lib/formatDate'
+import AmbientBackdrop from '@/components/AmbientBackdrop'
+import { formatDateLabel, isUnaired } from '@/lib/formatDate'
 import RatingStars from '@/components/RatingStars'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { TitleHero } from '@/components/title/TitleHero'
+import { TitleStatus, type TitleStatusValue } from '@/components/title/TitleStatus'
+import { CastStrip } from '@/components/title/CastStrip'
+import { MoreLikeThisRail } from '@/components/title/MoreLikeThisRail'
+import { StreamingRow } from '@/components/title/StreamingRow'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import { mediaToResult } from '@/lib/mediaToResult'
-import { findNextUp } from '@/lib/nextUp'
+import { findNextUp, seasonProgress } from '@/lib/nextUp'
 import { Check, Info, Loader2, TvMinimal } from 'lucide-react'
-import type { Episode, EpisodeProgress, WatchEntry } from '@/types'
+import type { Episode, EpisodeProgress, TmdbSearchResult, WatchEntry } from '@/types'
 import type { ShowDetails } from '@/lib/showDetails'
+import type { MediaArt } from '@/lib/mediaArt'
+import type { TmdbFullDetails } from '@/lib/tmdb'
 
 export interface ShowDetailClientProps {
   mediaId: string
   initialDetails: ShowDetails
+  /** The media row's backdrop and logo (migration 014); absent before it exists. */
+  art?: MediaArt | null
+  /** TMDB's details, for what the media row never stored: tagline, rating,
+   *  score, providers, and art when the row has none. Null when TMDB failed. */
+  tmdb?: TmdbFullDetails | null
+  /** TMDB's recommendations, for the "More like this" rail. */
+  similar?: TmdbSearchResult[]
 }
+
+const SIMILAR_TITLE = 'More like this'
 
 export default function ShowDetailClient({
   mediaId,
   initialDetails,
+  art,
+  tmdb,
+  similar = [],
 }: ShowDetailClientProps) {
   const media = initialDetails.media
   const seasons = initialDetails.seasons
@@ -213,11 +234,11 @@ export default function ShowDetailClient({
 
   const total = seasons.reduce((sum, s) => sum + s.episode_count, 0)
   const watched = progress.length
-  // "~Nh left" only makes sense once there is a runtime to multiply against and
-  // at least one episode still unwatched; and it is dropped when it rounds to 0.
-  const hoursLeft = total > watched && media.runtime_mins != null
-    ? Math.round(((total - watched) * media.runtime_mins) / 60)
-    : 0
+  // "3h 42m to go" only makes sense once there is a runtime to multiply against
+  // and at least one episode still unwatched.
+  const minutesLeft = total > watched && media.runtime_mins != null
+    ? (total - watched) * media.runtime_mins
+    : null
 
   const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
   const nextUp = findNextUp(seasons, watchedKeys)
@@ -226,125 +247,192 @@ export default function ShowDetailClient({
     : null
   const nextUpUnaired = nextUp ? isUnaired(nextUpMeta?.air_date ?? null) : false
 
-  const glassCard = {
-    background: 'var(--glass-card)',
-    border: '1px solid var(--border-subtle)',
+  // The hero's art and copy: the media row first, then TMDB for whatever the
+  // row never stored. The row's columns arrive with migration 014, so `art`
+  // is the same pair read in its own query.
+  const backdropUrl = art?.backdrop_url ?? media.backdrop_url ?? tmdb?.backdrop_url ?? null
+  const logoUrl = art?.logo_url ?? media.logo_url ?? tmdb?.logo_url ?? null
+  const genres = media.genres.length > 0 ? media.genres : tmdb?.genres ?? []
+  const castNames = media.cast_members.length > 0 ? media.cast_members : tmdb?.cast_members ?? []
+  const flatrate = tmdb?.watch_providers?.flatrate?.[0]
+  const platform = flatrate ? { name: flatrate.provider_name, logoUrl: flatrate.logo_path } : null
+
+  // The ring measures the season the next episode is in; once everything is
+  // watched, the last one.
+  const ringSeason = (nextUp && seasons.find(s => s.id === nextUp.season_id)) ?? seasons[seasons.length - 1]
+  const ringProgress = ringSeason ? seasonProgress(ringSeason, watchedKeys) : { watched: 0, total: 0 }
+
+  // A show with episodes shows its progress in the hero and keeps the stars in
+  // their own panel; one with none (not yet filled from TMDB) is just a watched
+  // title, so its date and stars take the status slot instead.
+  const ratingInHero = total === 0 && !!entry
+  let status: TitleStatusValue | undefined
+  if (total > 0) {
+    status = {
+      kind: 'progress',
+      seasonNumber: ringSeason?.season_number ?? 1,
+      seasonWatched: ringProgress.watched,
+      seasonTotal: ringProgress.total,
+      watched,
+      total,
+      minutesLeft,
+      next: nextUp
+        ? {
+            seasonNumber: nextUp.season_number,
+            episodeNumber: nextUp.episode_number,
+            name: nextUpMeta?.name,
+            stillUrl: nextUpMeta?.still_url,
+            runtimeMins: nextUpMeta?.runtime_mins,
+            airDate: nextUpMeta?.air_date,
+            unaired: nextUpUnaired,
+          }
+        : null,
+    }
+  } else if (entry) {
+    status = { kind: 'watched', watchedAt: entry.watched_at, rating, onRate: handleRatingChange, rewatch: entry.rewatch }
   }
 
+  const markNext = nextUp != null && !nextUpUnaired
+  const detailsButton = (
+    <Button variant="secondary" size="lg" onClick={openDetails}>
+      <Info className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+      <span>Details</span>
+    </Button>
+  )
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
+      <AmbientBackdrop src={backdropUrl} />
       {/* Show pages are the ones people deep-link into — from Continue Watching,
           a shared link, a bookmark — so the history-length fallback matters most
           here. router.back() on a fresh tab leaves the page. */}
       <BackButton fallback="/library" />
-      <div className="flex gap-4">
-        {media.poster_url && <Image src={media.poster_url} alt={media.title} width={128} height={192} className="w-32 h-auto rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-lg" />}
-        <div className="space-y-2">
-          {/* Not PageHeader: this is a media hero, poster beside title, and that
-              component is a full-width page-title block. The type scale is
-              matched to it so the two do not drift. */}
-          <h1
-            style={{
-              margin: 0,
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-3xl)',
-              fontWeight: 'var(--weight-extrabold)' as React.CSSProperties['fontWeight'],
-              letterSpacing: 'var(--tracking-tight)',
-              lineHeight: 'var(--leading-tight)',
-              color: 'var(--text-primary)',
-            }}
-          >
-            {media.title}
-          </h1>
-          <p className="text-zinc-400">{media.release_year} · TV Show</p>
-          {total > 0 && (
-            <div className="space-y-1.5 max-w-xs">
-              <p className="text-sm text-zinc-400">
-                {watched}/{total} episodes
-                {hoursLeft > 0 && ` · ~${hoursLeft}h left`}
-              </p>
-              {/* Same bar as EpisodeTracker and Continue Watching, which both
-                  showed progress here while this page had numbers only. */}
-              <div
-                className="h-1.5 overflow-hidden rounded-full bg-white/10"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={total}
-                aria-valuenow={watched}
-                aria-label={`${watched} of ${total} episodes watched`}
-              >
-                <div
-                  className="h-full rounded-full bg-[var(--teal-400)] transition-all duration-300"
-                  style={{ width: `${Math.round((watched / total) * 100)}%` }}
-                />
+
+      <TitleHero
+        title={media.title}
+        type="show"
+        backdropUrl={backdropUrl}
+        logoUrl={logoUrl}
+        posterUrl={media.poster_url}
+        tagline={tmdb?.tagline}
+        overview={media.overview}
+        certification={tmdb?.certification}
+        year={media.release_year}
+        genres={genres}
+        tmdbScore={tmdb?.vote_average ?? media.vote_average}
+        platform={platform}
+        preload
+        status={status && <TitleStatus status={status} />}
+        actions={
+          <>
+            {nextUp && !nextUpUnaired && (
+              // The primary action is the next episode. Under md it takes the
+              // whole row, as the reference's does.
+              <div className="max-md:basis-full">
+                <Button size="lg" fullWidth onClick={() => handleProgressChange(nextUp.season_id, nextUp.episode_number, true)}>
+                  <Check className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Mark E{nextUp.episode_number} watched</span>
+                </Button>
               </div>
-            </div>
-          )}
-          {media.genres.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {media.genres.map(g => (
-                <span key={g} className="px-2 py-0.5 text-xs text-zinc-400 rounded-full border border-[var(--border-faint)]"
-                  style={{ background: 'var(--btn-ghost-bg)' }}>
-                  {g}
-                </span>
-              ))}
-            </div>
-          )}
-          {entry ? (
-            <>
-              <RatingStars value={rating} onChange={handleRatingChange} />
-              <Button variant="ghost" size="sm" onClick={openDetails}>
-                <Info className="w-4 h-4" />
-                <span>Details</span>
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button onClick={handleMarkShowWatched} disabled={markingWatched} size="sm">
-                {markingWatched ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            )}
+            {total > 0 && (
+              // A link cannot wrap a <button>, so it wears the secondary pill's
+              // classes, as EmptyState's action link does.
+              <a
+                href="#episodes"
+                className="btn glass-btn inline-flex items-center justify-center gap-2 text-[var(--text-primary)]"
+                style={{
+                  minHeight: 48,
+                  padding: '0 20px',
+                  fontSize: 'var(--text-body)',
+                  fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+                  textDecoration: 'none',
+                }}
+              >
+                Episodes
+              </a>
+            )}
+            {!entry && (
+              <Button
+                variant={markNext ? 'secondary' : 'primary'}
+                size="lg"
+                onClick={handleMarkShowWatched}
+                disabled={markingWatched}
+              >
+                {markingWatched
+                  ? <Loader2 className="h-[18px] w-[18px] animate-spin" strokeWidth={1.8} aria-hidden="true" />
+                  : <Check className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />}
                 <span>Mark show as watched</span>
               </Button>
-              <Button variant="ghost" size="sm" onClick={openDetails}>
-                <Info className="w-4 h-4" />
-                <span>Details</span>
-              </Button>
-            </>
-          )}
-          {media.overview && <p className="text-sm text-zinc-400 max-w-prose leading-relaxed">{media.overview}</p>}
-        </div>
-      </div>
+            )}
+            {detailsButton}
+          </>
+        }
+      />
 
-      {nextUp && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg" style={glassCard}>
-          {nextUpUnaired ? (
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">All caught up</div>
-              <div className="text-sm font-semibold text-white">
-                S{nextUp.season_number} E{nextUp.episode_number} airs {formatAirDate(nextUpMeta?.air_date ?? '')}
+      {total > 0 && (
+        // The anchor target clears the phone shell's fixed top bar (64px),
+        // which would otherwise cover the heading after the jump.
+        <Card as="section" variant="panel" id="episodes" aria-labelledby="episodes-heading" className="scroll-mt-6 max-md:scroll-mt-20">
+          <SectionHeader id="episodes-heading" title="Episodes" />
+          <EpisodeTracker
+            seasons={seasons}
+            progress={progress}
+            episodes={episodes}
+            onProgressChange={handleProgressChange}
+          />
+        </Card>
+      )}
+
+      {((entry && !ratingInHero) || platform) && (
+        // Two columns only when both panels render; "Where to watch" on its
+        // own takes the full width rather than leaving an empty half.
+        <div className={`grid gap-6 ${entry && !ratingInHero && platform ? 'md:grid-cols-2' : ''}`}>
+          {entry && !ratingInHero && (
+            <Card as="section" variant="panel" aria-labelledby="rating-heading">
+              <SectionHeader id="rating-heading" title="Your rating" sub={`Watched ${formatDateLabel(entry.watched_at)}${entry.rewatch ? ' · Rewatch' : ''}`} />
+              <div className="flex flex-col gap-3" style={{ paddingLeft: 4 }}>
+                <RatingStars value={rating} onChange={handleRatingChange} />
+                {entry.review && (
+                  <p
+                    style={{
+                      margin: 0,
+                      padding: '8px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--glass-inset-card)',
+                      boxShadow: 'var(--glass-inset-card-edge)',
+                      fontSize: 'var(--text-base)',
+                      lineHeight: '20px',
+                      fontStyle: 'italic',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    {entry.review}
+                  </p>
+                )}
               </div>
-            </div>
-          ) : (
-            <>
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Next up</div>
-                <div className="text-sm font-semibold text-white">
-                  S{nextUp.season_number} E{nextUp.episode_number}
-                  {nextUpMeta?.name ? ` · ${nextUpMeta.name}` : ''}
-                </div>
-              </div>
-              <Button size="sm" onClick={() => handleProgressChange(nextUp.season_id, nextUp.episode_number, true)}>
-                <Check className="w-4 h-4" />
-                <span>Mark watched</span>
-              </Button>
-            </>
+            </Card>
+          )}
+          {platform && (
+            <Card as="section" variant="panel" aria-labelledby="streaming-heading">
+              <SectionHeader id="streaming-heading" title="Where to watch" />
+              <StreamingRow provider={platform} link={tmdb?.watch_providers?.link} />
+            </Card>
           )}
         </div>
       )}
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight mb-3">Episodes</h2>
-        <EpisodeTracker seasons={seasons} progress={progress} episodes={episodes} onProgressChange={handleProgressChange} />
-      </div>
 
+      {castNames.length > 0 && (
+        <Card as="section" variant="panel" aria-label="Cast">
+          <CastStrip cast={castNames.map((name) => ({ name }))} />
+        </Card>
+      )}
+
+      {similar.length > 0 && (
+        <Card as="section" variant="panel" aria-label={SIMILAR_TITLE}>
+          <MoreLikeThisRail title={SIMILAR_TITLE} items={similar} onSelect={(item) => openMedia(item)} />
+        </Card>
+      )}
     </div>
   )
 }

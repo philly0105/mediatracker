@@ -1,15 +1,20 @@
 'use client'
-import { useId, useState } from 'react'
+import React, { useState } from 'react'
 import type { Season, Episode, EpisodeProgress } from '@/types'
-import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { formatAirDate, isUnaired } from '@/lib/formatDate'
 import { findNextUp } from '@/lib/nextUp'
+import { Button } from '@/components/ui/Button'
+import { MediaRow } from '@/components/ui/MediaRow'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { SegmentedProgress } from '@/components/ui/SegmentedProgress'
+import { formatMinutes } from '@/components/title/format'
 
 interface Props {
   seasons: Season[]
   progress: EpisodeProgress[]
   /** Titles and air dates, when they have been fetched. Absent is normal — the
-   *  grid falls back to numbers, which is all it could ever render before. */
+   *  rows fall back to numbers, which is all they could ever render before. */
   episodes?: Episode[]
   onProgressChange: (seasonId: string, episode: number | number[], watched: boolean) => void
 }
@@ -38,20 +43,17 @@ function cascadeLabel(
     : `Unmark S${seasonNumber} E${ep}–E${episodeCount}${suffix}`
 }
 
-const glassCard = {
-  background: 'var(--glass-card)',
-  border: '1px solid var(--border-subtle)',
-}
-
 export default function EpisodeTracker({ seasons, progress, episodes, onProgressChange }: Props) {
   const [open, setOpen] = useState<string | null>(() => {
     const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
     return findNextUp(seasons, watchedKeys)?.season_id ?? seasons[0]?.id ?? null
   })
-  const panelIdBase = useId()
 
   const watchedSet = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
   const episodeMap = new Map((episodes ?? []).map(e => [`${e.season_id}-${e.episode_number}`, e]))
+  // Recomputed from the live progress rather than kept with `open`: the ring
+  // on the row has to move to the next episode as soon as one is marked.
+  const nextUp = findNextUp(seasons, watchedSet)
 
   function handleEpisodeClick(seasonId: string, ep: number, watched: boolean) {
     const affected: number[] = []
@@ -95,109 +97,139 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
     onProgressChange(season.id, affected.length === 1 ? affected[0] : affected, !allWatched)
   }
 
+  // Episodes that have not aired yet can't be watched, so they don't count
+  // toward the header fraction or whether a season reads as complete.
+  // A season with no metadata at all still counts everything, as before.
+  function seasonCounts(s: Season) {
+    const watchedCount = progress.filter(p => p.season_id === s.id).length
+    const unairedCount = Array.from({ length: s.episode_count }, (_, i) => i + 1)
+      .filter(e => isUnaired(episodeMap.get(`${s.id}-${e}`)?.air_date ?? null)).length
+    const airedCount = unairedCount > 0 ? s.episode_count - unairedCount : s.episode_count
+    return { watchedCount, airedCount, allWatched: airedCount > 0 && watchedCount >= airedCount }
+  }
+
+  // One season at a time, picked in the segmented control; the open one used
+  // to be an accordion panel.
+  const season = seasons.find(s => s.id === open) ?? seasons[0]
+  if (!season) return null
+
+  const { watchedCount, airedCount, allWatched } = seasonCounts(season)
+
   return (
-    <div className="space-y-2">
-      {seasons.map(season => {
-        const watchedCount = progress.filter(p => p.season_id === season.id).length
-        const isOpen = open === season.id
-        // Episodes that have not aired yet can't be watched, so they don't count
-        // toward the header fraction or whether the season reads as complete.
-        // A season with no metadata at all still counts everything, as before.
-        const unairedCount = Array.from({ length: season.episode_count }, (_, i) => i + 1)
-          .filter(e => isUnaired(episodeMap.get(`${season.id}-${e}`)?.air_date ?? null)).length
-        const airedCount = unairedCount > 0 ? season.episode_count - unairedCount : season.episode_count
-        const allWatched = airedCount > 0 && watchedCount >= airedCount
-        // One row per episode once there are titles to show; the four-across
-        // grid only works when every cell is three characters wide.
-        const hasTitles = (episodes ?? []).some(e => e.season_id === season.id && e.name)
-        return (
-          <div key={season.id} className="rounded-lg overflow-hidden" style={glassCard}>
-            <button
-              onClick={() => setOpen(isOpen ? null : season.id)}
-              aria-expanded={isOpen}
-              aria-controls={`${panelIdBase}-${season.id}`}
-              className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[var(--btn-ghost-bg)] focus-visible:outline-none focus-visible:bg-[var(--btn-ghost-bg)]"
+    <div className="space-y-4">
+      {/* The control is one row that scrolls sideways rather than wrapping, so
+          a long-running show's twenty seasons do not stack into a wall. A
+          finished season carries a check, which is what the accordion's
+          per-season bar used to tell at a glance. */}
+      <div className="scrollbar-none -mx-1 overflow-x-auto px-1 pb-1">
+        <SegmentedControl
+          label="Season"
+          size="sm"
+          options={seasons.map(s => ({
+            id: s.id,
+            label: `Season ${s.season_number}`,
+            icon: seasonCounts(s).allWatched ? Check : undefined,
+          }))}
+          value={season.id}
+          onChange={setOpen}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3" style={{ minWidth: 200 }}>
+          <SegmentedProgress
+            value={watchedCount}
+            max={airedCount}
+            count={false}
+            aria-label={`${watchedCount} of ${airedCount} episodes watched in season ${season.season_number}`}
+            className="max-w-[260px] flex-1"
+          />
+          <span
+            style={{
+              flex: 'none',
+              fontSize: 'var(--text-sm)',
+              lineHeight: '18px',
+              fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'],
+              color: 'var(--text-muted)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {watchedCount}/{airedCount}
+          </span>
+        </div>
+        <Button variant="secondary" size="sm" onClick={() => handleSeasonToggle(season, allWatched)}>
+          {allWatched ? 'Unmark whole season' : 'Mark whole season watched'}
+        </Button>
+      </div>
+
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {Array.from({ length: season.episode_count }, (_, i) => i + 1).map(ep => {
+          const watched = watchedSet.has(`${season.id}-${ep}`)
+          const meta = episodeMap.get(`${season.id}-${ep}`)
+          const airLabel = meta?.air_date ? formatAirDate(meta.air_date) : null
+          const unaired = isUnaired(meta?.air_date ?? null)
+          const label = cascadeLabel(season.season_number, ep, watched, season.episode_count, meta?.name)
+          const isNext = nextUp?.season_id === season.id && nextUp.episode_number === ep
+          return (
+            <li
+              key={ep}
+              style={{
+                opacity: unaired && !watched ? 0.55 : 1,
+                borderRadius: 'var(--radius-row)',
+                // The accent ring marks the next episode to watch, on the
+                // wrapper because the row's own shadow is its edge.
+                boxShadow: isNext ? 'var(--accent-ring)' : undefined,
+              }}
             >
-              <span className="font-medium text-white">Season {season.season_number}</span>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-soft)' }}>
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${airedCount > 0 ? (watchedCount / airedCount) * 100 : 0}%`, background: 'var(--teal-400)' }}
-                    />
-                  </div>
-                  <span className="text-xs text-zinc-400">{watchedCount}/{airedCount}</span>
-                </div>
-                {isOpen
-                  ? <ChevronUp className="w-4 h-4 text-zinc-500" aria-hidden="true" />
-                  : <ChevronDown className="w-4 h-4 text-zinc-500" aria-hidden="true" />}
-              </div>
-            </button>
-            {isOpen && (
-              <div id={`${panelIdBase}-${season.id}`} className="px-4 pb-4 pt-1 space-y-3"
-                style={{ borderTop: '1px solid var(--border-subtle)' }}>
-                <div className="pt-3">
+              <MediaRow
+                title={meta?.name ?? `Episode ${ep}`}
+                type="show"
+                stillUrl={meta?.still_url}
+                aside={meta?.runtime_mins ? formatMinutes(meta.runtime_mins) : ''}
+                subtitle={airLabel ? (unaired ? `Airs ${airLabel}` : airLabel) : undefined}
+                actions={
+                  // The one control per episode, as the old grid cell was: the
+                  // number, the check once watched, and the cascade as its name.
                   <button
-                    onClick={() => handleSeasonToggle(season, allWatched)}
-                    className="px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
+                    type="button"
+                    onClick={() => handleEpisodeClick(season.id, ep, watched)}
+                    aria-pressed={watched}
+                    aria-label={label}
+                    title={label}
+                    className="glass-btn inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 transition-colors"
                     style={{
-                      background: allWatched ? 'var(--btn-ghost-bg)' : 'var(--teal-tint-bg)',
-                      border: `1px solid ${allWatched ? 'var(--border-subtle)' : 'var(--teal-tint-border)'}`,
-                      color: allWatched ? 'var(--text-muted)' : 'var(--teal-300)',
+                      fontSize: 'var(--text-sm)',
+                      lineHeight: '18px',
+                      fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+                      fontVariantNumeric: 'tabular-nums',
+                      color: watched ? 'var(--accent)' : 'var(--text-secondary)',
                     }}
                   >
-                    {allWatched ? 'Unmark whole season' : 'Mark whole season watched'}
+                    {watched && <Check aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.8} />}
+                    <span>E{ep}</span>
                   </button>
-                </div>
-                <div className={hasTitles ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : 'grid grid-cols-2 sm:grid-cols-4 gap-2'}>
-                {Array.from({ length: season.episode_count }, (_, i) => i + 1).map(ep => {
-                  const watched = watchedSet.has(`${season.id}-${ep}`)
-                  const meta = episodeMap.get(`${season.id}-${ep}`)
-                  const airLabel = meta?.air_date ? formatAirDate(meta.air_date) : null
-                  const unaired = isUnaired(meta?.air_date ?? null)
-                  const label = cascadeLabel(season.season_number, ep, watched, season.episode_count, meta?.name)
-                  return (
-                    <button
-                      key={ep}
-                      onClick={() => handleEpisodeClick(season.id, ep, watched)}
-                      aria-pressed={watched}
-                      aria-label={label}
-                      title={label}
-                      className="flex items-center gap-2 px-3 py-2 rounded-sm text-left transition-colors"
-                      style={{
-                        background: watched ? 'var(--teal-tint-bg)' : 'var(--btn-ghost-bg)',
-                        border: watched ? '1px solid var(--teal-tint-border)' : '1px solid var(--border-subtle)',
-                        opacity: unaired && !watched ? 0.55 : 1,
-                      }}
-                    >
-                      {/* Both tints sit under 3:1 against the card, so watched
-                          state was carried by colour alone. */}
-                      <Check
-                        aria-hidden="true"
-                        className="w-3.5 h-3.5 shrink-0"
-                        style={{ color: 'var(--teal-400)', visibility: watched ? 'visible' : 'hidden' }}
-                      />
-                      <span className="text-sm font-medium shrink-0" style={{ color: watched ? 'var(--teal-400)' : 'var(--text-muted)' }}>
-                        E{ep}
-                      </span>
-                      {meta?.name && (
-                        <span className="min-w-0 flex-1 truncate text-sm text-white">{meta.name}</span>
-                      )}
-                      {airLabel && (
-                        <span className="shrink-0 text-xs text-zinc-500">
-                          {unaired ? `Airs ${airLabel}` : airLabel}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-                </div>
-              </div>
-            )}
-          </div>
-        )
-      })}
+                }
+              >
+                {meta?.overview && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 'var(--text-sm)',
+                      lineHeight: '18px',
+                      color: 'var(--text-muted)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {meta.overview}
+                  </p>
+                )}
+              </MediaRow>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
