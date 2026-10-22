@@ -121,14 +121,25 @@ function renderPage() {
   )
 }
 
-/** The cards inside one priority section, in DOM order. */
+/** A fixture row has no poster, so the PosterCard paints its title in the
+ *  empty frame as well as the caption; text queries read the caption. */
+const CAPTION = { selector: '.poster-card-title' }
+
+/** The cards inside one priority section, in DOM order. Each card is a
+ *  PosterCard, whose caption carries the title. */
 function sectionTitles(heading: string): string[] {
   const h2 = screen.getByRole('heading', { name: heading, level: 2 })
-  const section = h2.closest('div')!.parentElement!
-  return within(section)
-    .queryAllByRole('button')
-    .map((b) => b.getAttribute('aria-label'))
-    .filter((label): label is string => !!label && store.must_watch.concat(store.want_to_watch, store.someday).some((i) => i.media?.title === label))
+  const section = h2.closest('section')!
+  return Array.from(section.querySelectorAll('.poster-card-title'))
+    .map((el) => el.textContent ?? '')
+    .filter((title) => store.must_watch.concat(store.want_to_watch, store.someday).some((i) => i.media?.title === title))
+}
+
+/** One bucket is on screen at a time; the priority segments switch it. */
+async function showBucket(label: string) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('radio', { name: new RegExp(`^${label}`) }))
+  })
 }
 
 async function loadPage() {
@@ -170,8 +181,14 @@ describe('watchlist grouped load (F-32)', () => {
     // The facets call is gone; genres arrive with the same response.
     expect(gets.some((c) => url(c[0]).includes('facets=1'))).toBe(false)
 
-    expect(screen.getByText('Wanted One')).toBeTruthy()
-    expect(screen.getByText('Someday One')).toBeTruthy()
+    // Every bucket arrived with the one request: switching tabs fetches nothing.
+    await showBucket('Want to Watch')
+    expect(screen.getByText('Wanted One', CAPTION)).toBeTruthy()
+    await showBucket('Someday')
+    expect(screen.getByText('Someday One', CAPTION)).toBeTruthy()
+    expect(mockFetch.mock.calls.filter((c) => !c[1] || c[1].method === 'GET').length).toBe(1)
+    // The counts ride on the segments.
+    expect(screen.getByRole('radio', { name: 'Must Watch · 20' })).toBeTruthy()
     // Genres came from the grouped payload, so the dropdown is populated.
     expect(screen.getByRole('option', { name: 'Drama' })).toBeTruthy()
   })
@@ -180,23 +197,52 @@ describe('watchlist grouped load (F-32)', () => {
     await loadPage()
 
     // 20 rows in Must Watch, but only a page of them is on screen.
-    expect(screen.getByText('Must 0')).toBeTruthy()
-    expect(screen.queryByText('Must 12')).toBeNull()
+    expect(screen.getByText('Must 0', CAPTION)).toBeTruthy()
+    expect(screen.queryByText('Must 12', CAPTION)).toBeNull()
 
     const expander = screen.getByRole('button', { name: /Show all 20/ })
     await act(async () => { fireEvent.click(expander) })
 
-    expect(screen.getByText('Must 12')).toBeTruthy()
+    expect(screen.getByText('Must 12', CAPTION)).toBeTruthy()
     // Everything is loaded, so the expander is gone.
     expect(screen.queryByRole('button', { name: /Show all|Load \d+ more/ })).toBeNull()
   })
 
   it('does not offer an expander for a bucket that fits in one page', async () => {
     await loadPage()
+    await showBucket('Want to Watch')
 
     const wantHeading = screen.getByRole('heading', { name: 'Want to Watch', level: 2 })
-    const section = wantHeading.closest('div')!.parentElement!
+    const section = wantHeading.closest('section')!
+    expect(within(section).getByText('Wanted One', CAPTION)).toBeTruthy()
     expect(within(section).queryByRole('button', { name: /Show all/ })).toBeNull()
+  })
+
+  // Adding from a title's details defaults to Want to Watch, so a fresh
+  // watchlist often has nothing in Must Watch; the page must not open on an
+  // empty tab with everything behind the one beside it.
+  it('opens on the first bucket with something in it', async () => {
+    store = {
+      must_watch: [],
+      want_to_watch: [item('w1', 'Wanted One', 'want_to_watch')],
+      someday: [item('s1', 'Someday One', 'someday')],
+    }
+    renderPage()
+    await act(async () => { await Promise.resolve() })
+
+    await screen.findByRole('heading', { name: 'Want to Watch', level: 2 })
+    expect(screen.getByRole('radio', { name: 'Want to Watch · 1' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText('Wanted One', CAPTION)).toBeTruthy()
+    expect(screen.queryByText(/Nothing in Must Watch yet/)).toBeNull()
+  })
+
+  it('still opens on Must Watch when every bucket is empty', async () => {
+    store = { must_watch: [], want_to_watch: [], someday: [] }
+    renderPage()
+    await act(async () => { await Promise.resolve() })
+
+    await screen.findByRole('heading', { name: 'Must Watch', level: 2 })
+    expect(screen.getByText('Nothing in Must Watch yet')).toBeTruthy()
   })
 })
 

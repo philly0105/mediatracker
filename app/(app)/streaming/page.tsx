@@ -1,5 +1,4 @@
 'use client'
-import Image from 'next/image'
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import type { TmdbSearchResult } from '@/types'
 import { useLibraryIds } from '@/lib/useLibraryIds'
@@ -8,10 +7,17 @@ import { useUrlFilters } from '@/lib/useUrlFilters'
 import { FilterPills } from '@/components/FilterPills'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
-import { CheckCircle2, Bookmark, EyeOff, Loader2, Star, Tv } from 'lucide-react'
+import { useOptionalMultiSelect } from '@/components/MultiSelectProvider'
+import { CheckCircle2, Bookmark, EyeOff, Loader2, Star, Tv, CheckSquare } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Select } from '@/components/ui/Select'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { PosterCard, PosterBadge } from '@/components/ui/PosterCard'
+import { GridToolbar } from '@/components/grid/GridToolbar'
+import { PosterGrid } from '@/components/grid/PosterGrid'
 
 const PROVIDERS = [
   { id: '8', name: 'Netflix' },
@@ -61,6 +67,9 @@ function StreamingContent() {
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
   const { openMedia } = useMediaModal()
+  // The Select/Done pill sits in the toolbar with the other grid controls
+  // (spec §5.6); null outside the provider, in which case it is simply absent.
+  const multiSelect = useOptionalMultiSelect()
 
   // The grid's Watched / Watchlist badges read from these sets, and nothing
   // pushes the change back from the server, so they are updated here.
@@ -190,77 +199,85 @@ function StreamingContent() {
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       <PageHeader
         eyebrow="Available now"
         title="Streaming"
         sub={<>Browse what&rsquo;s streaming now on your services.</>}
-        selectable
       />
 
-      {/* Provider pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
-        {PROVIDERS.map((p) => {
-          const isActive = provider === p.id
-          return (
-            <button
-              key={p.id}
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => changeProvider(p.id)}
-              className={`px-4 py-2 rounded-full font-semibold text-xs transition-colors duration-200 whitespace-nowrap active:scale-95 ${
-                isActive
-                  ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] shadow-md shadow-black/30'
-                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-              }`}
-            >
-              <span>{p.name}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Type toggle */}
-      <div className="flex justify-start">
-        <SegmentedControl
-          options={[
-            { id: 'movie', label: 'Movies' },
-            { id: 'show', label: 'TV Shows' },
-          ]}
-          value={type}
-          onChange={changeType}
-          size="sm"
+      <GridToolbar>
+        {/* Service chips: the same aria-pressed buttons the page always had,
+            on the shared chip recipe. */}
+        <FilterPills
+          options={PROVIDERS.map((p) => ({ id: p.id, label: p.name }))}
+          active={provider}
+          onSelect={changeProvider}
         />
-      </div>
 
-      {/* Sort and filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <FilterPills options={SORT_OPTIONS} active={sortBy} onSelect={changeSort} />
-        <button
-          type="button"
-          onClick={toggleHideWatched}
-          aria-pressed={hideWatched}
-          className={`inline-flex w-fit items-center gap-2 px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
-            hideWatched
-              ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] border border-transparent shadow-md shadow-black/30'
-              : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-          }`}
-        >
-          <EyeOff className="w-3.5 h-3.5" />
-          <span>Hide watched</span>
-        </button>
-      </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            label="Media type"
+            options={[
+              { id: 'movie', label: 'Movies' },
+              { id: 'show', label: 'TV Shows' },
+            ]}
+            value={type}
+            onChange={changeType}
+          />
+
+          {/* Sort moved from a second row of pills to a Select (spec §5.6);
+              the values are unchanged, so the URL param is too. */}
+          <Select
+            label="Sort order"
+            value={sortBy}
+            onChange={(e) => changeSort(e.target.value as StreamingSort)}
+            className="min-w-[160px]"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.id} value={o.id} className="bg-[var(--bg-void)]">{o.label}</option>
+            ))}
+          </Select>
+
+          {/* A toggle chip: pressed takes the glass-button fill with the
+              accent text and ring, the chip rest state otherwise. */}
+          <button
+            type="button"
+            onClick={toggleHideWatched}
+            aria-pressed={hideWatched}
+            className={`inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[var(--radius-pill)] px-4 text-[length:var(--text-sm)] font-semibold transition-colors duration-200 ${
+              hideWatched
+                ? 'glass-btn text-[var(--accent)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                : 'bg-[var(--glass-chip)] text-[var(--text-secondary)] shadow-[var(--glass-chip-edge)] hover:bg-[var(--glass-fill-selected)] hover:text-[var(--text-primary)]'
+            }`}
+            style={hideWatched ? { boxShadow: 'var(--glass-btn-edge), var(--accent-ring)' } : undefined}
+          >
+            <EyeOff className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+            <span>Hide watched</span>
+          </button>
+
+          {multiSelect && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={multiSelect.toggleSelectMode}
+              // Accent while selecting: the pill is a current-state control then.
+              style={multiSelect.isSelectMode ? { color: 'var(--accent)' } : undefined}
+            >
+              <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+              <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+            </Button>
+          )}
+        </div>
+      </GridToolbar>
 
       {/* Poster grid */}
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className="aspect-[2/3] rounded-[var(--radius-xl)] bg-white/5 border border-white/10 animate-pulse"
-            />
+        <PosterGrid>
+          {Array.from({ length: 12 }, (_, i) => (
+            <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
           ))}
-        </div>
+        </PosterGrid>
       ) : visibleResults.length === 0 ? (
         <EmptyState
           icon={Tv}
@@ -280,68 +297,55 @@ function StreamingContent() {
           }
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
+        <PosterGrid>
           {visibleResults.map((item) => {
             const key = mediaKey(item.type, item.tmdb_id)
             const watched = watchedIds.has(key)
             const listed = watchlistIds.has(key)
+            const rating = item.vote_average !== undefined && item.vote_average > 0 ? item.vote_average.toFixed(1) : null
             return (
               <SelectableOverlay key={item.tmdb_id} item={item}>
-                <button
-                  type="button"
+                <PosterCard
+                  title={item.title}
+                  year={item.release_year ?? '—'}
+                  posterUrl={item.poster_url}
                   onClick={() => openDetails(item)}
-                  className="group block w-full text-left"
-                >
-                  <div className="relative aspect-[2/3] rounded-[var(--radius-xl)] overflow-hidden border border-white/10 bg-[var(--bg-void)] shadow-md shadow-black/30 group-hover:border-[var(--border-strong)] group-hover:-translate-y-0.5 transition-all duration-300">
-                    {item.poster_url ? (
-                      <Image
-                        src={item.poster_url}
-                        alt={item.title}
-                        fill
-                        sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 180px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-zinc-600">
-                        No Poster
-                      </div>
-                    )}
-                    {watched ? (
-                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-[var(--teal-300)] bg-black/70 border border-[var(--teal-tint-border)] shadow-md shadow-black/40">
-                        <CheckCircle2 className="w-3 h-3" /> Watched
-                      </span>
+                  badges={
+                    watched ? (
+                      <PosterBadge>
+                        <CheckCircle2 className="w-3 h-3 text-[var(--accent)]" strokeWidth={1.8} aria-hidden="true" />
+                        Watched
+                      </PosterBadge>
                     ) : listed ? (
-                      <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-zinc-200 bg-black/70 border border-white/10 shadow-md shadow-black/40">
-                        <Bookmark className="w-3 h-3" /> Watchlist
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-2 px-0.5">
-                    <p className="text-sm font-semibold text-white line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
-                      {item.title}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-                      <span>{item.release_year ?? '—'}</span>
-                      {item.vote_average !== undefined && item.vote_average > 0 && (
-                        <span className="inline-flex items-center gap-1 text-zinc-400">
-                          <Star className="w-3 h-3 fill-current text-[var(--rating)]" />
-                          {item.vote_average.toFixed(1)}
-                        </span>
-                      )}
+                      <PosterBadge>
+                        <Bookmark className="w-3 h-3" strokeWidth={1.8} aria-hidden="true" />
+                        Watchlist
+                      </PosterBadge>
+                    ) : null
+                  }
+                >
+                  {/* The TMDB score as a badge in the other top corner, clear
+                      of the library badge and the select checkbox. */}
+                  {rating && (
+                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+                      <PosterBadge>
+                        <Star className="w-3 h-3 fill-current text-[var(--rating)]" strokeWidth={1.8} aria-hidden="true" />
+                        <span className="tabular">{rating}</span>
+                      </PosterBadge>
                     </div>
-                  </div>
-                </button>
+                  )}
+                </PosterCard>
               </SelectableOverlay>
             )
           })}
-        </div>
+        </PosterGrid>
       )}
 
       {!loading && results.length > 0 && page < totalPages && (
-        <div ref={loadMoreRef} className="flex items-center justify-center py-6 text-xs font-semibold text-zinc-400">
+        <div ref={loadMoreRef} className="flex items-center justify-center py-6 text-[length:var(--text-xs)] font-semibold text-[var(--text-muted)]">
           {loadingMore && (
             <span className="inline-flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
               Loading more
             </span>
           )}

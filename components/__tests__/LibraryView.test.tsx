@@ -235,15 +235,15 @@ describe('LibraryView', () => {
       json: async () => ({ entries: [entry('1', 'Heat')] }),
     })
 
-    // Type is the only pill row left on the toolbar — rating moved into the
-    // filter drawer — but getAllByRole keeps this robust if that changes again.
+    // Type is a SegmentedControl on the toolbar — rating moved into the filter
+    // drawer — so its options announce as radios, not buttons.
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+      fireEvent.click(screen.getByRole('radio', { name: 'Movies' }))
     })
     expect(mockFetch).toHaveBeenCalledWith('/api/watch?type=movie')
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0])
+      fireEvent.click(screen.getByRole('radio', { name: 'All' }))
     })
     expect(mockFetch).toHaveBeenCalledWith('/api/watch')
   })
@@ -362,7 +362,7 @@ describe('LibraryView', () => {
     expect(mockFetch).not.toHaveBeenCalled()
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+      fireEvent.click(screen.getByRole('radio', { name: 'Movies' }))
     })
 
     expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -408,7 +408,7 @@ describe('LibraryView', () => {
     expect(mockFetch).not.toHaveBeenCalled()
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+      fireEvent.click(screen.getByRole('radio', { name: 'Movies' }))
     })
 
     expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -417,7 +417,7 @@ describe('LibraryView', () => {
     expect(screen.queryByText('All Seed Film')).not.toBeInTheDocument()
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0])
+      fireEvent.click(screen.getByRole('radio', { name: 'All' }))
     })
 
     expect(mockFetch).toHaveBeenCalledTimes(2)
@@ -522,7 +522,7 @@ describe('LibraryView', () => {
 
     // Switch to Movies — starts the scoped fetch
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+      fireEvent.click(screen.getByRole('radio', { name: 'Movies' }))
     })
 
     expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -530,7 +530,7 @@ describe('LibraryView', () => {
 
     // Switch back to All before the movie request resolves — should be satisfied from cache/seed
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0])
+      fireEvent.click(screen.getByRole('radio', { name: 'All' }))
     })
 
     // Assert no unnecessary All request when the fresh All cache/seed is still valid
@@ -830,7 +830,7 @@ describe('LibraryView', () => {
 
     // While refresh is pending, switch type filter to 'Movies'
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Movies' }))
+      fireEvent.click(screen.getByRole('radio', { name: 'Movies' }))
     })
 
     // Now resolve the older 'all' refresh

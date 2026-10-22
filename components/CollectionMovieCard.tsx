@@ -1,11 +1,11 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import { Bookmark, Check } from 'lucide-react'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import type { TmdbCollectionPart } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import SelectableOverlay from './SelectableOverlay'
-import { PosterCard } from './ui/PosterCard'
-import { Badge } from './ui/Badge'
+import { PosterCard, PosterBadge } from './ui/PosterCard'
 
 interface Props {
   part: TmdbCollectionPart
@@ -40,12 +40,20 @@ export default function CollectionMovieCard({ part, isWatched, isWatchlisted }: 
           posterUrl={part.poster_url}
           onClick={openDetails}
         >
+          {/* Top-right rather than the card's own badge slot: SelectableOverlay
+              puts its checkbox in the top-left corner. */}
           {(isWatched || isWatchlisted) && (
-            <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 10 }}>
+            <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
               {isWatched ? (
-                <Badge tone="success">Watched</Badge>
+                <PosterBadge>
+                  <Check size={12} strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+                  Watched
+                </PosterBadge>
               ) : (
-                <Badge tone="rating">Watchlisted</Badge>
+                <PosterBadge>
+                  <Bookmark size={12} strokeWidth={1.8} aria-hidden="true" />
+                  Watchlisted
+                </PosterBadge>
               )}
             </div>
           )}

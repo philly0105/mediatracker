@@ -5,6 +5,8 @@ import { Layers } from 'lucide-react'
 import PopularCollectionsFeed from '@/components/PopularCollectionsFeed'
 import { PosterCard } from '@/components/ui/PosterCard'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { Badge } from '@/components/ui/Badge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { fetchAllRows } from '@/lib/fetchAllRows'
 
@@ -12,6 +14,10 @@ export const metadata: Metadata = {
   title: 'Franchises',
   description: 'Movie franchises and collections in your library.',
 }
+
+// 2 columns on phones, 3 beside the rail, 4 to 6 beside the sidebar. The
+// loading skeleton repeats this so the page settles into the same grid.
+const POSTER_GRID = 'grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'
 
 export default async function CollectionsPage() {
   const user = await getAuthenticatedUser()
@@ -49,7 +55,7 @@ export default async function CollectionsPage() {
   const activeCollections = Array.from(collectionMap.values())
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       <PageHeader
         eyebrow="Series & sagas"
         title="Franchises"
@@ -57,18 +63,18 @@ export default async function CollectionsPage() {
       />
 
       {/* Your Franchises */}
-      <section className="space-y-5">
-        <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-          <div className="p-1.5 rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5">
-            <Layers className="w-4 h-4 text-[var(--accent)]" />
-          </div>
-          <h2 className="text-lg font-bold tracking-tight text-white">Your Franchises</h2>
-          {activeCollections.length > 0 && (
-            <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-[var(--border-subtle)] px-2 py-0.5 rounded-full">
-              {activeCollections.length}
+      <section aria-labelledby="your-franchises-title">
+        <SectionHeader
+          id="your-franchises-title"
+          title={
+            <span className="inline-flex items-center gap-2.5">
+              Your Franchises
+              {activeCollections.length > 0 && (
+                <Badge className="tabular">{activeCollections.length}</Badge>
+              )}
             </span>
-          )}
-        </div>
+          }
+        />
 
         {activeCollections.length === 0 ? (
           <EmptyState
@@ -79,7 +85,7 @@ export default async function CollectionsPage() {
             actionHref="/?search=1"
           />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16 }}>
+          <div className={POSTER_GRID}>
             {activeCollections.map(c => (
               <PosterCard
                 key={c.id}
@@ -94,10 +100,8 @@ export default async function CollectionsPage() {
       </section>
 
       {/* Popular Franchises */}
-      <section className="space-y-5">
-        <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-          <h2 className="text-lg font-bold tracking-tight text-white">Popular Franchises</h2>
-        </div>
+      <section aria-labelledby="popular-franchises-title">
+        <SectionHeader id="popular-franchises-title" title="Popular Franchises" />
         <PopularCollectionsFeed />
       </section>
     </div>

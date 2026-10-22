@@ -1,24 +1,24 @@
 'use client'
-import Image from 'next/image'
 import { useCallback, useEffect, useState, useRef } from 'react'
 import {
   Sparkles,
-  Check,
   Loader2,
-  Calendar,
   AlertCircle,
-  Plus,
-  Star,
-  RefreshCw
+  RefreshCw,
+  CheckSquare
 } from 'lucide-react'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import { useMediaActions, isAlreadyWatchedError, readCreatedEntry } from '@/lib/useMediaActions'
 import { FilterPills } from '@/components/FilterPills'
 import SelectableOverlay from '@/components/SelectableOverlay'
+import { useOptionalMultiSelect } from '@/components/MultiSelectProvider'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { activatableProps } from '@/components/ui/activatable'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { GridToolbar } from '@/components/grid/GridToolbar'
+import { RecommendationCard, RECOMMENDATION_ROW_GRID } from '@/components/grid/RecommendationCard'
+import { RecommendationFeedSkeleton } from '@/components/grid/RecommendationFeedSkeleton'
 import { useToast } from '@/components/ToastProvider'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 
@@ -39,8 +39,19 @@ const FILTER_DEFAULTS = {
   genre: 'All',
 }
 
+// The type filter is a segmented control (spec §5.6); the values are the
+// same three the pills carried, so the URL param is unchanged.
+const TYPE_OPTIONS: { id: 'all' | 'movie' | 'show'; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'movie', label: 'Movies' },
+  { id: 'show', label: 'TV Shows' },
+]
+
 export default function RecommendationsPage() {
   const { toast } = useToast()
+  // The Select/Done pill sits in the toolbar with the filters (spec §5.6);
+  // null outside the provider, in which case it is simply absent.
+  const multiSelect = useOptionalMultiSelect()
   const [items, setItems] = useState<Recommendation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -321,18 +332,17 @@ export default function RecommendationsPage() {
         sub={fallback
           ? 'We compiled this week\'s overall trending items to get you started!'
           : 'Personalized recommendations based on similar titles from your watch history.'}
-        selectable
         action={
           <Button
             onClick={() => loadRecommendations(true)}
             disabled={loading || refreshing}
-            variant="ghost"
+            variant="secondary"
             size="sm"
           >
             {refreshing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
             ) : (
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
             )}
             <span>{refreshing ? 'Refreshing' : 'Refresh'}</span>
           </Button>
@@ -340,22 +350,9 @@ export default function RecommendationsPage() {
       />
 
       {loading ? (
-        /* Shimmer loading layout */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-[var(--glass-card)] border border-[var(--border-subtle)] rounded-lg p-4 flex gap-4 animate-pulse">
-              <div className="w-20 h-28 bg-[var(--bg-void)] rounded-[var(--radius-xl)]" />
-              <div className="flex-1 space-y-3 py-1">
-                <div className="h-4 bg-[var(--bg-void)] rounded w-3/4" />
-                <div className="h-3 bg-[var(--bg-void)] rounded w-1/2" />
-                <div className="space-y-2 pt-2">
-                  <div className="h-3 bg-[var(--bg-void)] rounded w-full" />
-                  <div className="h-3 bg-[var(--bg-void)] rounded w-5/6" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        /* The toolbar and rows as placeholders, the same ones loading.tsx
+           paints, so nothing moves between the route fallback and this. */
+        <RecommendationFeedSkeleton />
       ) : error ? (
         /* Error Layout */
         <div className="max-w-md mx-auto">
@@ -382,23 +379,35 @@ export default function RecommendationsPage() {
       ) : (
         /* Main Recommendations Grid */
         <div className="space-y-6">
-          {/* Filters */}
-          <div className="flex flex-col gap-3">
-            <FilterPills
-              options={[
-                { id: 'all', label: 'All' },
-                { id: 'movie', label: 'Movies' },
-                { id: 'show', label: 'TV Shows' },
-              ]}
-              active={activeType}
-              onSelect={(id) => {
-                setFilter('type', id)
-                setFilter('genre', 'All')
-                setDiscoverPageByFilter({})
-                setHasMoreByFilter({})
-                setVisibleCount(10)
-              }}
-            />
+          {/* Filters. Rows, not posters, because the seed line and the
+              overview are what make a recommendation worth a look. */}
+          <GridToolbar>
+            <div className="flex flex-wrap items-center gap-3">
+              <SegmentedControl
+                label="Filter by type"
+                options={TYPE_OPTIONS}
+                value={activeType}
+                onChange={(id) => {
+                  setFilter('type', id)
+                  setFilter('genre', 'All')
+                  setDiscoverPageByFilter({})
+                  setHasMoreByFilter({})
+                  setVisibleCount(10)
+                }}
+              />
+              {multiSelect && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={multiSelect.toggleSelectMode}
+                  // Accent while selecting: the pill is a current-state control then.
+                  style={multiSelect.isSelectMode ? { color: 'var(--accent)' } : undefined}
+                >
+                  <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                  <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+                </Button>
+              )}
+            </div>
             <FilterPills
               options={topGenres.map((genre) => ({ id: genre, label: genre }))}
               active={effectiveGenre}
@@ -413,7 +422,7 @@ export default function RecommendationsPage() {
                 setVisibleCount(10)
               }}
             />
-          </div>
+          </GridToolbar>
 
           {filteredItems.length === 0 ? (
             <div className="max-w-sm mx-auto">
@@ -427,104 +436,16 @@ export default function RecommendationsPage() {
               />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={RECOMMENDATION_ROW_GRID}>
               {visibleItems.map((item) => (
                 <SelectableOverlay key={item.tmdb_id} item={item}>
-                <div
-                  onClick={() => openDetails(item)}
-                  {...activatableProps(() => openDetails(item), item.title)}
-                  className="bg-[var(--glass-card)] hover:bg-[var(--glass-card-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-lg p-4 flex gap-4 relative overflow-hidden group select-none hover:shadow-[var(--glow-violet)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-                >
-                  {/* Poster image */}
-                  {item.poster_url ? (
-                    <Image
-                      src={item.poster_url}
-                      alt={item.title}
-                      width={80}
-                      height={112}
-                      className="w-20 h-28 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/30 border border-[var(--border-subtle)] shrink-0"
-                    />
-                  ) : (
-                    <div className="w-20 h-28 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                      No Poster
-                    </div>
-                  )}
-
-                  {/* Metadata & Actions */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                    <div className="space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <h2 className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
-                          {item.title}
-                        </h2>
-                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest bg-white/5 border border-white/[0.03] px-1.5 py-0.5 rounded">
-                          {item.type === 'show' ? 'TV' : 'Movie'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-xs text-zinc-500">
-                        {item.release_year && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{item.release_year}</span>
-                          </span>
-                        )}
-                        {item.vote_average !== undefined && item.vote_average > 0 && (
-                          <span className="flex items-center gap-0.5 text-[var(--rating)] font-semibold">
-                            <Star className="w-3.5 h-3.5 fill-[var(--rating)] text-[var(--rating)]" />
-                            <span>{item.vote_average.toFixed(1)}</span>
-                          </span>
-                        )}
-                      </div>
-                      {item.seed_title && (
-                        <p className="text-[11px] text-zinc-500 line-clamp-1">
-                          Because you watched {item.seed_title}
-                        </p>
-                      )}
-                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pt-0.5">
-                        {item.overview || 'No description available.'}
-                      </p>
-                    </div>
-
-                    {/* Actions Row */}
-                    <div className="flex flex-wrap gap-2 pt-3">
-                      <Button
-                        disabled={actioningId === item.tmdb_id}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleAddToWatchlist(item.tmdb_id, item.type)
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
-                      >
-                        {actioningId === item.tmdb_id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Plus className="w-3 h-3" />
-                        )}
-                        <span>Watchlist</span>
-                      </Button>
-                      
-                      <Button
-                        disabled={actioningId === item.tmdb_id}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleMarkAsWatchedFromCard(item.tmdb_id, item.type)
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        style={{ flex: 1, minWidth: '75px', fontSize: '11px', padding: '6px 12px' }}
-                      >
-                        {actioningId === item.tmdb_id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Check className="w-3 h-3" />
-                        )}
-                        <span>Watched</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                  <RecommendationCard
+                    item={item}
+                    actioning={actioningId === item.tmdb_id}
+                    onOpen={() => openDetails(item)}
+                    onAddToWatchlist={() => handleAddToWatchlist(item.tmdb_id, item.type)}
+                    onMarkWatched={() => handleMarkAsWatchedFromCard(item.tmdb_id, item.type)}
+                  />
                 </SelectableOverlay>
               ))}
             </div>
@@ -533,7 +454,7 @@ export default function RecommendationsPage() {
           {/* Infinite Scroll Trigger */}
           {(visibleCount < filteredItems.length || canLoadMoreForFilter || loadingMore) && filteredItems.length > 0 && (
             <div ref={loadMoreRef} className="flex justify-center pt-8 pb-4">
-              <Loader2 className="w-6 h-6 text-[var(--accent)]/50 animate-spin" />
+              <Loader2 className="w-6 h-6 text-[var(--text-muted)] animate-spin" strokeWidth={1.8} aria-hidden="true" />
             </div>
           )}
         </div>

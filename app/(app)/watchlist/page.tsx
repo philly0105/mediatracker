@@ -1,25 +1,28 @@
 'use client'
-import Image from 'next/image'
 import dynamic from 'next/dynamic'
 
 import { useCallback, useState, useEffect, useRef, Suspense } from 'react'
-import { Flame, Sparkles, Inbox, Film, Tv, Loader2, Trash2, Dices, Search, SearchX, ChevronDown } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Loader2, Trash2, Dices, Search, SearchX, ChevronDown, CheckSquare } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaActions, readCreatedEntry } from '@/lib/useMediaActions'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
-import { Card } from '@/components/ui/Card'
+import { useOptionalMultiSelect } from '@/components/MultiSelectProvider'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ClearFilters } from '@/components/ui/ClearFilters'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { PosterCard } from '@/components/ui/PosterCard'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { GridToolbar } from '@/components/grid/GridToolbar'
+import { PosterGrid } from '@/components/grid/PosterGrid'
 import { useToast } from '@/components/ToastProvider'
 import { useDeferredAction } from '@/lib/useDeferredAction'
-import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
 
 const TonightPickModal = dynamic(() => import('@/components/TonightPickModal'))
 
@@ -30,9 +33,16 @@ const PRIORITY_LABELS = {
 }
 const PRIORITY_ORDER: WatchlistPriority[] = ['must_watch', 'want_to_watch', 'someday']
 
-// How many rows a bucket shows before you ask for more. Small on purpose: three
-// buckets are on screen at once, and the point of the restructure is that a
-// long Must Watch list no longer buries the two under it.
+// The segmented type filter, replacing the "All Types / Movies Only / TV Shows
+// Only" dropdown (spec §5.6). Same three values, so the URL param is unchanged.
+const TYPE_OPTIONS: { id: 'all' | 'movie' | 'show'; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'movie', label: 'Movies' },
+  { id: 'show', label: 'TV Shows' },
+]
+
+// How many posters a bucket shows before you ask for more. Small on purpose:
+// the expander keeps a long bucket from running on under the toolbar.
 const PAGE_SIZE = 12
 
 // Filter state mirrored into the URL so a filtered view is bookmarkable and
@@ -81,11 +91,22 @@ function WatchlistContent() {
   const [loading, setLoading] = useState(true)
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [showPick, setShowPick] = useState(false)
+  // Which bucket the grid shows (plan Task 10: priority SegmentedControl +
+  // grid). Local rather than a URL param: the three buckets still arrive in
+  // the one grouped request, so switching is instant and a shared link keeps
+  // meaning "the watchlist", not one tab of it.
+  const [activePriority, setActivePriority] = useState<WatchlistPriority>('must_watch')
+  // Whether the first load has already chosen the opening tab (see the load
+  // effect). A ref: nothing renders from it.
+  const openingTabPicked = useRef(false)
 
   const { markWatched } = useMediaActions()
   const { openMedia, closeMedia } = useMediaModal()
   const { toast } = useToast()
   const { schedule, cancel } = useDeferredAction()
+  // The Select/Done pill sits in the toolbar with the other grid controls
+  // (spec §5.6); null outside the provider, in which case it is simply absent.
+  const multiSelect = useOptionalMultiSelect()
 
   // The modal itself lives in MediaModalProvider; all this page needs to know is
   // which row is currently showing, so the handlers below can dismiss it when
@@ -145,6 +166,16 @@ function WatchlistContent() {
             ])
           ) as Groups
         )
+
+        // Open on the first bucket with something in it, once. Adding from a
+        // title's details defaults to Want to Watch, so a user with nothing in
+        // Must Watch would otherwise land on an empty tab with their whole
+        // watchlist behind the one beside it.
+        if (!openingTabPicked.current) {
+          openingTabPicked.current = true
+          const first = PRIORITY_ORDER.find((p) => (data?.groups?.[p]?.total ?? 0) > 0)
+          if (first) setActivePriority(first)
+        }
 
         // The genre dropdown is built from the genres actually in the user's
         // watchlist rather than a fixed TMDB list (which mixed movie and TV
@@ -406,88 +437,115 @@ function WatchlistContent() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Five controls are too wide to sit beside the title, so they get their
-          own row under it rather than being squeezed into the header's action slot. */}
+    <div className="space-y-6 pb-12">
+      {/* Seven controls are too wide to sit beside the title, so they get a
+          toolbar panel under it rather than the header's action slot. */}
       <div>
         <PageHeader
           eyebrow="Up next"
           title="Watchlist"
           sub="Prioritize movies and shows you want to watch next."
-          selectable
         />
 
-        <div className="flex flex-wrap items-center gap-3 pb-6 border-b border-[var(--border-subtle)]">
-          <div className="min-w-[180px]">
-            <Input
-              icon={<Search className="w-4 h-4" />}
-              aria-label="Search your watchlist"
-              placeholder="Search your watchlist..."
-              value={searchQuery}
-              onChange={(e) => setFilter('q', e.target.value)}
+        <GridToolbar>
+          <div className="flex flex-wrap items-center gap-3">
+            <SegmentedControl
+              label="Priority"
+              options={PRIORITY_ORDER.map((p) => ({
+                id: p,
+                // The count used to sit in a chip beside each heading; it rides
+                // on the segment now, and waits for the load so three zeros
+                // never flash first.
+                label: loading ? PRIORITY_LABELS[p] : `${PRIORITY_LABELS[p]} · ${groups[p].total}`,
+              }))}
+              value={activePriority}
+              onChange={setActivePriority}
+              // A phone is a few pixels short of three counted labels at the
+              // control's own size, and a wrapped segment is worse than a
+              // tighter one, so under `sm` the segments drop to the small
+              // recipe. Should that still fall short, the track scrolls, not
+              // the page.
+              className="max-w-full overflow-x-auto scrollbar-none [&>button]:whitespace-nowrap [&>button]:px-2 [&>button]:text-xs sm:[&>button]:px-4 sm:[&>button]:text-sm"
             />
+            <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+              <Button onClick={() => setShowPick(true)}>
+                <Dices className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                <span>Pick for me</span>
+              </Button>
+              {multiSelect && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={multiSelect.toggleSelectMode}
+                  // Accent while selecting: the pill is a current-state control then.
+                  style={multiSelect.isSelectMode ? { color: 'var(--accent)' } : undefined}
+                >
+                  <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                  <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+                </Button>
+              )}
+            </div>
           </div>
-          <Select
-            label="Filter by type"
-            value={typeFilter}
-            onChange={(e) => setFilter('type', e.target.value)}
-            className="min-w-[120px]"
-          >
-            <option value="all" className="bg-[var(--bg-void)]">All Types</option>
-            <option value="movie" className="bg-[var(--bg-void)]">Movies Only</option>
-            <option value="show" className="bg-[var(--bg-void)]">TV Shows Only</option>
-          </Select>
 
-          <Select
-            label="Filter by genre"
-            value={genreFilter}
-            onChange={(e) => setFilter('genre', e.target.value)}
-            className="min-w-[140px]"
-          >
-            <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
-            {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
-          </Select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-[200px] flex-1">
+              <Input
+                icon={<Search />}
+                aria-label="Search your watchlist"
+                placeholder="Search your watchlist..."
+                value={searchQuery}
+                onChange={(e) => setFilter('q', e.target.value)}
+              />
+            </div>
+            <SegmentedControl
+              label="Filter by type"
+              options={TYPE_OPTIONS}
+              value={typeFilter}
+              onChange={(t) => setFilter('type', t)}
+            />
 
-          <Select
-            label="Sort order"
-            value={sortOrder}
-            onChange={(e) => setFilter('sort', e.target.value)}
-            className="min-w-[140px]"
-          >
-            <option value="added" className="bg-[var(--bg-void)]">Recently Added</option>
-            <option value="oldest" className="bg-[var(--bg-void)]">Oldest First</option>
-            <option value="title" className="bg-[var(--bg-void)]">Title A–Z</option>
-            <option value="year" className="bg-[var(--bg-void)]">Release Year</option>
-          </Select>
+            <Select
+              label="Filter by genre"
+              value={genreFilter}
+              onChange={(e) => setFilter('genre', e.target.value)}
+              className="min-w-[140px]"
+            >
+              <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
+              {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
+            </Select>
 
-          {hasActiveFilters && (
-            <ClearFilters onClear={() => resetFilters(['q', 'type', 'genre'])} />
-          )}
+            <Select
+              label="Sort order"
+              value={sortOrder}
+              onChange={(e) => setFilter('sort', e.target.value)}
+              className="min-w-[140px]"
+            >
+              <option value="added" className="bg-[var(--bg-void)]">Recently Added</option>
+              <option value="oldest" className="bg-[var(--bg-void)]">Oldest First</option>
+              <option value="title" className="bg-[var(--bg-void)]">Title A–Z</option>
+              <option value="year" className="bg-[var(--bg-void)]">Release Year</option>
+            </Select>
 
-          <Button onClick={() => setShowPick(true)}>
-            <Dices className="w-4 h-4" />
-            <span>Pick for me</span>
-          </Button>
-        </div>
+            {hasActiveFilters && (
+              <ClearFilters onClear={() => resetFilters(['q', 'type', 'genre'])} />
+            )}
+          </div>
+        </GridToolbar>
       </div>
 
-      <div className="space-y-12 pb-12">
-        {PRIORITY_ORDER.map((priority) => (
-          <WatchlistSection
-            key={priority}
-            priority={priority}
-            group={groups[priority]}
-            loading={loading}
-            typeFilter={typeFilter}
-            genreFilter={genreFilter}
-            actioningId={actioningId}
-            onExpand={() => loadMore(priority)}
-            onOpen={openDetails}
-            onUpdatePriority={handleUpdatePriority}
-            onRemove={handleRemove}
-          />
-        ))}
-      </div>
+      {/* One bucket at a time. Every bucket is still loaded and kept, so a
+          move lands in its new tab without a refetch and Undo puts it back. */}
+      <WatchlistSection
+        priority={activePriority}
+        group={groups[activePriority]}
+        loading={loading}
+        filtered={hasActiveFilters}
+        actioningId={actioningId}
+        onExpand={() => loadMore(activePriority)}
+        onOpen={openDetails}
+        onUpdatePriority={handleUpdatePriority}
+        onRemove={handleRemove}
+      />
 
       {/* "Pick for me" modal */}
       {showPick && (
@@ -505,8 +563,7 @@ function WatchlistSection({
   priority,
   group,
   loading,
-  typeFilter,
-  genreFilter,
+  filtered,
   actioningId,
   onExpand,
   onOpen,
@@ -516,166 +573,131 @@ function WatchlistSection({
   priority: WatchlistPriority
   group: GroupState
   loading: boolean
-  typeFilter: 'all' | 'movie' | 'show'
-  genreFilter: string
+  /** Whether any of search, type or genre is narrowing the bucket. */
+  filtered: boolean
   actioningId: string | null
   onExpand: () => void
   onOpen: (item: WatchlistItem) => void
   onUpdatePriority: (itemId: string, priority: WatchlistPriority) => void
   onRemove: (itemId: string) => void
 }) {
-  const config = PRIORITY_CONFIG[priority]
-  const Icon = config.icon
   const { items, total, expanded, loadingMore } = group
   const remaining = total - items.length
-
-  // Hide an empty section only when it's unfiltered and not the Must Watch bucket
-  // (which is always kept visible so the "No matching items." empty state can show).
-  if (!loading && items.length === 0 && priority !== 'must_watch' && typeFilter === 'all' && genreFilter === 'All') {
-    return null
-  }
+  const headingId = `watchlist-${priority}`
 
   return (
-    <div className="space-y-5">
-      {/* Group Header */}
-      <div className="flex items-center gap-3 pb-2 border-b border-[var(--border-subtle)]">
-        <div className={`p-1.5 rounded-lg border ${config.borderClass} ${config.bgClass}`}>
-          <Icon className={`w-4 h-4 ${config.textClass}`} />
-        </div>
-        <h2 className="text-lg font-bold tracking-tight text-white">
-          {PRIORITY_LABELS[priority]}
-        </h2>
-        <span className="text-xs font-semibold text-zinc-500 bg-white/5 border border-[var(--border-subtle)] px-2 py-0.5 rounded-full">
-          {loading ? '...' : total}
-        </span>
-      </div>
+    <section aria-labelledby={headingId} className="space-y-5">
+      {/* The segment above is the visible label; the heading keeps the bucket
+          a landmark for screen readers. */}
+      <h2 id={headingId} className="sr-only">
+        {PRIORITY_LABELS[priority]}
+      </h2>
 
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
-          {[0, 1, 2, 3].map((j) => (
-            <div key={j} className="bg-[var(--glass-card)] border border-[var(--border-subtle)] rounded-lg p-3.5 flex gap-4 animate-pulse">
-              <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-[var(--bg-void)] shrink-0" />
-              <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5">
-                <div className="space-y-2">
-                  <div className="h-4 bg-[var(--bg-void)] rounded w-2/3" />
-                  <div className="h-3 bg-[var(--bg-void)] rounded w-1/4" />
-                </div>
-                <div className="h-3.5 bg-[var(--bg-void)] rounded w-1/3" />
-              </div>
-            </div>
+        <PosterGrid>
+          {Array.from({ length: 10 }, (_, i) => (
+            <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
           ))}
-        </div>
+        </PosterGrid>
       ) : items.length === 0 ? (
-        <EmptyState
-          size="compact"
-          icon={SearchX}
-          title="No matching items"
-          hint="Nothing in this group matches the active filters."
-        />
+        // With tabs an empty bucket is on screen whether or not a filter
+        // emptied it, so say which.
+        filtered ? (
+          <EmptyState
+            size="compact"
+            icon={SearchX}
+            title="No matching items"
+            hint="Nothing in this group matches the active filters."
+          />
+        ) : (
+          <EmptyState
+            size="compact"
+            icon={Inbox}
+            title={`Nothing in ${PRIORITY_LABELS[priority]} yet`}
+            hint="Set a title's priority from its details to move it here."
+          />
+        )
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
+          <PosterGrid>
             {items.map((item) => {
               const isActioning = actioningId === item.id
               const selectableItem = item.media ? mediaToResult(item.media) : null
+              // The old card showed the type beside its icon; the caption's
+              // tabular line carries it now, after the year.
+              const caption = [item.media?.release_year, item.media?.type === 'show' ? 'TV Show' : 'Movie']
+                .filter(Boolean)
+                .join(' · ')
 
               return (
                 <SelectableOverlay key={item.id} item={selectableItem}>
-                  <div className="motion-item-in" style={{ height: '100%' }}>
-                    <Card
+                  <div className="motion-item-in group relative h-full">
+                    <PosterCard
+                      title={item.media?.title ?? ''}
+                      year={caption}
+                      posterUrl={item.media?.poster_url}
                       onClick={() => onOpen(item)}
-                      aria-label={item.media?.title}
-                      style={{ padding: '14px', display: 'flex', gap: '16px', position: 'relative', height: '100%', userSelect: 'none' }}
-                      className="group cursor-pointer"
+                    />
+
+                    {/* The actions sit beside the card, not inside it: the card
+                        is one <button>, and a button cannot hold buttons. The
+                        box matches the poster frame and lets clicks fall
+                        through to it everywhere but on the controls. Hover-
+                        revealed where the pointer can hover; always visible
+                        where it cannot, so a touch tablet still finds them
+                        and a tap on the art never lands on a hidden one. */}
+                    <div
+                      className={`absolute inset-x-0 top-0 z-[1] flex items-end justify-center p-1.5 transition-opacity duration-200 ${
+                        isActioning ? 'opacity-100' : '[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100'
+                      }`}
+                      style={{ aspectRatio: '2 / 3', pointerEvents: 'none' }}
                     >
-                      {item.media?.poster_url ? (
-                        <Image
-                          src={item.media.poster_url}
-                          alt={item.media?.title ?? ''}
-                          width={56}
-                          height={80}
-                          className="w-14 h-20 rounded-[var(--radius-xl)] object-cover shadow-md shadow-black/20 border border-[var(--border-subtle)] shrink-0 bg-[var(--bg-void)]"
-                        />
-                      ) : (
-                        <div className="w-14 h-20 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                          No Poster
-                        </div>
-                      )}
-                      <div className="flex-grow min-w-0 flex flex-col justify-between py-0.5 pr-14">
-                        <div>
-                          <p className="font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
-                            {item.media?.title}
-                          </p>
-                          <p className="text-xs text-zinc-500 mt-0.5">
-                            {item.media?.release_year}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
-                          {item.media?.type === 'show' ? (
-                            <><Tv className="w-3.5 h-3.5 text-[var(--live)]" /><span>TV Show</span></>
-                          ) : (
-                            <><Film className="w-3.5 h-3.5 text-[var(--accent)]" /><span>Movie</span></>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Actions row on hover */}
-                      <div className="absolute top-3.5 right-3.5 flex flex-col gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center" style={{ pointerEvents: 'auto' }}>
                         {isActioning ? (
-                          <div className="p-1"><Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500" /></div>
+                          <span className="flex h-11 w-11 items-center justify-center">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--glass-badge)] text-[var(--text-secondary)] shadow-[var(--glass-badge-edge)]">
+                              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
+                            </span>
+                          </span>
                         ) : (
-                          <div className="flex gap-1.5 bg-black/60 p-1 rounded-sm border border-[var(--border-subtle)]">
+                          <>
                             {priority !== 'must_watch' && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onUpdatePriority(item.id, 'must_watch') }}
-                                className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--rust-300)] hover:bg-[var(--rust-tint-bg)] transition-colors"
-                                title="Move to Must Watch"
-                                aria-label="Move to Must Watch"
-                              ><Flame className="w-3.5 h-3.5" /></button>
+                              <PosterAction label="Move to Must Watch" onClick={() => onUpdatePriority(item.id, 'must_watch')}>
+                                <Flame className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                              </PosterAction>
                             )}
                             {priority !== 'want_to_watch' && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onUpdatePriority(item.id, 'want_to_watch') }}
-                                className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--amber-300)] hover:bg-[var(--amber-tint-bg)] transition-colors"
-                                title="Move to Want to Watch"
-                                aria-label="Move to Want to Watch"
-                              ><Sparkles className="w-3.5 h-3.5" /></button>
+                              <PosterAction label="Move to Want to Watch" onClick={() => onUpdatePriority(item.id, 'want_to_watch')}>
+                                <Sparkles className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                              </PosterAction>
                             )}
                             {priority !== 'someday' && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onUpdatePriority(item.id, 'someday') }}
-                                className="p-1.5 rounded-sm text-zinc-400 hover:text-zinc-300 hover:bg-white/10 transition-colors"
-                                title="Move to Someday"
-                                aria-label="Move to Someday"
-                              ><Inbox className="w-3.5 h-3.5" /></button>
+                              <PosterAction label="Move to Someday" onClick={() => onUpdatePriority(item.id, 'someday')}>
+                                <Inbox className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                              </PosterAction>
                             )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
-                              className="p-1.5 rounded-sm text-zinc-400 hover:text-[var(--live)] hover:bg-[var(--rust-tint-bg)] transition-colors"
-                              title="Remove"
-                              aria-label="Remove"
-                            ><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
+                            <PosterAction label="Remove" destructive onClick={() => onRemove(item.id)}>
+                              <Trash2 className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+                            </PosterAction>
+                          </>
                         )}
                       </div>
-                    </Card>
+                    </div>
                   </div>
                 </SelectableOverlay>
               )
             })}
-          </div>
+          </PosterGrid>
 
-          {/* An explicit expander, not a sentinel. Three infinite scrolls stacked
-              vertically meant scrolling through all of Must Watch before Want to
-              Watch came into view. */}
+          {/* An explicit expander, not a sentinel: a long bucket should end
+              where the user says, not keep scrolling under the toolbar. */}
           {remaining > 0 && (
             <div className="flex justify-center pt-1">
               <Button variant="ghost" size="sm" onClick={onExpand} disabled={loadingMore}>
                 {loadingMore ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
                 ) : (
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
                 )}
                 <span>
                   {expanded ? `Load ${Math.min(remaining, PAGE_SIZE)} more` : `Show all ${total}`}
@@ -685,8 +707,41 @@ function WatchlistSection({
           )}
         </>
       )}
+    </section>
+  )
+}
 
-    </div>
+// One icon action over a poster: a 44px target around a 32px dark-glass disc,
+// the badge fill so it reads on bright art. Removal takes the danger colour
+// on hover; a move only brightens.
+function PosterAction({
+  label,
+  destructive = false,
+  onClick,
+  children,
+}: {
+  label: string
+  destructive?: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      title={label}
+      aria-label={label}
+      className={`flex h-11 w-11 items-center justify-center text-[var(--text-secondary)] transition-colors duration-200 ${
+        destructive ? 'hover:text-[var(--danger)]' : 'hover:text-[var(--text-primary)]'
+      }`}
+    >
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--glass-badge)] shadow-[var(--glass-badge-edge)] forced-colors:border forced-colors:border-[color:CanvasText]">
+        {children}
+      </span>
+    </button>
   )
 }
 

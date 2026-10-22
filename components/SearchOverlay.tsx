@@ -1,11 +1,11 @@
 'use client'
 import Image from 'next/image'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, CheckCircle2, Bookmark, Check, Plus, Loader2, User, Clock } from 'lucide-react'
 import type { TmdbSearchResult, TmdbPersonResult } from '@/types'
 import { useModal } from '@/lib/useModal'
-import { useIsMac } from '@/components/ui/Kbd'
+import { Kbd } from '@/components/ui/Kbd'
 import { useTmdbSearch, type SearchMode } from '@/lib/useTmdbSearch'
 import { useLibraryIds } from '@/lib/useLibraryIds'
 import { mediaKey } from '@/lib/mediaKey'
@@ -21,11 +21,69 @@ interface Props {
   onClose: () => void
 }
 
+// Every option is a tier-2 row at the control radius (no blur: the list can
+// be long). The keyboard highlight is the selected fill plus the accent ring,
+// inline so it beats the row's own hover fill; the pointer moves the highlight
+// anyway, so hover and selection never disagree. Forced colours drops both the
+// fill and the ring, so the selected row takes the system Highlight there;
+// `!` is what lets the class beat the inline fill, as in Sidebar's tabs.
+const ROW_CLASS = 'glass-row rounded-[var(--radius-md)] flex items-center gap-3 w-full text-left cursor-pointer aria-selected:forced-colors:bg-[color:Highlight]! aria-selected:forced-colors:text-[color:HighlightText]!'
+const SELECTED_STYLE: CSSProperties = {
+  background: 'var(--glass-fill-selected)',
+  boxShadow: 'var(--glass-row-edge), var(--accent-ring)',
+}
+function rowStyle(selected: boolean, padding: string): CSSProperties {
+  return { minHeight: 44, padding, ...(selected ? SELECTED_STYLE : undefined) }
+}
+
+const SEMIBOLD = 'var(--weight-semibold)' as CSSProperties['fontWeight']
+const MEDIUM = 'var(--weight-medium)' as CSSProperties['fontWeight']
+
+// Group labels: 12/16/600 muted in plain case, as the sidebar's "Must watch".
+const GROUP_LABEL: CSSProperties = {
+  padding: '8px 12px 4px',
+  fontSize: 'var(--text-xs)',
+  lineHeight: '16px',
+  fontWeight: SEMIBOLD,
+  color: 'var(--text-muted)',
+}
+const ROW_LABEL: CSSProperties = {
+  fontSize: 'var(--text-base)',
+  lineHeight: '20px',
+  fontWeight: MEDIUM,
+  letterSpacing: 'var(--tracking-text)',
+  color: 'var(--text-primary)',
+}
+const ROW_TITLE: CSSProperties = { ...ROW_LABEL, margin: 0, fontWeight: SEMIBOLD }
+const ROW_META: CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--text-sm)',
+  lineHeight: '18px',
+  color: 'var(--text-muted)',
+  fontVariantNumeric: 'tabular-nums',
+}
+const HINT: CSSProperties = {
+  margin: 0,
+  padding: '32px 16px',
+  textAlign: 'center',
+  fontSize: 'var(--text-base)',
+  lineHeight: '20px',
+  color: 'var(--text-muted)',
+}
+// Thumbs: a 44x66 poster at the thumb radius, or a 40px headshot circle.
+const THUMB: CSSProperties = { flexShrink: 0, objectFit: 'cover', boxShadow: 'var(--shadow-sm)' }
+const THUMB_EMPTY: CSSProperties = {
+  ...THUMB,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'linear-gradient(150deg, var(--zinc-800), var(--bg-void))',
+  color: 'var(--text-muted)',
+}
+const ACTION_BTN = 'glass-btn inline-flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-40'
+
 export default function SearchOverlay({ onClose }: Props) {
   const [mode, setMode] = useState<SearchMode>('title')
-  // The footer hint said ⌘↵ on every platform; the handler has always taken
-  // Ctrl too (KeyboardShortcuts.tsx).
-  const isMac = useIsMac()
   const { query, setQuery, results, loading, clear } = useTmdbSearch(mode)
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
   // The old dashboard dropdown refreshed the route after an action so Recently
@@ -177,7 +235,9 @@ export default function SearchOverlay({ onClose }: Props) {
     inputRef.current?.focus()
   }, [])
 
-  // Keep the highlighted row in view as the arrow keys move it.
+  // Keep the highlighted row in view as the arrow keys move it. The list's
+  // scroll-padding matches its padding so a row at either edge keeps the
+  // accent ring inside the scrollport instead of landing flush on it.
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)
     el?.scrollIntoView({ block: 'nearest' })
@@ -260,18 +320,27 @@ export default function SearchOverlay({ onClose }: Props) {
       style={{ background: 'var(--scrim)', paddingTop: '12dvh' }}
       onClick={handleClose}
     >
+      {/* The one blurred container of the palette; everything inside is a
+          tier-2 fill. */}
       <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Search movies and TV shows"
         onClick={(e) => e.stopPropagation()}
-        style={{ background: 'var(--surface-modal)', width: 'min(640px, calc(100vw - 32px))' }}
-        className="overlay-in rounded-[var(--radius-2xl)] border border-white/15 shadow-2xl overflow-hidden"
+        style={{ width: 'min(720px, calc(100vw - 32px))' }}
+        className="overlay-in glass-panel glass-rim flex flex-col overflow-hidden"
       >
-        {/* Input row */}
-        <div className="px-5 py-4 flex items-center gap-3 border-b border-white/5">
-          <Search className="w-5 h-5 text-zinc-500" />
+        {/* Input row: the input is the inset well itself, so the global focus
+            outline wraps the well rather than drawing inside it. */}
+        <div className="relative px-4 pt-4">
+          <Search
+            size={18}
+            strokeWidth={1.8}
+            aria-hidden="true"
+            className="pointer-events-none absolute left-8 top-1/2 mt-2 -translate-y-1/2"
+            style={{ color: 'var(--text-muted)' }}
+          />
           {/* The arrow-key highlight used to be purely visual, so a screen
               reader heard nothing as it moved. Focus stays on the input and
               aria-activedescendant points at the highlighted row instead. */}
@@ -288,7 +357,15 @@ export default function SearchOverlay({ onClose }: Props) {
             aria-controls="search-overlay-results"
             aria-autocomplete="list"
             aria-activedescendant={optionCount > 0 ? optionId(activeIndex) : undefined}
-            className="flex-1 bg-transparent border-none outline-none text-base text-white placeholder:text-zinc-500"
+            className="glass-inset w-full border-0 placeholder:text-[var(--text-faint)]"
+            style={{
+              height: 52,
+              padding: '0 16px 0 46px',
+              fontFamily: 'inherit',
+              fontSize: 'var(--text-body)',
+              fontWeight: MEDIUM,
+              color: 'var(--text-primary)',
+            }}
           />
         </div>
 
@@ -297,16 +374,19 @@ export default function SearchOverlay({ onClose }: Props) {
             listbox owned by the combobox above, not a tabpanel, so the tab
             pattern was half-implemented and announced a relationship that did
             not exist. */}
-        <div className="px-5 pt-3 flex gap-2" role="group" aria-label="Search type">
+        <div className="flex gap-1.5 px-4 pt-3" role="group" aria-label="Search type">
           {([['title', 'Titles'], ['person', 'People']] as const).map(([value, label]) => (
             <button
               key={value}
               type="button"
               aria-pressed={mode === value}
               onClick={() => switchMode(value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                mode === value ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-300'
+              className={`inline-flex min-h-11 items-center rounded-full px-4 transition-colors ${
+                mode === value
+                  ? 'bg-[var(--glass-fill-active)] text-[var(--text-primary)] shadow-[var(--inset-hairline)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--glass-fill-hover)] hover:text-[var(--text-primary)]'
               }`}
+              style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', fontWeight: SEMIBOLD, letterSpacing: 'var(--tracking-text)' }}
             >
               {label}
             </button>
@@ -319,16 +399,17 @@ export default function SearchOverlay({ onClose }: Props) {
           id="search-overlay-results"
           role="listbox"
           aria-label={mode === 'person' ? 'People' : 'Titles and pages'}
-          className="max-h-[min(420px,60dvh)] overflow-y-auto p-2"
+          className="flex max-h-[min(420px,60dvh)] flex-col gap-1 overflow-y-auto scroll-py-3 p-3"
         >
           {showQuickNav && shownRecents.length > 0 && (
             <>
-              <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Recent</span>
+              <div className="flex items-center justify-between" style={GROUP_LABEL}>
+                <span>Recent</span>
                 <button
                   type="button"
                   onClick={() => setRecents(clearRecentSearches())}
-                  className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 hover:text-zinc-300 transition-colors"
+                  className="-my-3 -mr-2 inline-flex min-h-11 items-center rounded-full px-2 transition-colors hover:bg-[var(--glass-fill-hover)] hover:text-[var(--text-primary)]"
+                  style={{ fontSize: 'var(--text-xs)', fontWeight: SEMIBOLD, color: 'var(--text-secondary)' }}
                 >
                   Clear
                 </button>
@@ -342,17 +423,18 @@ export default function SearchOverlay({ onClose }: Props) {
                   data-index={i}
                   onMouseEnter={() => setActiveIndex(i)}
                   onClick={() => applyRecent(recent)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                  className={ROW_CLASS}
+                  style={rowStyle(i === activeIndex, '0 12px')}
                 >
-                  <Clock className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-                  <span className="text-sm text-zinc-300">{recent}</span>
+                  <Clock size={18} strokeWidth={1.8} aria-hidden="true" className="shrink-0" style={{ color: 'var(--text-muted)' }} />
+                  <span className="truncate" style={ROW_LABEL}>{recent}</span>
                 </div>
               ))}
             </>
           )}
           {showQuickNav && (
             <>
-              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Go to</div>
+              <div style={GROUP_LABEL}>Go to</div>
               {QUICK_NAV.map((item, navIndex) => {
                 const i = shownRecents.length + navIndex
                 const Icon = item.icon
@@ -365,10 +447,13 @@ export default function SearchOverlay({ onClose }: Props) {
                     data-index={i}
                     onMouseEnter={() => setActiveIndex(i)}
                     onClick={() => navigateTo(item.href)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                    className={ROW_CLASS}
+                    style={rowStyle(i === activeIndex, '0 12px')}
                   >
-                    <Icon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-                    <span className="text-sm text-zinc-300">{item.name}</span>
+                    <span aria-hidden="true" className="inline-flex shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      <Icon className="h-[18px] w-[18px] [stroke-width:1.8]" />
+                    </span>
+                    <span className="truncate" style={ROW_LABEL}>{item.name}</span>
                   </div>
                 )
               })}
@@ -376,7 +461,7 @@ export default function SearchOverlay({ onClose }: Props) {
           )}
           {!showQuickNav && matchedPages.length > 0 && (
             <>
-              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Pages</div>
+              <div style={GROUP_LABEL}>Pages</div>
               {matchedPages.map((page, i) => {
                 const Icon = page.icon
                 return (
@@ -388,30 +473,34 @@ export default function SearchOverlay({ onClose }: Props) {
                     data-index={i}
                     onMouseEnter={() => setActiveIndex(i)}
                     onClick={() => navigateTo(page.href)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                    className={ROW_CLASS}
+                    style={rowStyle(i === activeIndex, '0 12px')}
                   >
-                    <Icon className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-                    <span className="text-sm text-zinc-300">{page.name}</span>
+                    <span aria-hidden="true" className="inline-flex shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      <Icon className="h-[18px] w-[18px] [stroke-width:1.8]" />
+                    </span>
+                    <span className="truncate" style={ROW_LABEL}>{page.name}</span>
                   </div>
                 )
               })}
             </>
           )}
           {mode === 'person' && query.trim().length < 2 && (
-            <div className="py-8 text-sm text-zinc-500 text-center">Search for an actor or director by name.</div>
+            <p style={HINT}>Search for an actor or director by name.</p>
           )}
           {query.trim().length >= 2 && loading && (
-            <div className="py-8 text-sm text-zinc-500 text-center">Searching…</div>
+            <p style={HINT}>Searching…</p>
           )}
           {query.trim().length >= 2 && !loading && results.length === 0 && matchedPages.length === 0 && (
-            <div className="py-8 text-center space-y-3">
-              <p className="text-sm text-zinc-500">No matches for &ldquo;{query}&rdquo;.</p>
+            <div className="py-6 text-center">
+              <p style={{ ...HINT, padding: 0 }}>No matches for &ldquo;{query}&rdquo;.</p>
               {/* A dead end used to be the whole answer. The other index is one
                   keystroke away and usually has the thing they meant. */}
               <button
                 type="button"
                 onClick={() => switchMode(mode === 'title' ? 'person' : 'title')}
-                className="text-xs font-semibold text-[var(--accent)] hover:underline"
+                className="btn btn-link mt-2"
+                style={{ minHeight: 44, padding: '0 14px', fontSize: 'var(--text-sm)', fontWeight: SEMIBOLD, color: 'var(--accent)' }}
               >
                 {mode === 'title'
                   ? `Search people for “${query.trim()}” instead`
@@ -428,7 +517,8 @@ export default function SearchOverlay({ onClose }: Props) {
               data-index={i}
               onMouseEnter={() => setActiveIndex(i)}
               onClick={() => openPerson(p.name)}
-              className={`flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${i === activeIndex ? 'bg-white/[0.06]' : ''}`}
+              className={ROW_CLASS}
+              style={rowStyle(i === activeIndex, '6px 8px')}
             >
               {p.profile_url ? (
                 <Image
@@ -436,16 +526,16 @@ export default function SearchOverlay({ onClose }: Props) {
                   alt=""
                   width={40}
                   height={40}
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  style={{ ...THUMB, width: 40, height: 40, borderRadius: '50%' }}
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-black border border-white/5 text-zinc-600">
-                  <User className="w-4 h-4" />
+                <div style={{ ...THUMB_EMPTY, width: 40, height: 40, borderRadius: '50%' }}>
+                  <User size={18} strokeWidth={1.8} aria-hidden="true" />
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">{p.name}</p>
-                {p.known_for && <p className="text-xs text-zinc-500 truncate mt-0.5">{p.known_for}</p>}
+                <p className="truncate" style={ROW_TITLE}>{p.name}</p>
+                {p.known_for && <p className="truncate" style={{ ...ROW_META, marginTop: 2 }}>{p.known_for}</p>}
               </div>
             </div>
           ))}
@@ -463,33 +553,34 @@ export default function SearchOverlay({ onClose }: Props) {
                 data-index={listIndex}
                 onMouseEnter={() => setActiveIndex(listIndex)}
                 onClick={() => openDetails(r)}
-                className={`group flex items-center gap-3 p-2 rounded-[var(--radius-md)] cursor-pointer w-full text-left ${listIndex === activeIndex ? 'bg-white/[0.06]' : ''}`}
+                className={`group ${ROW_CLASS}`}
+                style={rowStyle(listIndex === activeIndex, '6px 8px')}
               >
                 {r.poster_url ? (
                   <Image
                     src={r.poster_url}
                     alt=""
-                    width={40}
-                    height={56}
-                    className="w-10 h-14 rounded-[var(--radius-xl)] object-cover flex-shrink-0"
+                    width={44}
+                    height={66}
+                    style={{ ...THUMB, width: 44, height: 66, borderRadius: 'var(--radius-thumb)' }}
                   />
                 ) : (
-                  <div className="w-10 h-14 rounded-[var(--radius-xl)] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-zinc-800 to-black border border-white/5 text-zinc-600 text-xs">
+                  <div style={{ ...THUMB_EMPTY, width: 44, height: 66, borderRadius: 'var(--radius-thumb)', fontSize: 'var(--text-2xs)', lineHeight: '12px', textAlign: 'center' }}>
                     No Poster
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white truncate">{r.title}</p>
-                  <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                    <span className="text-xs text-zinc-500">{r.release_year ?? '—'} · {r.type === 'show' ? 'TV Show' : 'Movie'}</span>
+                  <p className="truncate" style={ROW_TITLE}>{r.title}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <span style={ROW_META}>{r.release_year ?? '—'} · {r.type === 'show' ? 'TV Show' : 'Movie'}</span>
                     {watched && (
-                      <Badge tone="success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle2 className="w-3 h-3" /> Watched
+                      <Badge tone="success">
+                        <CheckCircle2 size={12} strokeWidth={1.8} aria-hidden="true" /> Watched
                       </Badge>
                     )}
                     {!watched && listed && (
-                      <Badge tone="neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <Bookmark className="w-3 h-3" /> Watchlist
+                      <Badge tone="neutral">
+                        <Bookmark size={12} strokeWidth={1.8} aria-hidden="true" /> Watchlist
                       </Badge>
                     )}
                   </div>
@@ -502,7 +593,7 @@ export default function SearchOverlay({ onClose }: Props) {
                     footer advertises. */}
                 <div
                   aria-hidden="true"
-                  className={`flex items-center gap-1 shrink-0 pr-1 transition-opacity ${
+                  className={`flex shrink-0 items-center gap-1 transition-opacity ${
                     listIndex === activeIndex ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   }`}
                 >
@@ -512,9 +603,11 @@ export default function SearchOverlay({ onClose }: Props) {
                     disabled={watched || actioningId !== null}
                     title={watched ? 'Already watched' : 'Mark as watched'}
                     onClick={(e) => { e.stopPropagation(); logWatched(r) }}
-                    className="p-1.5 rounded-lg text-zinc-500 hover:text-[var(--accent)] hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                    className={`${ACTION_BTN} text-[var(--text-secondary)] hover:text-[var(--accent)]`}
                   >
-                    {actioningId === r.tmdb_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    {actioningId === r.tmdb_id
+                      ? <Loader2 size={18} strokeWidth={1.8} className="animate-spin" />
+                      : <Check size={18} strokeWidth={1.8} />}
                   </button>
                   <button
                     type="button"
@@ -522,9 +615,9 @@ export default function SearchOverlay({ onClose }: Props) {
                     disabled={listed || watched || actioningId !== null}
                     title={listed ? 'Already on your watchlist' : 'Add to watchlist'}
                     onClick={(e) => { e.stopPropagation(); listForLater(r) }}
-                    className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                    className={`${ACTION_BTN} text-[var(--text-secondary)] hover:text-[var(--text-primary)]`}
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus size={18} strokeWidth={1.8} />
                   </button>
                 </div>
               </div>
@@ -532,17 +625,27 @@ export default function SearchOverlay({ onClose }: Props) {
           })}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-2.5 border-t border-white/5 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-          <span>↑↓ Navigate</span>
-          <span>↵ Open</span>
+        {/* Footer. Kbd names the platform's modifier (⌘ or Ctrl); the handler
+            has always taken either (KeyboardShortcuts.tsx). */}
+        <div
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-5 py-3"
+          style={{
+            borderColor: 'var(--border-divider)',
+            fontSize: 'var(--text-xs)',
+            lineHeight: '16px',
+            fontWeight: MEDIUM,
+            color: 'var(--text-muted)',
+          }}
+        >
+          <span className="inline-flex items-center gap-1.5"><Kbd keys="↑↓" mod={false} /> Navigate</span>
+          <span className="inline-flex items-center gap-1.5"><Kbd keys="↵" mod={false} /> Open</span>
           {mode === 'title' && !showQuickNav && (
             <>
-              <span>{isMac ? '⌘↵' : 'Ctrl ↵'} Watched</span>
-              <span>⇧↵ Watchlist</span>
+              <span className="inline-flex items-center gap-1.5"><Kbd keys="↵" /> Watched</span>
+              <span className="inline-flex items-center gap-1.5"><Kbd keys="⇧↵" mod={false} /> Watchlist</span>
             </>
           )}
-          <span>Esc Close</span>
+          <span className="inline-flex items-center gap-1.5"><Kbd keys="Esc" mod={false} /> Close</span>
         </div>
       </div>
 

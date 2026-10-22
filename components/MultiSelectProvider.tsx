@@ -208,19 +208,26 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
           aria-label="Bulk actions"
           /* bottom-24 on mobile clears the fixed bottom nav, which the old
              bottom-6 sat on top of — the toast stack already gets this right.
-             max-w + flex-wrap keeps five controls on a 320px screen. */
-          className="motion-toolbar-up fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[100] flex flex-wrap items-center justify-center gap-2 p-2 max-w-[calc(100vw-2rem)] bg-[var(--bg-void)]/95 border border-[var(--border-strong)] rounded-lg shadow-2xl shadow-black/50"
+             max-w + flex-wrap keeps five controls on a 320px screen. Centred
+             with inset-x + mx-auto rather than left-1/2 + translate, which
+             caps a shrink-to-fit box at half the viewport and wrapped it into
+             a near-square on phones. A glass pill: it floats over the grid,
+             so it is one of the few blurred surfaces on the page and the
+             pill radius beats the panel's 28; the wrapped two-row bar on
+             phones takes the 28 instead, since a pill that tall reads as a
+             circle. */
+          className="motion-toolbar-up glass-panel glass-rim fixed bottom-24 md:bottom-10 inset-x-4 mx-auto w-fit z-[100] flex flex-wrap items-center justify-center gap-2 px-2 py-1.5 max-w-[calc(100vw-2rem)] rounded-[var(--radius-2xl)] sm:rounded-[var(--radius-pill)]"
         >
-          <div className="flex items-center gap-2 pl-4 pr-2">
-            <span aria-hidden="true" className="flex items-center justify-center w-6 h-6 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] font-bold text-xs border border-[var(--accent)]/30">
+          <div className="flex items-center gap-2 pl-3 pr-2">
+            <span aria-hidden="true" className="tabular flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-[var(--glass-chip)] shadow-[var(--glass-chip-edge)] text-[var(--accent)] font-semibold text-xs">
               {selectedItems.size}
             </span>
-            <span aria-live="polite" className="text-sm font-semibold text-white mr-2">
+            <span aria-live="polite" className="tabular text-sm font-semibold text-[var(--text-primary)] mr-1">
               {progress ? `${progress.done} of ${progress.total} done` : `${selectedItems.size} selected`}
             </span>
           </div>
 
-          <div className="h-6 w-px bg-white/10" />
+          <div className="h-6 w-px bg-[var(--border-soft)]" />
 
           {selectedItems.size < selectableCount && (
             <Button
@@ -229,7 +236,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
               variant="ghost"
               size="sm"
             >
-              <CheckSquare className="w-4 h-4" />
+              <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
               <span className="hidden sm:inline">Select all {selectableCount}</span>
               <span className="sm:hidden">All</span>
             </Button>
@@ -241,7 +248,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             variant="ghost"
             size="sm"
           >
-            {loadingAction === 'watchlist' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {loadingAction === 'watchlist' ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" /> : <Plus className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
             <span className="hidden sm:inline">Add to Watchlist</span>
             <span className="sm:hidden">Watchlist</span>
           </Button>
@@ -252,19 +259,19 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             variant="ghost"
             size="sm"
           >
-            {loadingAction === 'watched' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {loadingAction === 'watched' ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" /> : <Check className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
             <span className="hidden sm:inline">Mark as Watched</span>
             <span className="sm:hidden">Watched</span>
           </Button>
 
-          <div className="h-6 w-px bg-white/10" />
+          <div className="h-6 w-px bg-[var(--border-soft)]" />
 
           <button
             onClick={clearSelection}
             aria-label="Clear selection"
-            className="p-2 rounded-sm hover:bg-[var(--live)]/20 text-zinc-400 hover:text-[var(--live)] transition-colors"
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)] transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
           </button>
         </div>,
         document.body

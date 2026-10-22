@@ -1,11 +1,15 @@
 'use client'
 import Image from 'next/image'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import type { TmdbCollectionSummary } from '@/types'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 const CACHE_KEY = 'popular-collections-cache'
+
+// 2/3/4 columns; the image `sizes` hints below describe exactly this grid.
+const GRID = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6'
 
 export default function PopularCollectionsFeed() {
   const [collections, setCollections] = useState<TmdbCollectionSummary[]>([])
@@ -85,37 +89,63 @@ export default function PopularCollectionsFeed() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className={GRID}>
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="glass-card rounded-[var(--radius-2xl)] aspect-video animate-pulse bg-white/5" />
+          <Skeleton key={i} className="aspect-video rounded-[var(--radius-lg)]" />
         ))}
       </div>
     )
   }
 
   if (collections.length === 0) {
-    return <p className="text-zinc-500 text-sm italic pl-1">No popular franchises found.</p>
+    return (
+      <p style={{ margin: 0, paddingLeft: 4, fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-muted)' }}>
+        No popular franchises found.
+      </p>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className={GRID}>
         {collections.map(c => (
-          <Link key={c.id} href={`/collections/${c.id}`}>
-            <div className="glass-card rounded-[var(--radius-2xl)] overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
-              <div className="relative aspect-video">
-                {c.backdrop_url ? (
-                  <Image src={c.backdrop_url} alt={c.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" />
-                ) : c.poster_url ? (
-                  <Image src={c.poster_url} alt={c.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-contain bg-[var(--bg-void)]" />
-                ) : (
-                  <div className="w-full h-full bg-[var(--bg-void)]" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <p className="absolute bottom-2 left-3 right-3 text-white text-sm font-bold line-clamp-2 leading-snug drop-shadow-md">
-                  {c.name}
-                </p>
-              </div>
+          // A backdrop-shaped poster card: the same lift, ring and hover glow
+          // as PosterCard (the `.poster-card*` rules), with the name over a
+          // scrim at the foot of the art. No blur: these render per item.
+          // The scrim is a solid band under the two caption lines before it
+          // fades, because a fade that starts at the bottom edge thins to a
+          // third of its strength by the top glyph line and light backdrops
+          // (Wicked, The Bear) then fail AA behind the name.
+          <Link
+            key={c.id}
+            href={`/collections/${c.id}`}
+            className="poster-card"
+            style={{ position: 'relative', display: 'block', textDecoration: 'none', color: 'inherit' }}
+          >
+            <div
+              className="poster-card-frame"
+              style={{ position: 'relative', aspectRatio: '16 / 9', overflow: 'hidden', borderRadius: 'var(--radius-lg)', background: 'var(--bg-deep)' }}
+            >
+              {c.backdrop_url ? (
+                <Image src={c.backdrop_url} alt="" fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="poster-card-img object-cover" />
+              ) : c.poster_url ? (
+                <Image src={c.poster_url} alt="" fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="poster-card-img object-contain" />
+              ) : null}
+              <div
+                aria-hidden="true"
+                style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--scrim) 0, var(--scrim) 56px, transparent 104px)' }}
+              />
+              <p
+                style={{
+                  position: 'absolute', left: 12, right: 12, bottom: 10, margin: 0,
+                  fontSize: 'var(--text-sm)', lineHeight: '18px',
+                  fontWeight: 'var(--weight-semibold)' as CSSProperties['fontWeight'],
+                  letterSpacing: 'var(--tracking-text)', color: 'var(--text-primary)',
+                  overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                }}
+              >
+                {c.name}
+              </p>
             </div>
           </Link>
         ))}
@@ -123,7 +153,9 @@ export default function PopularCollectionsFeed() {
 
       {hasMore && (
         <div ref={sentinelRef} className="flex justify-center h-8">
-          {loadingMore && <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />}
+          {loadingMore && (
+            <Loader2 className="w-[18px] h-[18px] animate-spin" strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+          )}
         </div>
       )}
     </div>

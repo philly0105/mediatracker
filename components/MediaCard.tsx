@@ -26,6 +26,17 @@ interface Props {
   onUpdated?: () => void
 }
 
+// The edit and delete controls are quiet icon circles: transparent until
+// hovered, delete turning red. The row gets the full 44px circle; the poster
+// chip draws a tighter 36px circle so the pair does not cover half of a
+// phone-width poster, and grows the hit area back to 44px with an invisible
+// ::after (the chip's gap-2 keeps the two hit areas from overlapping).
+const ICON_BTN =
+  'inline-flex items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)] disabled:opacity-40'
+const ICON_BTN_DANGER = 'hover:text-[var(--danger)]'
+const ICON_BTN_ROW = 'w-11 h-11'
+const ICON_BTN_POSTER = "w-9 h-9 relative after:absolute after:-inset-1 after:content-['']"
+
 export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }: Props) {
   const media = entry.media!
   const router = useRouter()
@@ -74,6 +85,31 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
     onDeleted?.(entry.id)
   }
 
+  const size = view === 'poster' ? ICON_BTN_POSTER : ICON_BTN_ROW
+  const actions = (
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
+        className={`${ICON_BTN} ${size}`}
+        title="Edit entry"
+        aria-label="Edit entry"
+      >
+        <Pencil className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+      </button>
+      <button
+        onClick={handleDelete}
+        disabled={isDeleting}
+        className={`${ICON_BTN} ${ICON_BTN_DANGER} ${size}`}
+        title="Delete entry"
+        aria-label="Delete entry"
+      >
+        {isDeleting
+          ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
+          : <Trash2 className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
+      </button>
+    </>
+  )
+
   return (
     <SelectableOverlay item={mediaAsResult}>
       {view === 'poster' ? (
@@ -86,29 +122,14 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
             onClick={openDetails}
           />
           {/* Edit/delete float OUTSIDE the PosterCard (its root is a <button>;
-              nesting buttons is invalid HTML). Same hover-chip treatment as the
-              watchlist cards: always visible on touch, hover-revealed on md+. */}
+              nesting buttons is invalid HTML) on the dark badge fill, which is
+              the chip that reads over poster art. Always visible on touch,
+              hover-revealed on md+. No blur: one of these per grid cell. */}
           <div
-            className="absolute top-2 right-2 z-10 flex gap-1.5 bg-black/60 p-1 rounded-sm border border-[var(--border-subtle)] opacity-100 md:opacity-0 md:group-hover/poster:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200"
+            className="absolute top-2 right-2 z-10 flex gap-2 p-0.5 rounded-[var(--radius-pill)] bg-[var(--glass-badge)] shadow-[var(--glass-badge-edge)] opacity-100 md:opacity-0 md:group-hover/poster:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-              title="Edit entry"
-              aria-label="Edit entry"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-rust-400 hover:bg-rust-500/10 transition-all"
-              title="Delete entry"
-              aria-label="Delete entry"
-            >
-              {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-            </button>
+            {actions}
           </div>
         </div>
       ) : (
@@ -123,27 +144,10 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
           watchedAt={entry.watched_at}
           tmdbRating={tmdbRating}
           onClick={openDetails}
-          actions={
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowEditModal(true); }}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-all"
-                title="Edit entry"
-                aria-label="Edit entry"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-rust-400 hover:bg-rust-500/10 transition-all"
-                title="Delete entry"
-                aria-label="Delete entry"
-              >
-                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          }
+          /* Stacked, so the pair takes one 44px column: side by side they
+             squeezed the text column under the width of the rating control
+             and its clear button slid beneath the pencil. */
+          actions={<div className="flex flex-col items-center shrink-0">{actions}</div>}
         />
       )}
 
@@ -158,4 +162,3 @@ export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }:
     </SelectableOverlay>
   )
 }
-

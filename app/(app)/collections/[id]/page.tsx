@@ -1,10 +1,13 @@
 import type { Metadata } from 'next'
+import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { getCollectionDetails } from '@/lib/tmdb'
 import CollectionMovieCard from '@/components/CollectionMovieCard'
 import BackButton from '@/components/BackButton'
+import AmbientBackdrop from '@/components/AmbientBackdrop'
+import { SegmentedProgress } from '@/components/ui/SegmentedProgress'
 
 // getCollectionDetails is fetch-cached for 7 days, so this shares the page's
 // request rather than adding a second TMDB round-trip.
@@ -74,51 +77,90 @@ export default async function CollectionDetailPage({
   }).length
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* The page is about this franchise, so its backdrop tints the canvas. */}
+      <AmbientBackdrop src={collection.backdrop_url} />
+
       <BackButton label="Franchises" fallback="/collections" />
 
-      {/* Hero */}
-      <div className="relative rounded-[var(--radius-2xl)] overflow-hidden border border-white/5">
-        {collection.backdrop_url ? (
-          <Image
-            src={collection.backdrop_url}
-            alt={collection.name}
-            width={1280}
-            height={256}
-            sizes="100vw"
-            className="w-full h-48 sm:h-64 object-cover"
-          />
-        ) : (
-          <div className="w-full h-48 sm:h-64 bg-[var(--bg-void)]" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-void)] via-[var(--bg-void)]/60 to-transparent" />
-        <div className="absolute bottom-6 left-6 right-6 flex items-end gap-4">
-          {collection.poster_url && (
-            <Image
-              src={collection.poster_url}
-              alt={collection.name}
-              width={80}
-              height={120}
-              className="hidden sm:block w-20 h-auto rounded-xl border border-white/10 shadow-lg shrink-0"
-            />
+      {/* Header: the Home hero at a smaller scale. A glass frame around the
+          sharp backdrop, with the facts on a smoked slab over the art. Under
+          the content breakpoint the art sits above the slab instead. */}
+      <section aria-labelledby="collection-title" className="glass-panel glass-rim" style={{ padding: 8 }}>
+        <div
+          className="relative flex flex-col overflow-hidden rounded-[var(--radius-row)] md:block md:min-h-[280px]"
+          style={{ background: 'var(--bg-deep)' }}
+        >
+          {collection.backdrop_url && (
+            <div className="relative h-[200px] w-full md:absolute md:inset-0 md:h-auto">
+              <Image
+                src={collection.backdrop_url}
+                alt=""
+                aria-hidden="true"
+                fill
+                sizes="(max-width: 767px) 100vw, 1136px"
+                className="object-cover"
+                style={{ objectPosition: '50% 25%' }}
+              />
+            </div>
           )}
-          <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight drop-shadow-lg">
-              {collection.name}
-            </h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              {watchedCount} of {collection.parts.length} watched
-            </p>
+          <div className="glass-slab glass-rim relative z-[1] flex gap-5 rounded-none p-5 md:m-4 md:max-w-[560px] md:rounded-[var(--radius-slab)] md:p-6">
+            {collection.poster_url && (
+              <Image
+                src={collection.poster_url}
+                alt=""
+                aria-hidden="true"
+                width={96}
+                height={144}
+                className="hidden sm:block w-20 md:w-24 h-auto shrink-0 self-start rounded-[var(--radius-md)] object-cover"
+                style={{ boxShadow: 'var(--shadow-sm)' }}
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <h1
+                id="collection-title"
+                className="text-[length:var(--text-2xl)] leading-[30px] md:text-[length:var(--text-3xl)] md:leading-[34px]"
+                style={{
+                  margin: 0,
+                  fontWeight: 'var(--weight-heading)' as CSSProperties['fontWeight'],
+                  letterSpacing: 'var(--tracking-tight)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {collection.name}
+              </h1>
+              <p
+                className="tabular"
+                style={{
+                  margin: '6px 0 0',
+                  fontSize: 'var(--text-body)',
+                  lineHeight: '20px',
+                  fontWeight: 'var(--weight-semibold)' as CSSProperties['fontWeight'],
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {watchedCount} of {collection.parts.length} watched
+              </p>
+              {/* The line above already carries the count. */}
+              <SegmentedProgress
+                value={watchedCount}
+                max={collection.parts.length}
+                count={false}
+                aria-label={`${watchedCount} of ${collection.parts.length} films watched`}
+                style={{ marginTop: 10 }}
+              />
+              {collection.overview && (
+                <p style={{ margin: '14px 0 0', fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-secondary)' }}>
+                  {collection.overview}
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-
-      {collection.overview && (
-        <p className="text-sm text-zinc-400 leading-relaxed max-w-2xl">{collection.overview}</p>
-      )}
+      </section>
 
       {/* Movie grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {collection.parts.map(part => {
           const mediaId = tmdbIdToMediaId.get(part.tmdb_id)
           return (

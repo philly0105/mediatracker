@@ -3,12 +3,16 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import MediaCard from '@/components/MediaCard'
 import type { WatchEntry } from '@/types'
 import { Input } from '@/components/ui/Input'
-import { FilterPills } from '@/components/FilterPills'
-import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard, SearchX, SlidersHorizontal } from 'lucide-react'
+import { Select } from '@/components/ui/Select'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { Search, RefreshCw, Loader2, List, LayoutGrid, Clapperboard, SearchX, SlidersHorizontal, CheckSquare, X } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import LibraryFilterDrawer from '@/components/LibraryFilterDrawer'
 import { SectionError } from '@/components/ui/SectionError'
+import { useOptionalMultiSelect } from '@/components/MultiSelectProvider'
 import { sortWatchEntries, type WatchEntrySort } from '@/lib/watchEntrySort'
 import { matchesLibraryQuery } from '@/lib/matchesLibraryQuery'
 import {
@@ -77,6 +81,22 @@ const ratingOptions: { id: string; label: string }[] = [
 // from the URL while at their default so /movies stays /movies; `q` is the
 // free-text key (default '') and so gets its URL write debounced.
 const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', genre: 'All', decade: 'All', view: 'list' }
+
+// The grid/list toggle's segments: 36px inside the inset track, as in
+// SegmentedControl, so the pair clears the 44px target as one control.
+const VIEW_TOGGLE =
+  'flex items-center justify-center w-9 h-9 rounded-[var(--radius-thumb)] transition-colors duration-200'
+const VIEW_TOGGLE_ON =
+  'text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+const VIEW_TOGGLE_OFF =
+  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)]'
+
+// The poster wall: two across on a phone, three at the tablet breakpoint, five
+// or six on a wide desktop, with the gap opening from 16 to 24 past phones.
+const POSTER_GRID = 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6'
+// The row list: as many 320px-plus rows across as fit, never narrower than the
+// container.
+const ROW_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-3'
 
 export interface LibraryViewProps {
   initialEntries?: WatchEntry[]
@@ -154,6 +174,9 @@ export default function LibraryView({
 
   const { schedule, cancel } = useDeferredAction()
   const { toast } = useToast()
+  // The Select/Done pill sits in the toolbar beside the view toggle; null when
+  // rendered outside the provider, in which case the pill is simply absent.
+  const multiSelect = useOptionalMultiSelect()
 
   const fetchEntries = useCallback(
     async () => {
@@ -417,10 +440,23 @@ export default function LibraryView({
     return () => observer.disconnect()
   }, [hasMore])
 
+  // The narrowing filters that live in the drawer, surfaced as removable chips
+  // on the toolbar so you can see (and undo) what the drawer did without
+  // reopening it. The search text is not here: the field itself shows it.
+  const activeChips = [
+    genreFilter !== 'All' && { key: 'genre', label: genreFilter },
+    ratingFilter !== 'All' && {
+      key: 'rating',
+      label: ratingFilter === 'Unrated' ? 'Unrated' : `Rated ${ratingFilter}`,
+    },
+    decadeFilter !== 'All' && { key: 'decade', label: `${decadeFilter}s` },
+  ].filter((chip): chip is { key: string; label: string } => chip !== false)
+
   return (
     <div className="space-y-6">
-      {/* The filter bank is nine controls wide, so it gets its own row beneath
-          the title instead of competing with it for the header line. */}
+      {/* The filter bank is nine controls wide, so it gets its own glass
+          toolbar beneath the title instead of competing with it for the
+          header line. It is one of the page's few blurred surfaces. */}
       <div>
         <PageHeader
           eyebrow="Everything watched"
@@ -430,82 +466,120 @@ export default function LibraryView({
               ? `${filteredEntries.length} of ${entries.length} watched`
               : `${entries.length} watched`
           )}
-          selectable
         />
-        {/* The type pills must survive an empty result set: filtering to a type
-            with nothing in it would otherwise remove the only way back. */}
+        {/* The type control must survive an empty result set: filtering to a
+            type with nothing in it would otherwise remove the only way back. */}
         {!loading && (entries.length > 0 || typeFilter !== 'all') && (
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <FilterPills
-              options={[{ id: 'all', label: 'All' }, { id: 'movie', label: 'Movies' }, { id: 'show', label: 'Shows' }]}
-              active={typeFilter}
-              onSelect={(id) => setFilter('type', id)}
-            />
-            <button
-              type="button"
-              onClick={() => setFilterDrawerOpen(true)}
-              aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : 'Filters'}
-              className={`inline-flex items-center gap-2 px-3 py-2 rounded-sm font-semibold text-xs transition-all duration-300 whitespace-nowrap active:scale-95 ${
-                activeFilterCount > 0
-                  ? 'text-[var(--btn-primary-fg)] bg-[var(--accent)] border border-transparent shadow-md shadow-black/30'
-                  : 'text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold bg-black/25 text-inherit">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-            <div className="w-full sm:w-64">
-              <Input
-                icon={<Search className="w-4 h-4 text-zinc-500" />}
-                aria-label="Search your library"
-                placeholder="Search titles, director, cast..."
-                value={searchQuery}
-                onChange={(e) => setFilter('q', e.target.value)}
-                className="h-9 px-3 text-sm rounded-full bg-[var(--surface-shell)]/60 border-[var(--border-subtle)] focus:border-[var(--accent)]"
+          <div className="glass-panel glass-rim p-3 md:p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <SegmentedControl
+                label="Type"
+                options={[{ id: 'all', label: 'All' }, { id: 'movie', label: 'Movies' }, { id: 'show', label: 'Shows' }]}
+                value={typeFilter}
+                onChange={(id) => setFilter('type', id)}
               />
-            </div>
-            <div className="inline-flex p-1 rounded-sm bg-[var(--surface-input)] border border-[var(--border-subtle)] self-start">
-              <button
-                type="button"
-                onClick={() => setFilter('view', 'list')}
-                aria-label="List view"
-                aria-pressed={view === 'list'}
-                className={`p-1.5 rounded-sm transition-colors ${view === 'list' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white'}`}
+              {/* The search well takes the slack on wide toolbars and its own
+                  row on a phone, where nothing else fits beside it. */}
+              <div className="basis-full sm:basis-auto sm:flex-1 sm:min-w-[220px] sm:max-w-sm">
+                <Input
+                  icon={<Search />}
+                  aria-label="Search your library"
+                  placeholder="Search titles, director, cast..."
+                  value={searchQuery}
+                  onChange={(e) => setFilter('q', e.target.value)}
+                />
+              </div>
+              <Select
+                label="Sort by"
+                value={sortBy}
+                onChange={(e) => setFilter('sort', e.target.value)}
               >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilter('view', 'grid')}
-                aria-label="Grid view"
-                aria-pressed={view === 'grid'}
-                className={`p-1.5 rounded-sm transition-colors ${view === 'grid' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white'}`}
+                {sortOptions.map((o) => (
+                  <option key={o.id} value={o.id} className="bg-[var(--bg-void)]">
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setFilterDrawerOpen(true)}
+                aria-label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : 'Filters'}
               >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-            </div>
-            {/* Demoted to an icon now that the list refetches on focus — a
-                labelled "Refresh" in a filter row reads as an admission that
-                the page might be lying to you. */}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              aria-label={refreshing ? 'Refreshing library' : 'Refresh library'}
-              title="Refresh"
-              className="p-1.5 rounded-sm text-zinc-500 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
-            >
-              {refreshing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
+                <SlidersHorizontal className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                <span>Filters</span>
+              </Button>
+              {/* Two pressed buttons rather than a SegmentedControl: the pair
+                  is a layout switch, not a value, and aria-pressed is how it
+                  has always announced. The track and segments match the
+                  control's recipe so the two read as one family. */}
+              <div className="glass-inset inline-flex items-center gap-0.5 p-1">
+                <button
+                  type="button"
+                  onClick={() => setFilter('view', 'list')}
+                  aria-label="List view"
+                  aria-pressed={view === 'list'}
+                  className={`${VIEW_TOGGLE} ${view === 'list' ? VIEW_TOGGLE_ON : VIEW_TOGGLE_OFF}`}
+                >
+                  <List className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilter('view', 'grid')}
+                  aria-label="Grid view"
+                  aria-pressed={view === 'grid'}
+                  className={`${VIEW_TOGGLE} ${view === 'grid' ? VIEW_TOGGLE_ON : VIEW_TOGGLE_OFF}`}
+                >
+                  <LayoutGrid className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                </button>
+              </div>
+              {multiSelect && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={multiSelect.toggleSelectMode}
+                  // Accent while selecting: the pill is a current-state control then.
+                  style={multiSelect.isSelectMode ? { color: 'var(--accent)' } : undefined}
+                >
+                  <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                  <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+                </Button>
               )}
-            </button>
+              {/* Demoted to an icon now that the list refetches on focus — a
+                  labelled "Refresh" in a filter row reads as an admission that
+                  the page might be lying to you. */}
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                aria-label={refreshing ? 'Refreshing library' : 'Refresh library'}
+                title="Refresh"
+                className="inline-flex items-center justify-center w-11 h-11 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)] transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                {refreshing ? (
+                  <Loader2 className="w-[18px] h-[18px] animate-spin" strokeWidth={1.8} aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                )}
+              </button>
+            </div>
+            {activeChips.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                {activeChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    onClick={() => setFilter(chip.key, 'All')}
+                    aria-label={`Remove ${chip.label} filter`}
+                    className="glass-btn inline-flex items-center gap-2 min-h-11 pl-3 pr-2.5 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-semibold text-[var(--text-primary)] whitespace-nowrap forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]"
+                  >
+                    <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                    <span>{chip.label}</span>
+                    <X className="w-4 h-4 text-[var(--text-secondary)]" strokeWidth={1.8} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -538,18 +612,32 @@ export default function LibraryView({
           message="We couldn't fetch your library entries. Check your connection and try again."
         />
       ) : loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-32 rounded-[var(--radius-md)] bg-white/5 border border-white/10 animate-pulse"
-            />
-          ))}
-        </div>
+        // Placeholders in the shape the layout will take, so the swap to real
+        // rows or posters does not reflow the page.
+        view === 'grid' ? (
+          <div className={POSTER_GRID}>
+            {Array.from({ length: 10 }, (_, i) => (
+              <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-lg)]" />
+            ))}
+          </div>
+        ) : (
+          <div className={ROW_GRID}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="glass-row hover:bg-[var(--glass-card)] flex gap-4 p-3">
+                <Skeleton className="w-16 h-24 shrink-0 rounded-[var(--radius-md)]" />
+                <div className="flex-1 space-y-3 py-1">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-1/4" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : (
         <>
           {view === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className={POSTER_GRID}>
               {visibleEntries.map((entry) => (
                 <MediaCard
                   key={entry.id}
@@ -561,7 +649,7 @@ export default function LibraryView({
               ))}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
+            <div className={ROW_GRID}>
               {visibleEntries.map((entry) => (
                 <MediaCard
                   key={entry.id}
@@ -574,7 +662,7 @@ export default function LibraryView({
           )}
           {hasMore && (
             <div ref={sentinelRef} className="h-20 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
+              <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" strokeWidth={1.8} aria-hidden="true" />
             </div>
           )}
           {entries.length === 0 && (

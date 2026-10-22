@@ -258,14 +258,17 @@ alter table media add column if not exists logo_url text;
 ## Task 10: Library and grid pages
 **Files:** `components/{LibraryView,LibraryFilterDrawer,FilterPills,SelectableOverlay,MediaCard,CollectionMovieCard,PopularCollectionsFeed}.tsx`, `components/ui/ClearFilters.tsx`, `app/(app)/{library,watchlist,collections,collections/[id],recommendations,streaming,search}/page.tsx`, `components/SearchOverlay.tsx`
 
-- [ ] A toolbar `.glass-panel` holding search-within (`.glass-inset`), type `SegmentedControl`, sort `Select`, filter chips (active chips = `rgba(255,255,255,.16)` + an accent dot, with a remove ×), the grid/list toggle and a Select button for multi-select.
-- [ ] Grid: `PosterCard`s, 5–6 columns at 1440, 3 at 768 and 2 at 390, gap 24 or 16. **No blur on cards.** List view: `MediaRow`s.
-- [ ] `LibraryFilterDrawer` becomes a glass side sheet, or a bottom sheet under `md`.
-- [ ] Watchlist: priority `SegmentedControl` (Must watch / Want to watch / Someday) + grid.
-- [ ] `SearchOverlay`: a centred `.glass-panel` (max-width 720, radius 28), input `.glass-inset` 52px, result rows `.glass-row` with poster thumbs, keyboard selection highlighted with `rgba(255,255,255,.12)` + accent ring.
-- [ ] Ambient on these pages = the most recently watched title.
+- [x] A toolbar `.glass-panel` holding search-within (`.glass-inset`), type `SegmentedControl`, sort `Select`, filter chips (active chips = `rgba(255,255,255,.16)` + an accent dot, with a remove ×), the grid/list toggle and a Select button for multi-select.
+  - The type filter is a `SegmentedControl`, active genre, rating and decade filters are removable chips, and Select moved from the page header into the toolbar on Library, Watchlist, Recommendations and Streaming. The Filters button keeps its count in its accessible name.
+- [x] Grid: `PosterCard`s, 5–6 columns at 1440, 3 at 768 and 2 at 390, gap 24 or 16. **No blur on cards.** List view: `MediaRow`s.
+- [x] `LibraryFilterDrawer` becomes a glass side sheet, or a bottom sheet under `md`.
+- [x] Watchlist: priority `SegmentedControl` (Must watch / Want to watch / Someday) + grid.
+  - The priority groups are now tabs, so the page opens on the first group that has titles.
+- [x] `SearchOverlay`: a centred `.glass-panel` (max-width 720, radius 28), input `.glass-inset` 52px, result rows `.glass-row` with poster thumbs, keyboard selection highlighted with `rgba(255,255,255,.12)` + accent ring.
+- [x] Ambient on these pages = the most recently watched title.
 - [ ] Profile `/library` scroll with 4× CPU throttle against the baseline; there must be no new long tasks.
-- [ ] Verify, then commit: `style(library): spatial-glass grids, toolbar and search overlay`
+  - Deferred to the Task 14 performance pass.
+- [x] Verify, then commit: `style(library): spatial-glass grids, toolbar and search overlay`
 
 ## Task 11: Calendar and Stats
 **Files:** `components/{CalendarClient,StatsCharts,DeferredStatsCharts}.tsx`, `app/(app)/{calendar,stats}/page.tsx`
