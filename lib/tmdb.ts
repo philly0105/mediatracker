@@ -221,6 +221,35 @@ export interface TmdbFullDetails {
   belongs_to_collection?: { id: number; name: string } | null
   watch_providers?: TmdbWatchProviders | null
   vote_average?: number
+  backdrop_url: string | null
+  // Only the full payload carries `images`, so this is always null when
+  // append is false.
+  logo_url: string | null
+}
+
+// One entry of the `images.logos` array from the details append.
+export type TmdbLogo = {
+  file_path?: string | null
+  iso_639_1?: string | null
+  vote_average?: number | null
+  width?: number | null
+}
+
+// The title logo the hero uses in place of the title text. The request already
+// limits logos to English and language-less ones; English wins because TMDB
+// leaves the language off logos that have no text, which would hide the title.
+// Then the community's top-voted, then the widest (the most detail to scale
+// down). Some logos are stored as SVG, which TMDB doesn't resize, but it keeps a
+// PNG of each under the same name, so the extension is swapped to get w500.
+export function pickLogo(logos: TmdbLogo[] | null | undefined): string | null {
+  const best = (logos ?? [])
+    .filter((logo): logo is TmdbLogo & { file_path: string } => typeof logo.file_path === 'string' && logo.file_path !== '')
+    .sort((a, b) =>
+      Number(b.iso_639_1 === 'en') - Number(a.iso_639_1 === 'en') ||
+      (b.vote_average ?? 0) - (a.vote_average ?? 0) ||
+      (b.width ?? 0) - (a.width ?? 0)
+    )[0]
+  return best ? `${IMG}${best.file_path.replace(/\.svg$/i, '.png')}` : null
 }
 
 export type StreamingSort = 'popular' | 'rating' | 'latest'
@@ -260,12 +289,22 @@ export async function fetchTmdbDetails(
   // Cheap callers (e.g. /api/tmdb/rating, which only needs vote_average) can opt out of
   // the heavy append_to_response payload (full credits, trailers, providers, external_ids).
   const params: Record<string, string> = {}
-  if (append) params.append_to_response = 'credits,videos,watch/providers,external_ids'
+  if (append) {
+    params.append_to_response = 'credits,videos,watch/providers,external_ids,images'
+    // `images` is only here for the logo. Without a language filter it carries
+    // every language's posters and backdrops too; English plus language-less is
+    // all pickLogo will consider.
+    params.include_image_language = 'en,null'
+  }
   const res = await fetchTmdb(apiUrl(endpoint, params), CACHE_7D)
   if (!res.ok) throw new Error(`TMDB details failed: ${res.status}`)
   const d = await res.json()
 
+  // backdrop_path is on the base payload, so the cheap path still gets it.
+  const backdrop_url: string | null = d.backdrop_path ? `${BACKDROP}${d.backdrop_path}` : null
+
   // These fields only exist in the append_to_response payload; stay safe when append=false
+  const logo_url = append ? pickLogo(d.images?.logos) : null
   const trailerKey = append ? d.videos?.results?.find((v: TmdbVideo) => v.type === 'Trailer' && v.site === 'YouTube')?.key : undefined
   const trailer_url = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null
 
@@ -296,6 +335,8 @@ export async function fetchTmdbDetails(
         : null,
       watch_providers,
       vote_average: d.vote_average,
+      backdrop_url,
+      logo_url,
     }
   } else {
     return {
@@ -320,6 +361,8 @@ export async function fetchTmdbDetails(
       trailer_url,
       watch_providers,
       vote_average: d.vote_average,
+      backdrop_url,
+      logo_url,
     }
   }
 }

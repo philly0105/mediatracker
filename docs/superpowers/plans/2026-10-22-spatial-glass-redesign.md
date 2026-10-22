@@ -39,29 +39,29 @@
 - Copy to: `app/styles/design-system/tokens/` (byte-identical)
 - Test: `app/styles/design-system/__tests__/designSystemSync.test.ts`
 
-- [ ] In `colors.css`, apply every row of spec §5.1's table: canvas, glass surfaces, cool zinc ramp, text ramp, borders, accent and gold ramps (green, teal and rust alias to aqua; amber to gold), tints, buttons and scrim. Keep every existing name. Add the new tokens (`--accent-tint`, `--accent-ring`, `--rating-empty`, `--ink`, `--glass-fallback`, `--glass-rim`). Rewrite the header comment to describe Spatial Glass.
-- [ ] In `effects.css`, set the radii (`sm 8, md 14, lg 16, xl 14, 2xl 28`), blur (`12/24/40/80`), shadows (§4.3) and glows. Add `--glass-blur: 40px`, `--glass-saturate: 160%`, `--ambient-blur: 80px`, `--ambient-saturate: 1.3`. Keep `/* @kind other */` annotations where they exist.
-- [ ] In `typography.css`, set `--font-sans` to `var(--font-inter), 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif` and update the role tokens to the §4.2 table (`--font-display` → 650 28px/34px, etc.).
-- [ ] In `spacing.css`, set `--sidebar-width: 232px`, add `--rail-width: 76px` and `--shell-pad: 24px`, and set `--content-max: 1440px`.
-- [ ] In `fonts.css`, swap the Outfit `@import` for `Inter:opsz,wght@14..32,400..700`. In `textures.css`, set `--grain-opacity: 0`.
-- [ ] Copy all changed files into `app/styles/design-system/tokens/` and confirm `designSystemSync.test.ts` passes.
-- [ ] Verify, then commit: `style(tokens): retune design tokens to spatial glass`
+- [x] In `colors.css`, apply every row of spec §5.1's table: canvas, glass surfaces, cool zinc ramp, text ramp, borders, accent and gold ramps (green, teal and rust alias to aqua; amber to gold), tints, buttons and scrim. Keep every existing name. Add the new tokens (`--accent-tint`, `--accent-ring`, `--rating-empty`, `--ink`, `--glass-fallback`, `--glass-rim`). Rewrite the header comment to describe Spatial Glass.
+- [x] In `effects.css`, set the radii (`sm 8, md 14, lg 16, xl 14, 2xl 28`), blur (`12/24/40/80`), shadows (§4.3) and glows. Add `--glass-blur: 40px`, `--glass-saturate: 160%`, `--ambient-blur: 80px`, `--ambient-saturate: 1.3`. Keep `/* @kind other */` annotations where they exist.
+- [x] In `typography.css`, set `--font-sans` to `var(--font-inter), 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif` and update the role tokens to the §4.2 table (`--font-display` → 650 28px/34px, etc.).
+- [x] In `spacing.css`, set `--sidebar-width: 232px`, add `--rail-width: 76px` and `--shell-pad: 24px`, and set `--content-max: 1440px`.
+- [x] In `fonts.css`, swap the Outfit `@import` for `Inter:opsz,wght@14..32,400..700`. In `textures.css`, set `--grain-opacity: 0`.
+- [x] Copy all changed files into `app/styles/design-system/tokens/` and confirm `designSystemSync.test.ts` passes.
+- [x] Verify, then commit: `style(tokens): retune design tokens to spatial glass`
 
 ## Task 2: Font and metadata colours
 **Files:** `app/layout.tsx`, `app/manifest.ts`, `app/icon.tsx`, `app/apple-icon.tsx`, every `opengraph-image.tsx`
 
-- [ ] Replace `Outfit` with `Inter({ subsets: ['latin'], axes: ['opsz'], variable: '--font-inter', display: 'swap' })`, apply `inter.variable` and `inter.className` on `<body>`, and add `font-optical-sizing: auto` to the body rule in `globals.css`. Check the `next/font` docs in `node_modules/next/dist/docs/` for the axes syntax.
-- [ ] `viewport.themeColor` → `#061015`; manifest `background_color` and `theme_color` → `#061015`.
-- [ ] Icons and OG images: canvas `#061015`, mark `#EAF6F9` rounded square with an `#08161C` "D" (copy the SVG from the reference sidebar), text `#F3F8FA`, accent `#8FE3F0`.
-- [ ] Verify, then commit: `style: switch to Inter and spatial-glass metadata colours`
+- [x] Replace `Outfit` with `Inter({ subsets: ['latin'], axes: ['opsz'], variable: '--font-inter', display: 'swap' })`, apply `inter.variable` and `inter.className` on `<body>`, and add `font-optical-sizing: auto` to the body rule in `globals.css`. Check the `next/font` docs in `node_modules/next/dist/docs/` for the axes syntax.
+- [x] `viewport.themeColor` → `#061015`; manifest `background_color` and `theme_color` → `#061015`.
+- [x] Icons and OG images: canvas `#061015`, mark `#EAF6F9` rounded square with an `#08161C` "D" (copy the SVG from the reference sidebar), text `#F3F8FA`, accent `#8FE3F0`.
+- [x] Verify, then commit: `style: switch to Inter and spatial-glass metadata colours`
 
 ## Task 3: Global CSS (Tailwind bridge, glass utilities, ambient base)
 **Files:** `app/globals.css`
 
-- [ ] Keep the `@theme inline` bridge; it now resolves to the cool ramp automatically. Change `--color-white: var(--zinc-100)` (now `#F3F8FA`, still correct). Map the green, teal, amber and rust bridges to the aqua and gold ramps (spec §5.1).
-- [ ] `body`: `background-color: var(--surface-page); color: var(--text-primary); font-size: 15px; line-height: 22px; letter-spacing: -0.006em; -webkit-font-smoothing: antialiased`.
-- [ ] Delete the `body::after` grain rule and the gradient `.ambient-layer` rule; Task 4 replaces them. Keep the comment explaining why nothing is pinned with `background-attachment: fixed`.
-- [ ] Replace `.glass-panel` and `.glass-card` and add the other tiers:
+- [x] Keep the `@theme inline` bridge; it now resolves to the cool ramp automatically. Change `--color-white: var(--zinc-100)` (now `#F3F8FA`, still correct). Map the green, teal, amber and rust bridges to the aqua and gold ramps (spec §5.1).
+- [x] `body`: `background-color: var(--surface-page); color: var(--text-primary); font-size: 15px; line-height: 22px; letter-spacing: -0.006em; -webkit-font-smoothing: antialiased`.
+- [x] Delete the `body::after` grain rule and the gradient `.ambient-layer` rule; Task 4 replaces them. Keep the comment explaining why nothing is pinned with `background-attachment: fixed`.
+- [x] Replace `.glass-panel` and `.glass-card` and add the other tiers:
 
 ```css
 .glass-rim { position: relative; }
@@ -119,8 +119,8 @@
   .glass-panel, .glass-slab, .glass-row, .glass-inset, .glass-btn, .glass-card { border: 1px solid CanvasText; }
 }
 ```
-- [ ] Grep for leftover literals: `rg -n "#100e09|#15120c|#1b1711|#7c9a6a|#c4805f|#d3a85c|Outfit" app components lib`. Replace each with the matching token.
-- [ ] Verify, then commit: `style: glass utility tiers and cool tailwind bridge`
+- [x] Grep for leftover literals: `rg -n "#100e09|#15120c|#1b1711|#7c9a6a|#c4805f|#d3a85c|Outfit" app components lib`. Replace each with the matching token.
+- [x] Verify, then commit: `style: glass utility tiers and cool tailwind bridge`
 
 ## Task 4: AmbientBackdrop
 **Files:**
@@ -128,7 +128,7 @@
 - Modify: `app/layout.tsx`, `app/(app)/layout.tsx`
 - Test: `components/__tests__/AmbientBackdrop.test.tsx`
 
-- [ ] Create the component:
+- [x] Create the component:
 
 ```tsx
 'use client'
@@ -169,11 +169,12 @@ export default function AmbientBackdrop({ src }: { src?: string | null }) {
   )
 }
 ```
-- [ ] In `globals.css`, add `@media (prefers-reduced-transparency: reduce) { .ambient-img { display: none } }` and `@media (prefers-reduced-motion: reduce) { .ambient-img { transition: none } }`.
-- [ ] `app/layout.tsx`: replace `<div className="ambient-layer" />` with a default `<AmbientBackdrop />` (tint only, with a faint aqua radial: `radial-gradient(1200px 600px at 20% -10%, rgba(143,227,240,.10), transparent 60%)` on the tint div when `src` is empty).
+- [x] In `globals.css`, add `@media (prefers-reduced-transparency: reduce) { .ambient-img { display: none } }` and `@media (prefers-reduced-motion: reduce) { .ambient-img { transition: none } }`.
+- [x] `app/layout.tsx`: replace `<div className="ambient-layer" />` with a default `<AmbientBackdrop />` (tint only, with a faint aqua radial: `radial-gradient(1200px 600px at 20% -10%, rgba(143,227,240,.10), transparent 60%)` on the tint div when `src` is empty).
 - [ ] Pages pass their featured art: Home → the first continue-watching show's backdrop; title page and modal → that title's backdrop; library-type pages → the most recently watched title. Render `<AmbientBackdrop src=… />` at the top of the page; it stacks above the default.
-- [ ] Test `toAmbientSrc` (`w1280` → `w780`, `original` → `w780`, `null` → `null`) and that the image is `aria-hidden` with `alt=""`.
-- [ ] Verify, then commit: `feat: ambient backdrop layer that follows the featured title`
+  - Library-type pages get the most recent watch from `components/RecentAmbient.tsx`, mounted in `app/(app)/layout.tsx`. Home and the title page wire theirs in Tasks 8 and 9.
+- [x] Test `toAmbientSrc` (`w1280` → `w780`, `original` → `w780`, `null` → `null`) and that the image is `aria-hidden` with `alt=""`.
+- [x] Verify, then commit: `feat: ambient backdrop layer that follows the featured title`
 
 ## Task 5: Data — backdrop and logo on media
 **Files:**
@@ -181,20 +182,22 @@ export default function AmbientBackdrop({ src }: { src?: string | null }) {
 - Modify: `lib/tmdb.ts`, `lib/media.ts` (and any other `from('media')` insert/upsert sites: grep for them), `types/index.ts`
 - Test: `lib/__tests__/tmdb.test.ts`
 
-- [ ] Migration:
+- [x] Migration:
 ```sql
 -- Artwork the Spatial Glass design renders: a backdrop for the ambient layer and
 -- hero, and the transparent title logo used as the hero title treatment.
 alter table media add column if not exists backdrop_url text;
 alter table media add column if not exists logo_url text;
 ```
-- [ ] `lib/tmdb.ts`: when `append` is true, extend `append_to_response` with `images` and pass `include_image_language: 'en,null'`. Add and export a pure `pickLogo(logos)`: prefer `iso_639_1 === 'en'`, then the highest `vote_average`, then the widest; return a `w500` URL or `null`. Return `logo_url` alongside the existing `backdrop_url`.
-- [ ] Unit-test `pickLogo` (prefers English, highest vote, `null` when empty) and that details mapping returns `logo_url`.
-- [ ] `lib/media.ts` (and every other media upsert site): write `backdrop_url` and `logo_url` when present. Hook into the existing metadata refresh (migration 013 `metadata_refreshed_at`) so old rows fill in lazily.
-- [ ] Backfill route following the `backfill-vote-average` pattern (admin-guarded, batched, idempotent).
-- [ ] Add both fields to the `Media` types and the dashboard, library and detail selects that need them.
+- [x] `lib/tmdb.ts`: when `append` is true, extend `append_to_response` with `images` and pass `include_image_language: 'en,null'`. Add and export a pure `pickLogo(logos)`: prefer `iso_639_1 === 'en'`, then the highest `vote_average`, then the widest; return a `w500` URL or `null`. Return `logo_url` alongside the existing `backdrop_url`.
+- [x] Unit-test `pickLogo` (prefers English, highest vote, `null` when empty) and that details mapping returns `logo_url`.
+- [x] `lib/media.ts` (and every other media upsert site): write `backdrop_url` and `logo_url` when present. Hook into the existing metadata refresh (migration 013 `metadata_refreshed_at`) so old rows fill in lazily.
+- [x] Backfill route following the `backfill-vote-average` pattern (admin-guarded, batched, idempotent).
+- [x] Add both fields to the `Media` types and the dashboard, library and detail selects that need them.
+  - Pages read the art through `fetchMediaArt` (`lib/mediaArt.ts`), a separate query, rather than in their main selects, so a database without 014 still serves those pages. The show page already selects `*`.
 - [ ] **Stop and ask Richard** to apply `014_media_art.sql` (Supabase SQL editor or `supabase db push`) and run the backfill once.
-- [ ] Verify, then commit: `feat(data): store backdrop and logo urls for media`
+  - Deferred to the Task 14 handback: Richard asked for the redesign to run through without stopping. Until 014 is applied, the art reads come back empty (`lib/mediaArt.ts`, `RecentAmbient`) and `upsertMedia` falls back to the 013 columns, so nothing breaks.
+- [x] Verify, then commit: `feat(data): store backdrop and logo urls for media`
 
 ## Task 6: Shell (sidebar, rail, mobile bars, page frame)
 **Files:** `components/Sidebar.tsx`, `components/ui/NavItem.tsx`, `app/(app)/layout.tsx`, `components/ui/Avatar.tsx`, `components/ui/Kbd.tsx`

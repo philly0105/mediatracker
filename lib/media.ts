@@ -78,19 +78,31 @@ export async function upsertMedia(
     optionalFields.vote_average = details.vote_average
   }
 
-  let { data: media, error } = await supabase
-    .from('media')
-    .upsert({ ...mediaRow, ...optionalFields }, { onConflict: 'tmdb_id,type' })
-    .select()
-    .single()
+  // Artwork lives in migration 014. This refresh is also how rows that predate
+  // it get their art: once metadata_refreshed_at goes stale, the next write
+  // lands here. Each key is only sent when TMDB has a value, because an upsert
+  // updates just the columns it is given, and a title whose logo TMDB has since
+  // pulled should keep the one it had rather than lose it.
+  const artFields: Record<string, unknown> = {}
+  if (details.backdrop_url) artFields.backdrop_url = details.backdrop_url
+  if (details.logo_url) artFields.logo_url = details.logo_url
 
+  const upsertRow = (row: Record<string, unknown>) =>
+    supabase.from('media').upsert(row, { onConflict: 'tmdb_id,type' }).select().single()
   // PGRST204 = column not found in schema cache; 42703 = undefined_column.
-  if (error && (error.code === 'PGRST204' || error.code === '42703')) {
-    ;({ data: media, error } = await supabase
-      .from('media')
-      .upsert(mediaRow, { onConflict: 'tmdb_id,type' })
-      .select()
-      .single())
+  const isMissingColumn = (err: { code?: string } | null) =>
+    err?.code === 'PGRST204' || err?.code === '42703'
+
+  let { data: media, error } = await upsertRow({ ...mediaRow, ...optionalFields, ...artFields })
+
+  // Step down one migration at a time. Dropping straight to the base row when
+  // only 014 is missing would also stop writing vote_average and
+  // metadata_refreshed_at, and without the latter every write re-fetches TMDB.
+  if (error && isMissingColumn(error) && Object.keys(artFields).length > 0) {
+    ;({ data: media, error } = await upsertRow({ ...mediaRow, ...optionalFields }))
+  }
+  if (error && isMissingColumn(error)) {
+    ;({ data: media, error } = await upsertRow(mediaRow))
   }
 
   if (error) throw new Error(`Failed to upsert media: ${error.message}`)

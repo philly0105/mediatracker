@@ -16,6 +16,10 @@ export interface Media {
   cast_members: string[]
   collection_id: number | null
   collection_name: string | null
+  // Migration 014. Optional because most selects name their columns and leave
+  // these out, and rows read before 014 is applied don't have them at all.
+  backdrop_url?: string | null
+  logo_url?: string | null
 }
 
 export interface Season {

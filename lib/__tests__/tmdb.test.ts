@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes } from '@/lib/tmdb'
+import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes, pickLogo } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -173,6 +173,113 @@ describe('fetchTmdbDetails', () => {
       trailer_url: null,
       watch_providers: null,
     })
+  })
+
+  it('asks for images in English and no language alongside the other appends', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 550, title: 'Fight Club', genres: [], credits: { crew: [], cast: [] } }),
+    })
+    await fetchTmdbDetails(550, 'movie')
+    const url = new URL(mockFetch.mock.calls[0][0])
+    expect(url.searchParams.get('append_to_response')?.split(',')).toContain('images')
+    expect(url.searchParams.get('include_image_language')).toBe('en,null')
+  })
+
+  it('maps backdrop_url and logo_url for a movie', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', genres: [], credits: { crew: [], cast: [] },
+        backdrop_path: '/backdrop.jpg',
+        images: { logos: [{ file_path: '/logo.png', iso_639_1: 'en', vote_average: 5.3, width: 800 }] },
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie')
+    expect(details.backdrop_url).toBe('https://image.tmdb.org/t/p/w1280/backdrop.jpg')
+    expect(details.logo_url).toBe('https://image.tmdb.org/t/p/w500/logo.png')
+  })
+
+  it('maps backdrop_url and logo_url for a show', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 95396, name: 'Severance', genres: [], seasons: [], credits: { cast: [] },
+        backdrop_path: '/sev-backdrop.jpg',
+        images: { logos: [{ file_path: '/sev-logo.svg', iso_639_1: 'en', vote_average: 5.4, width: 1200 }] },
+      }),
+    })
+    const details = await fetchTmdbDetails(95396, 'show')
+    expect(details.backdrop_url).toBe('https://image.tmdb.org/t/p/w1280/sev-backdrop.jpg')
+    expect(details.logo_url).toBe('https://image.tmdb.org/t/p/w500/sev-logo.png')
+  })
+
+  it('returns null art when TMDB has none', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', genres: [], credits: { crew: [], cast: [] },
+        backdrop_path: null, images: { logos: [] },
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie')
+    expect(details.backdrop_url).toBeNull()
+    expect(details.logo_url).toBeNull()
+  })
+
+  it('keeps the backdrop but has no logo on the cheap path', async () => {
+    // backdrop_path is on the base payload; images only comes with the append.
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 550, title: 'Fight Club', genres: [], backdrop_path: '/backdrop.jpg',
+        images: { logos: [{ file_path: '/logo.png', iso_639_1: 'en' }] },
+      }),
+    })
+    const details = await fetchTmdbDetails(550, 'movie', false)
+    expect(new URL(mockFetch.mock.calls[0][0]).searchParams.has('include_image_language')).toBe(false)
+    expect(details.backdrop_url).toBe('https://image.tmdb.org/t/p/w1280/backdrop.jpg')
+    expect(details.logo_url).toBeNull()
+  })
+})
+
+describe('pickLogo', () => {
+  it('prefers an English logo over a better-voted language-less one', () => {
+    expect(pickLogo([
+      { file_path: '/mark.png', iso_639_1: null, vote_average: 9, width: 2000 },
+      { file_path: '/title.png', iso_639_1: 'en', vote_average: 1, width: 300 },
+    ])).toBe('https://image.tmdb.org/t/p/w500/title.png')
+  })
+
+  it('takes the highest-voted English logo', () => {
+    expect(pickLogo([
+      { file_path: '/low.png', iso_639_1: 'en', vote_average: 3.2, width: 2000 },
+      { file_path: '/high.png', iso_639_1: 'en', vote_average: 5.6, width: 500 },
+    ])).toBe('https://image.tmdb.org/t/p/w500/high.png')
+  })
+
+  it('breaks a vote tie on width', () => {
+    expect(pickLogo([
+      { file_path: '/narrow.png', iso_639_1: 'en', vote_average: 5, width: 400 },
+      { file_path: '/wide.png', iso_639_1: 'en', vote_average: 5, width: 1600 },
+    ])).toBe('https://image.tmdb.org/t/p/w500/wide.png')
+  })
+
+  it('falls back to a language-less logo when there is no English one', () => {
+    expect(pickLogo([{ file_path: '/mark.png', iso_639_1: null, vote_average: 5, width: 800 }]))
+      .toBe('https://image.tmdb.org/t/p/w500/mark.png')
+  })
+
+  it('asks for the PNG of an SVG logo, since TMDB only resizes PNGs', () => {
+    expect(pickLogo([{ file_path: '/vector.svg', iso_639_1: 'en' }]))
+      .toBe('https://image.tmdb.org/t/p/w500/vector.png')
+  })
+
+  it('returns null when there is nothing usable', () => {
+    expect(pickLogo([])).toBeNull()
+    expect(pickLogo(undefined)).toBeNull()
+    expect(pickLogo(null)).toBeNull()
+    expect(pickLogo([{ file_path: '', iso_639_1: 'en' }, { file_path: null, iso_639_1: 'en' }])).toBeNull()
   })
 })
 
