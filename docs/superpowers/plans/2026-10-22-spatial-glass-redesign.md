@@ -315,5 +315,7 @@ alter table media add column if not exists logo_url text;
   - The only hits are `app/__tests__/palette.test.ts`, the guard test that fails if any of these come back.
 - [x] `npm run lint && npm run test:run && npm run build` all green.
   - On gmk1 with the final tree: lint clean, 92 files and 753 tests passing in four runs in a row, the build and `tsc --noEmit` clean. `1ebeb76` fixed a race in the LibraryView infinite-scroll test (it fired the observer before the effect had made it), which had failed two of four full runs.
-- [ ] Push the branch and open a PR titled "Spatial Glass redesign" with before and after screenshots. Vercel builds a preview for Richard to check on his phone.
-- [ ] Hand back to Richard: preview URL, the migration and backfill status, and any deviations from the spec with the reasons.
+- [x] Push the branch and open a PR titled "Spatial Glass redesign" with before and after screenshots. Vercel builds a preview for Richard to check on his phone.
+  - Asked before pushing, Richard chose to push straight to master instead of a PR: `master` was fast-forwarded to `eff779b` on 2026-10-22, so Vercel deployed production (dorfmovies.vercel.app) rather than a preview. The PR description draft (before and after shots, Lighthouse table, deviations) went into the handback instead.
+- [x] Hand back to Richard: preview URL, the migration and backfill status, and any deviations from the spec with the reasons.
+  - Handed back in the session and on the Notion task "Spatial Glass visual redesign (DorfMovies)" (Needs review). Migration 014 is not applied and the backfill has not run; both wait on Richard.
