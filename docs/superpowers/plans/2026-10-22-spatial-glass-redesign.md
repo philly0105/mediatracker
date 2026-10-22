@@ -203,14 +203,16 @@ alter table media add column if not exists logo_url text;
 ## Task 6: Shell (sidebar, rail, mobile bars, page frame)
 **Files:** `components/Sidebar.tsx`, `components/ui/NavItem.tsx`, `app/(app)/layout.tsx`, `components/ui/Avatar.tsx`, `components/ui/Kbd.tsx`
 
-- [ ] `(app)/layout.tsx`: shell wrapper `max-w-[1720px] mx-auto p-6 gap-6 flex` (on `lg`). Main content `flex-1 min-w-0`. Remove the old `md:pl-[calc(var(--sidebar-width)+2rem)]` offset for `lg`; the sidebar is now in flow (sticky), not fixed. Keep the existing mobile top and bottom paddings below `md`.
-- [ ] `lg` and up: sidebar as `<aside className="glass-panel glass-rim">`, 232px wide, `align-self: stretch`, inner content `sticky top-6`. Order: wordmark (SVG mark from the reference + "DorfMovies" 17/22/650 -0.02em), search field (`.glass-inset`, 44px, magnifier icon, ⌘K `Kbd`; clicking opens the existing SearchOverlay, which stays the single search), nav list, a "Must watch" mini-list (top 5 must-watch posters, 24×36 radius 4, count right-aligned; data from the existing watchlist counts query, or omit if it needs a new query), then Settings at the bottom.
-- [ ] `md` to `lg`: compact rail, 76px wide (`--rail-width`), icon above a 11px label, same glass.
-- [ ] Under `md`: keep the current top bar, bottom tab bar and More drawer markup and behaviour. Swap the surfaces to `.glass-panel` with blur 24 (radius 0 for the bars; the drawer sheet gets radius 28 on top) and update item states.
-- [ ] `NavItem`: 44px tall, radius 14, gap 12, icon 20 and stroke 1.8; active `rgba(255,255,255,.15)` + `inset 0 1px 0 rgba(255,255,255,.14)`; hover `.08`; text 14/20/500 (600 when active). Keep `aria-current` and update `NavItem.test.tsx` assertions to the new classes.
-- [ ] `Avatar` and `Kbd`: per spec §5.5. Update `Kbd.test.tsx` if it asserts classes.
-- [ ] Check at 1440, 1100, 900, 768 and 390.
-- [ ] Verify, then commit: `style(shell): glass sidebar, compact rail and glass mobile bars`
+- [x] `(app)/layout.tsx`: shell wrapper `max-w-[1720px] mx-auto p-6 gap-6 flex` (on `lg`). Main content `flex-1 min-w-0`. Remove the old `md:pl-[calc(var(--sidebar-width)+2rem)]` offset for `lg`; the sidebar is now in flow (sticky), not fixed. Keep the existing mobile top and bottom paddings below `md`.
+- [x] `lg` and up: sidebar as `<aside className="glass-panel glass-rim">`, 232px wide, `align-self: stretch`, inner content `sticky top-6`. Order: wordmark (SVG mark from the reference + "DorfMovies" 17/22/650 -0.02em), search field (`.glass-inset`, 44px, magnifier icon, ⌘K `Kbd`; clicking opens the existing SearchOverlay, which stays the single search), nav list, a "Must watch" mini-list (top 5 must-watch posters, 24×36 radius 4, count right-aligned; data from the existing watchlist counts query, or omit if it needs a new query), then Settings at the bottom.
+  - The Must watch list needed its own query (`components/SidebarMustWatch.tsx`: one `watchlist_items` read, five rows plus the count). It streams in through Suspense and renders nothing on error, and the spec lists it in §5.4, so it stayed. Items open the media modal with the watchlist page's handlers.
+  - Nav labels keep the current copy (Dashboard, Recommendations); spec §1 keeps copy as is, so §5.4's list is read as the order only. In the rail, "Recommendations" breaks at a soft hyphen.
+- [x] `md` to `lg`: compact rail, 76px wide (`--rail-width`), icon above a 11px label, same glass.
+- [x] Under `md`: keep the current top bar, bottom tab bar and More drawer markup and behaviour. Swap the surfaces to `.glass-panel` with blur 24 (radius 0 for the bars; the drawer sheet gets radius 28 on top) and update item states.
+- [x] `NavItem`: 44px tall, radius 14, gap 12, icon 20 and stroke 1.8; active `rgba(255,255,255,.15)` + `inset 0 1px 0 rgba(255,255,255,.14)`; hover `.08`; text 14/20/500 (600 when active). Keep `aria-current` and update `NavItem.test.tsx` assertions to the new classes.
+- [x] `Avatar` and `Kbd`: per spec §5.5. Update `Kbd.test.tsx` if it asserts classes.
+- [x] Check at 1440, 1100, 900, 768 and 390.
+- [x] Verify, then commit: `style(shell): glass sidebar, compact rail and glass mobile bars`
 
 ## Task 7: UI primitives
 **Files:** `components/ui/{Card,Button,Badge,Input,Select,SegmentedControl,PosterCard,MediaRow,StatTile,PageHeader,EmptyState,SectionError,Skeleton,ClearFilters,Eyebrow,BentoGrid}.tsx`, `components/RatingStars.tsx`; create `components/ui/{ProgressRing,SegmentedProgress,SectionHeader,DateStack}.tsx`

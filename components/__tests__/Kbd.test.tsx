@@ -44,4 +44,23 @@ describe('Kbd', () => {
     expect(el).toBeInTheDocument()
     expect(el).toHaveClass('text-xs')
   })
+
+  it('carries the chip recipe itself so call sites only add layout', () => {
+    withUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)')
+    const { container } = render(<Kbd keys="K" />)
+    const el = container.querySelector('kbd')!
+    expect(el).toHaveClass('inline-flex')
+    expect(el).toHaveStyle({ height: '22px', borderRadius: 'var(--radius-xs)', background: 'var(--glass-fill-hover)' })
+  })
+
+  it('leaves the display mode to a caller that sets one', () => {
+    withUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)')
+    // The dashboard search bar hides the chip on phones. Tailwind orders
+    // `inline-flex` after `hidden`, so a default display class added alongside
+    // the caller's would win and show it.
+    const { container } = render(<Kbd keys="K" className="hidden md:inline-flex" />)
+    const el = container.querySelector('kbd')!
+    expect(el).toHaveClass('hidden', 'md:inline-flex')
+    expect(el).not.toHaveClass('inline-flex')
+  })
 })

@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { getAuthenticatedUser } from '@/lib/supabase/server'
 import Sidebar from '@/components/Sidebar'
+import SidebarMustWatch from '@/components/SidebarMustWatch'
 import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 import KeyboardShortcuts from '@/components/KeyboardShortcuts'
 import { MediaModalProvider } from '@/components/MediaModalProvider'
@@ -40,19 +41,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <RecentAmbient userId={user.id} />
           </Suspense>
         )}
-        <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
-          {user && <Sidebar userEmail={user.email} />}
+        {/* The shell: from md up, a padded wrapper capped at --shell-max with
+            the glass sidebar (or rail) in flow beside the content column. The
+            sidebar used to be fixed and the page padded past it by hand, so
+            three widths had to agree; now the flex row is the only layout.
+            --shell-max measures sidebar plus gap plus content, the way the
+            reference's content-box shell does, so the cap adds the padding
+            back on top of it; under border-box alone the content column could
+            never reach --content-max. */}
+        <div className="relative z-10 flex min-h-screen flex-col md:mx-auto md:w-full md:max-w-[calc(var(--shell-max)_+_2_*_var(--shell-pad))] md:flex-row md:items-start md:gap-[var(--shell-pad)] md:p-[var(--shell-pad)]">
+          {user && (
+            <Sidebar
+              userEmail={user.email}
+              // The must-watch list is one extra query, so it streams in behind
+              // the shell in its own Suspense rather than gating it.
+              mustWatch={
+                <Suspense>
+                  <SidebarMustWatch userId={user.id} />
+                </Suspense>
+              }
+            />
+          )}
 
-          {/* transition-[padding-left], not transition-all: padding-left is the
-              only thing here that ever animates, and `all` made the browser
-              watch every animatable property on the one element whose entire
-              subtree is replaced on every navigation. */}
-          <main className={`flex-1 w-full px-4 py-6 md:px-8 md:py-8 transition-[padding-left] duration-300 ${
-            // pl = the rail's own width plus the page's md:px-8 gutter, both read
-            // from the token. It used to be a literal md:pl-72 (288px) against a
-            // 256px --sidebar-width, so the three numbers could drift apart.
-            user ? 'pt-20 md:pt-8 md:pl-[calc(var(--sidebar-width)+2rem)] pb-24 md:pb-8' : 'pb-8'
-          }`}>
+          {/* Under md the mobile bars are fixed, so the page clears them with
+              its own top and bottom padding; from md up the wrapper's padding
+              is the frame. */}
+          <main className={`w-full min-w-0 flex-1 px-4 md:px-0 ${user ? 'pt-20 pb-24 md:py-0' : 'py-6 md:py-0'}`}>
             {/* One shared measure for every route. Without it the bento
                 grid and library run the full width of an ultrawide display. */}
             <div className="mx-auto w-full max-w-[var(--content-max)]">

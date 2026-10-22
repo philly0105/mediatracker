@@ -23,6 +23,37 @@ describe('NavItem', () => {
     expect(linkElement).toHaveClass('nav-item')
   })
 
+  it('keeps the nav-item contract when stacked for the compact rail', () => {
+    const { getByRole } = render(
+      <NavItem icon={Home} label="Recommendations" active href="/recommendations" stacked />
+    )
+    const link = getByRole('link')
+    // The rail only changes the layout; the active and hover treatments still
+    // come from `.nav-item` and `aria-current`. The full name also travels on
+    // the title, as the rail's tooltip.
+    expect(link).toHaveClass('nav-item')
+    expect(link).toHaveAttribute('aria-current', 'page')
+    expect(link).toHaveAttribute('title', 'Recommendations')
+    expect(link).toHaveStyle({ flexDirection: 'column' })
+  })
+
+  it('shows the rail label when stacked but keeps the plain label as the name', () => {
+    const { getByRole } = render(
+      <NavItem icon={Home} label="Recommendations" railLabel={'Recom\u00admendations'} href="/recommendations" stacked />
+    )
+    const link = getByRole('link', { name: 'Recommendations' })
+    expect(link.textContent).toBe('Recom\u00admendations')
+  })
+
+  it('ignores the rail label in the row layout', () => {
+    const { getByRole } = render(
+      <NavItem icon={Home} label="Recommendations" railLabel={'Recom\u00admendations'} href="/recommendations" />
+    )
+    const link = getByRole('link')
+    expect(link.textContent).toBe('Recommendations')
+    expect(link).not.toHaveAttribute('aria-label')
+  })
+
   it('leaves aria-current off an inactive entry', () => {
     const { getByRole } = render(<NavItem icon={Home} label="Dashboard" href="/dashboard" />)
     expect(getByRole('link')).not.toHaveAttribute('aria-current')
