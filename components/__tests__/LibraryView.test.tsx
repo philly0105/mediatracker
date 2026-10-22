@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import LibraryView, { __resetEntryCache } from '../LibraryView'
 import { ToastProvider } from '../ToastProvider'
@@ -97,6 +97,9 @@ describe('LibraryView', () => {
 
     renderLibrary()
     await screen.findByText('Film 1')
+    // The observer is made in an effect, which can still be pending when the
+    // first page is already in the DOM; firing before it exists does nothing.
+    await waitFor(() => expect(trigger).not.toBeNull())
 
     // 30 loaded, 24 rendered — the count still reports the whole library.
     expect(screen.getAllByTitle('Delete entry')).toHaveLength(24)
