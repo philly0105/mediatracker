@@ -4,31 +4,39 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: 'brand' | 'accent' | 'neutral' | 'live' | 'rating' | 'success'
 }
 
-export function Badge({ children, tone = 'neutral', style, ...rest }: BadgeProps) {
-  const theme = {
-    brand: { background: 'var(--green-tint-bg)', color: 'var(--green-300)', border: '1px solid var(--green-tint-border)' },
-    accent: { background: 'var(--green-tint-bg)', color: 'var(--green-300)', border: '1px solid var(--green-tint-border)' },
-    neutral: { background: 'var(--btn-ghost-bg)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' },
-    live: { background: 'var(--rust-tint-bg)', color: 'var(--rust-300)', border: '1px solid var(--rust-tint-border)' },
-    rating: { background: 'var(--amber-tint-bg)', color: 'var(--amber-300)', border: '1px solid var(--amber-tint-border)' },
-    success: { background: 'var(--teal-tint-bg)', color: 'var(--teal-300)', border: '1px solid var(--teal-tint-border)' },
-  }[tone]
+// A chip is a white-alpha pill; the tone only colours the text. Rating is the
+// one gold, and brand, live and success all resolve to the single aqua accent.
+// Over poster art the white chip washes out; that is `PosterBadge` in
+// ui/PosterCard, the dark badge fill, not a mode of this one.
+const TONE_COLOR = {
+  brand: 'var(--accent)',
+  accent: 'var(--accent)',
+  neutral: 'var(--text-primary)',
+  live: 'var(--live)',
+  rating: 'var(--rating)',
+  success: 'var(--success)',
+}
 
+export function Badge({ children, tone = 'neutral', style, ...rest }: BadgeProps) {
   return (
     <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 'var(--text-2xs)',
-        fontFamily: 'var(--font-sans)',
-        fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'],
-        textTransform: 'uppercase',
-        letterSpacing: 'var(--tracking-widest)',
-        padding: '4px 10px',
+        gap: '4px',
+        height: '24px',
+        padding: '0 8px',
         borderRadius: 'var(--radius-pill)',
+        background: 'var(--glass-chip)',
+        boxShadow: 'var(--glass-chip-edge)',
+        color: TONE_COLOR[tone],
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-xs)',
+        lineHeight: '16px',
+        fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+        letterSpacing: 'var(--tracking-normal)',
         whiteSpace: 'nowrap',
-        ...theme,
         ...style,
       }}
       {...rest}

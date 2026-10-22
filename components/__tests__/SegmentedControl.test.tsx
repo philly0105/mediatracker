@@ -30,6 +30,15 @@ describe('SegmentedControl', () => {
     expect(showRadio).toHaveAttribute('aria-checked', 'false')
   })
 
+  it('marks the selected segment for forced colours, with no inline fill to beat it', () => {
+    render(<SegmentedControl options={options} value="movie" onChange={vi.fn()} />)
+
+    const selected = screen.getByRole('radio', { name: 'Movies' })
+    expect(selected.className).toContain('forced-colors:bg-[color:Highlight]')
+    expect(selected.style.background).toBe('')
+    expect(screen.getByRole('radio', { name: 'TV Shows' }).className).not.toContain('forced-colors:')
+  })
+
   it('triggers onChange with the selected option id', () => {
     const onChange = vi.fn()
     render(

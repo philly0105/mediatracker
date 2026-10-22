@@ -2,7 +2,6 @@
 import Image from 'next/image'
 import React, { useState } from 'react'
 import RatingStars from '@/components/RatingStars'
-import { Badge } from './Badge'
 import { Calendar, Star } from 'lucide-react'
 import { formatDateLabel } from '@/lib/formatDate'
 import { activatableProps } from './activatable'
@@ -12,13 +11,30 @@ interface MediaRowProps {
   year?: string | number
   type?: 'movie' | 'show'
   posterUrl?: string | null
+  /** A 16:9 episode still; shown in place of the poster thumb when given. */
+  stillUrl?: string | null
   rating?: number | null
   onRate?: (rating: number | null) => void
   review?: string | null
   watchedAt?: string | null
   tmdbRating?: number | null
+  /** The line under the title, e.g. the next episode's name. */
+  subtitle?: React.ReactNode
+  /** Small muted text at the top-right of the text column (a platform); defaults to the type. */
+  aside?: React.ReactNode
   onClick?: () => void
+  /** Trailing slot at the row's end: a 44px check button, edit and delete, etc. */
   actions?: React.ReactNode
+  /** Rendered under the text, for a SegmentedProgress or similar. */
+  children?: React.ReactNode
+}
+
+const metaStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--text-sm)',
+  lineHeight: '18px',
+  color: 'var(--text-muted)',
+  fontVariantNumeric: 'tabular-nums',
 }
 
 export function MediaRow({
@@ -26,90 +42,141 @@ export function MediaRow({
   year,
   type = 'movie',
   posterUrl,
+  stillUrl,
   rating = null,
   onRate,
   review,
   watchedAt,
   tmdbRating,
+  subtitle,
+  aside,
   onClick,
   actions,
+  children,
 }: MediaRowProps) {
-  const [imgErr, setImgErr] = useState(false)
-  const hasImg = posterUrl && !imgErr
+  // Tracked separately: TMDB stills 404 often enough that a failed still should
+  // fall back to the poster rather than straight to the placeholder.
+  const [stillErr, setStillErr] = useState(false)
+  const [posterErr, setPosterErr] = useState(false)
+  const typeLabel = type === 'show' ? 'TV' : 'Movie'
+  const thumbStyle: React.CSSProperties = {
+    flexShrink: 0,
+    borderRadius: 'var(--radius-thumb)',
+    objectFit: 'cover',
+    boxShadow: 'var(--shadow-sm)',
+  }
+  // The still is the reference's 160x90, shrinking to 104x58 under the content
+  // breakpoint. The placeholder for a missing still uses the same class so it
+  // shrinks with its siblings instead of widening that one row on phones.
+  const stillSize = 'w-[104px] h-[58px] md:w-40 md:h-[90px]'
+
+  // Fixed thumbs, so width/height props rather than `fill`. They also reserve
+  // the space, which is what stops the list jumping as images load.
+  let thumb: React.ReactNode
+  if (stillUrl && !stillErr) {
+    thumb = (
+      <Image src={stillUrl} alt="" width={160} height={90} onError={() => setStillErr(true)}
+        className={stillSize} style={thumbStyle} />
+    )
+  } else if (posterUrl && !posterErr) {
+    thumb = <Image src={posterUrl} alt={title} width={60} height={90} onError={() => setPosterErr(true)} style={thumbStyle} />
+  } else {
+    const stillShaped = !!stillUrl
+    thumb = (
+      <div className={stillShaped ? stillSize : undefined} style={{
+        ...thumbStyle, ...(stillShaped ? {} : { width: 60, height: 90 }),
+        background: 'linear-gradient(150deg, var(--zinc-800), var(--bg-void))',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-faint)' }}>{typeLabel}</span>
+      </div>
+    )
+  }
+
+  const showStars = !!onRate || rating != null
+  const showMeta = year != null || tmdbRating != null
 
   return (
     <div
       onClick={onClick}
       {...activatableProps(onClick, title)}
-      // Hover/focus styling is `.media-row-interactive` in globals.css.
-      className={['media-row', onClick && 'media-row-interactive'].filter(Boolean).join(' ')}
+      // The reference's "Up next" row: a tier-2 fill with the gradient rim,
+      // no blur, because rows render once per list item.
+      className="glass-row glass-rim"
       style={{
         display: 'flex',
+        alignItems: 'center',
         gap: 'var(--space-4)',
-        padding: '14px',
-        borderRadius: 'var(--radius-md)',
+        padding: '10px 12px 10px 10px',
         cursor: onClick ? 'pointer' : 'default',
       }}
     >
-      {hasImg ? (
-        // Fixed 64x96 thumbnail, so width/height props rather than `fill`. They
-        // also reserve the space, which is what stops the list jumping as
-        // posters load.
-        <Image src={posterUrl!} alt={title} width={64} height={96} onError={() => setImgErr(true)} style={{
-          borderRadius: 'var(--radius-md)', objectFit: 'cover',
-          boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-subtle)', flexShrink: 0,
-        }} />
-      ) : (
-        <div style={{
-          width: 64, height: 96, borderRadius: 'var(--radius-md)', flexShrink: 0,
-          border: '1px solid var(--border-subtle)',
-          background: 'linear-gradient(150deg, var(--zinc-800), var(--bg-void))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{type === 'show' ? 'TV' : 'Movie'}</span>
-        </div>
-      )}
+      {thumb}
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '8px' }}>
-            <p style={{
-              margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'], color: 'var(--text-primary)',
-              lineHeight: 'var(--leading-snug)', overflow: 'hidden', display: '-webkit-box',
-              WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-            }}>{title}</p>
-            {actions && <div onClick={e => e.stopPropagation()}>{actions}</div>}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-            <Badge tone="neutral">{type === 'show' ? 'TV' : 'Movie'}</Badge>
-            {year && <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{year}</span>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 12 }}>
+          <p style={{
+            margin: 0, fontSize: 'var(--text-md)', lineHeight: '22px',
+            fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+            letterSpacing: 'var(--tracking-text)', color: 'var(--text-primary)',
+            overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          }}>{title}</p>
+          <span style={{
+            fontSize: 'var(--text-xs)', lineHeight: '16px',
+            fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'],
+            color: 'var(--text-muted)', whiteSpace: 'nowrap',
+          }}>{aside ?? typeLabel}</span>
+        </div>
+        {subtitle != null && (
+          <p style={{
+            margin: '2px 0 0', fontSize: 'var(--text-base)', lineHeight: '20px',
+            fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'],
+            color: 'var(--text-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{subtitle}</p>
+        )}
+        {showMeta && (
+          <p style={{ ...metaStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {year != null && <span>{year}</span>}
+            {year != null && tmdbRating != null && <span aria-hidden="true">·</span>}
             {tmdbRating != null && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'], color: 'var(--amber-400)' }}>
-                <Star style={{ width: 11, height: 11, fill: 'currentColor' }} /> {tmdbRating.toFixed(1)}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Star size={12} strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--rating)', fill: 'var(--rating)' }} />
+                {tmdbRating.toFixed(1)}
               </span>
             )}
-          </div>
-        </div>
+          </p>
+        )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-          <div onClick={(e) => e.stopPropagation()}>
-            <RatingStars value={rating} onChange={onRate} readOnly={!onRate} />
+        {(showStars || review || watchedAt || children) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            {showStars && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <RatingStars value={rating} onChange={onRate} readOnly={!onRate} size={onRate ? 'md' : 'sm'} />
+              </div>
+            )}
+            {review && (
+              <p style={{
+                margin: 0, fontSize: 'var(--text-sm)', lineHeight: '18px', fontStyle: 'italic', color: 'var(--text-secondary)',
+                background: 'var(--glass-inset-card)', boxShadow: 'var(--glass-inset-card-edge)', padding: '6px 8px',
+                borderRadius: 'var(--radius-sm)',
+                overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              }}>{review}</p>
+            )}
+            {watchedAt && (
+              <span style={{ ...metaStyle, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', lineHeight: '16px' }}>
+                <Calendar size={12} strokeWidth={1.8} aria-hidden="true" /> Watched {formatDateLabel(watchedAt)}
+              </span>
+            )}
+            {children}
           </div>
-          {review && (
-            <p style={{
-              margin: 0, fontSize: 'var(--text-xs)', fontStyle: 'italic', color: 'var(--text-secondary)',
-              background: 'var(--btn-ghost-bg)', border: '1px solid var(--border-faint)', padding: '6px 8px',
-              borderRadius: 'var(--radius-sm)', lineHeight: 'var(--leading-relaxed)',
-              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-            }}>{review}</p>
-          )}
-          {watchedAt && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-2xs)', color: 'var(--text-faint)' }}>
-              <Calendar style={{ width: 12, height: 12 }} /> Watched {formatDateLabel(watchedAt)}
-            </span>
-          )}
-        </div>
+        )}
       </div>
+
+      {actions && (
+        <div onClick={e => e.stopPropagation()} style={{ flex: 'none', display: 'flex', alignItems: 'center' }}>
+          {actions}
+        </div>
+      )}
     </div>
   )
 }

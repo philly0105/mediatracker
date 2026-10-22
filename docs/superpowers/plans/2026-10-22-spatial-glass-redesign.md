@@ -217,14 +217,14 @@ alter table media add column if not exists logo_url text;
 ## Task 7: UI primitives
 **Files:** `components/ui/{Card,Button,Badge,Input,Select,SegmentedControl,PosterCard,MediaRow,StatTile,PageHeader,EmptyState,SectionError,Skeleton,ClearFilters,Eyebrow,BentoGrid}.tsx`, `components/RatingStars.tsx`; create `components/ui/{ProgressRing,SegmentedProgress,SectionHeader,DateStack}.tsx`
 
-- [ ] Rebuild each to spec §5.5 exactly, keeping the current props API (add props only when needed, e.g. `Card variant="panel|slab|row|inset"`, `Button variant="primary|secondary|icon|ghost"`).
-- [ ] New `ProgressRing` (48px, 4px stroke, `aria-label="6 of 10 episodes watched"`), `SegmentedProgress` (`role="img"` with the same aria-label), `SectionHeader`, `DateStack`.
-- [ ] `RatingStars`: gold `#F2C46D` and empty `rgba(236,245,249,.30)`; keep the half-star logic and click handlers.
-- [ ] `PosterCard`: no blur; radius 14; poster shadow + 1px ring; caption block; optional badges slot.
-- [ ] `Skeleton`: shimmer off under reduced motion.
-- [ ] `BentoGrid`: keep the export if pages still import it; Home no longer uses it after Task 8.
-- [ ] Update affected tests (`SegmentedControl.test.tsx`, `RatingStars.test.tsx`, and any others the run flags).
-- [ ] Verify, then commit: `style(ui): spatial-glass primitives`
+- [x] Rebuild each to spec §5.5 exactly, keeping the current props API (add props only when needed, e.g. `Card variant="panel|slab|row|inset"`, `Button variant="primary|secondary|icon|ghost"`).
+- [x] New `ProgressRing` (48px, 4px stroke, `aria-label="6 of 10 episodes watched"`), `SegmentedProgress` (`role="img"` with the same aria-label), `SectionHeader`, `DateStack`.
+- [x] `RatingStars`: gold `#F2C46D` and empty `rgba(236,245,249,.30)`; keep the half-star logic and click handlers.
+- [x] `PosterCard`: no blur; radius 14; poster shadow + 1px ring; caption block; optional badges slot.
+- [x] `Skeleton`: shimmer off under reduced motion.
+- [x] `BentoGrid`: keep the export if pages still import it; Home no longer uses it after Task 8.
+- [x] Update affected tests (`SegmentedControl.test.tsx`, `RatingStars.test.tsx`, and any others the run flags).
+- [x] Verify, then commit: `style(ui): spatial-glass primitives`
 
 ## Task 8: Home dashboard
 **Files:** `app/(app)/page.tsx`, `components/{ContinueWatchingRow,DashboardUpcoming,DashboardUpcomingWidget,DashboardRecentCards,DashboardSearchBar}.tsx`, `app/(app)/loading.tsx`

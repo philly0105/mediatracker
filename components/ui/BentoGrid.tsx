@@ -14,7 +14,8 @@ export function BentoGrid({
     <div
       // No max-w here: the layout already wraps every route in
       // max-w-[var(--content-max)], which is the same 1280px.
-      className={`grid gap-4 ${!hasGridCols ? 'grid-cols-1 md:grid-cols-4' : ''} ${className}`}
+      // The panel gap: 24, tightening to 12 under the content breakpoint.
+      className={`grid gap-3 md:gap-6 ${!hasGridCols ? 'grid-cols-1 md:grid-cols-4' : ''} ${className}`}
     >
       {children}
     </div>

@@ -13,3 +13,8 @@
 @keyframes dorf-spin {
   to { transform: rotate(360deg); }
 }
+
+@keyframes dorf-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}

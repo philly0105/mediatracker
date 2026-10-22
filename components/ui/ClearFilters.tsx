@@ -7,11 +7,12 @@ import { X } from 'lucide-react'
  *
  * Render it conditionally on that same flag: a permanently visible "clear"
  * that does nothing most of the time is worse than no control at all.
+ * `.clear-filters` in globals.css is the glass pill with the danger text.
  */
 export function ClearFilters({ onClear }: { onClear: () => void }) {
   return (
     <button type="button" onClick={onClear} className="clear-filters">
-      <X className="w-3.5 h-3.5" />
+      <X className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
       <span>Clear filters</span>
     </button>
   )

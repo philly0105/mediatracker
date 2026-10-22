@@ -197,7 +197,7 @@ body {
     transition: background var(--dur-fast) var(--ease-standard);
   }
 
-  .glass-btn:hover {
+  .glass-btn:hover:not(:disabled) {
     background: var(--btn-ghost-bg-hover);
   }
 
@@ -299,18 +299,27 @@ body {
 }
 
 /* Posters get no blur: they live in grids and rails. A 1px ring over the
-   poster drop; hover swaps the ring for the generic one and lifts a touch. */
+   poster drop; hover swaps the ring for the generic one and lifts a touch.
+   The caption sits under the poster in the open, so the ring belongs to the
+   frame, not the card root. */
 .poster-card {
   border: 0;
-  box-shadow: 0 0 0 1px var(--border-soft), var(--shadow-poster);
-  transition: box-shadow var(--dur-slow) var(--ease-out-expo),
-              transform var(--dur-slow) var(--ease-out-expo);
+  transition: transform var(--dur-slow) var(--ease-out-expo);
 }
 
 .poster-card:hover,
 .poster-card:focus-visible {
-  box-shadow: var(--glow-violet);
   transform: var(--lift-poster);
+}
+
+.poster-card-frame {
+  box-shadow: 0 0 0 1px var(--border-soft), var(--shadow-poster);
+  transition: box-shadow var(--dur-slow) var(--ease-out-expo);
+}
+
+.poster-card:hover .poster-card-frame,
+.poster-card:focus-visible .poster-card-frame {
+  box-shadow: var(--glow-violet);
 }
 
 .poster-card-img {
@@ -539,7 +548,7 @@ body {
 @media (forced-colors: active) {
   .card-surface,
   .media-row,
-  .poster-card,
+  .poster-card-frame,
   .input-field,
   .btn-primary,
   .btn-ghost,

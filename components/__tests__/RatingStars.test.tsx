@@ -2,6 +2,11 @@ import { render, fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import RatingStars from '@/components/RatingStars'
 
+// `var(--rating)` with its closing paren: `--rating` alone would also match the
+// empty star's `var(--rating-empty)`.
+const FILLED = 'svg[style*="var(--rating)"]'
+const EMPTY = 'svg[style*="var(--rating-empty)"]'
+
 describe('RatingStars', () => {
   it('renders a single native range slider across the star row', () => {
     render(<RatingStars value={null} onChange={vi.fn()} />)
@@ -45,8 +50,26 @@ describe('RatingStars', () => {
     expect(overlays.map(o => (o as HTMLElement).style.width)).toEqual([
       '100%', '100%', '100%', '50%',
     ])
-    const filled = container.querySelectorAll('svg[style*="--amber-400"]')
-    expect(filled).toHaveLength(4)
+    expect(container.querySelectorAll(FILLED)).toHaveLength(4)
+  })
+
+  it('paints filled stars gold and empty stars with the translucent empty token', () => {
+    const { container } = render(<RatingStars value={2} readOnly />)
+    // Five translucent shapes underneath, two gold fills on top. The empty star
+    // is filled, not just outlined: at 12px an outline alone is invisible.
+    const empty = container.querySelectorAll<SVGElement>(EMPTY)
+    expect(empty).toHaveLength(5)
+    expect(empty[0].style.fill).toBe('var(--rating-empty)')
+    expect(container.querySelectorAll(FILLED)).toHaveLength(2)
+  })
+
+  it('renders 12px glyphs for the caption size and 24px by default', () => {
+    const { container, rerender } = render(<RatingStars value={4} readOnly size="sm" />)
+    expect(container.querySelectorAll('svg.w-3.h-3')).toHaveLength(9)
+    expect(container.querySelectorAll('svg.w-6.h-6')).toHaveLength(0)
+
+    rerender(<RatingStars value={4} readOnly />)
+    expect(container.querySelectorAll('svg.w-6.h-6')).toHaveLength(9)
   })
 
   it('does not call onChange when readOnly and renders no interactive control', () => {
@@ -100,13 +123,11 @@ describe('RatingStars', () => {
     const slider = screen.getByRole('slider')
 
     fireEvent.change(slider, { target: { value: '3' } })
-    let filled = container.querySelectorAll('svg[style*="--amber-400"]')
-    expect(filled).toHaveLength(3)
+    expect(container.querySelectorAll(FILLED)).toHaveLength(3)
     expect(onChange).not.toHaveBeenCalled()
 
     fireEvent.blur(slider)
     expect(onChange).toHaveBeenCalledWith(3)
-    filled = container.querySelectorAll('svg[style*="--amber-400"]')
-    expect(filled).toHaveLength(0)
+    expect(container.querySelectorAll(FILLED)).toHaveLength(0)
   })
 })

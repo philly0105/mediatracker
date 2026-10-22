@@ -2,10 +2,11 @@ import React from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { Card } from './Card'
+import { Button } from './Button'
 
 interface EmptyStateProps {
-  /** A lucide icon component, e.g. `BarChart3`. Rendered muted and oversized. */
-  icon?: React.ComponentType<{ className?: string }>
+  /** A lucide icon component, e.g. `BarChart3`. Rendered in a glass circle. */
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>
   /** Sentence case, and say what is missing rather than what went wrong. */
   title: string
   /** Optional second line telling the user how this page fills up. */
@@ -14,19 +15,21 @@ interface EmptyStateProps {
   /** Give one of these two. `onAction` wins when both are set. */
   actionHref?: string
   onAction?: () => void
-  /** `error` swaps the muted palette for the rust "this went wrong" one, so the
-   *  two hand-rolled error cards on /recommendations can use this component too. */
+  /** `error` colours the icon and the action with `--danger`, so the two
+   *  hand-rolled error cards on /recommendations can use this component too. */
   tone?: 'default' | 'error'
   /** `compact` for empty states that sit inside a section rather than replacing
    *  a page — the watchlist renders three sections at once under an active
-   *  filter, and three full-height dashed cards stacked up is worse than the
-   *  italic line it replaced. */
+   *  filter, and three full-height panels stacked up is worse than the italic
+   *  line it replaced. It is a flat row rather than a blurred panel, so it is
+   *  safe inside a panel that already blurs. */
   size?: 'default' | 'compact'
 }
 
 /**
- * The shared "there is nothing here yet" surface. A dashed card rather than a
- * solid one so it reads as a placeholder for content, not as content.
+ * The shared "there is nothing here yet" surface: a centred glass panel with
+ * the icon in a glass circle, a card-title line, a secondary line and one
+ * secondary pill.
  */
 export function EmptyState({
   icon: Icon,
@@ -40,44 +43,48 @@ export function EmptyState({
 }: EmptyStateProps) {
   const isError = tone === 'error'
   const compact = size === 'compact'
-  const actionClass =
-    `group ${compact ? 'mt-4' : 'mt-6'} inline-flex items-center gap-2 rounded-[var(--radius-sm)] px-4 py-2 text-sm font-bold transition-colors`
-  const actionStyle = isError
-    ? {
-        color: 'var(--rust-300)',
-        background: 'var(--rust-tint-bg)',
-        border: '1px solid var(--rust-tint-border)',
-      }
-    : {
-        color: 'var(--accent)',
-        background: 'var(--green-tint-bg)',
-        border: '1px solid var(--green-tint-border)',
-      }
+  const circle = compact ? 40 : 48
+  const actionStyle = { marginTop: compact ? 16 : 24 }
+  const arrow = (
+    <ArrowRight
+      className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+  )
 
   return (
     <Card
-      style={{
-        padding: compact ? '24px 20px' : '48px 32px',
-        textAlign: 'center',
-        borderStyle: 'dashed',
-        ...(isError ? { borderColor: 'var(--rust-tint-border)' } : {}),
-      }}
+      variant={compact ? 'row' : 'panel'}
+      // A row's hover fill is for clickable rows; an empty state is not one.
+      className={compact ? 'hover:bg-[var(--glass-card)]' : undefined}
+      style={{ padding: compact ? '24px 20px' : '48px 32px', textAlign: 'center' }}
     >
       {Icon && (
-        <Icon
-          className={[
-            compact ? 'w-8 h-8 mx-auto mb-3' : 'w-12 h-12 mx-auto mb-4',
-            'opacity-40',
-            isError ? 'text-[var(--live)]' : 'text-[var(--text-muted)]',
-          ].join(' ')}
-        />
+        <span
+          aria-hidden="true"
+          className="glass-btn"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: circle,
+            height: circle,
+            borderRadius: '50%',
+            marginBottom: compact ? 12 : 16,
+            color: isError ? 'var(--danger)' : 'var(--text-secondary)',
+          }}
+        >
+          <Icon className={compact ? 'w-[18px] h-[18px]' : 'w-5 h-5'} strokeWidth={1.8} />
+        </span>
       )}
       <p
         style={{
           margin: 0,
           fontFamily: 'var(--font-sans)',
-          fontSize: compact ? 'var(--text-sm)' : 'var(--text-md)',
-          fontWeight: 'var(--weight-medium)' as React.CSSProperties['fontWeight'],
+          fontSize: compact ? 'var(--text-base)' : 'var(--text-md)',
+          lineHeight: compact ? '20px' : '24px',
+          fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
           color: 'var(--text-primary)',
         }}
       >
@@ -89,8 +96,8 @@ export function EmptyState({
             margin: '8px auto 0',
             maxWidth: '42ch',
             fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-sm)',
-            lineHeight: 'var(--leading-normal)',
+            fontSize: 'var(--text-base)',
+            lineHeight: '20px',
             color: 'var(--text-secondary)',
           }}
         >
@@ -98,15 +105,27 @@ export function EmptyState({
         </p>
       )}
       {actionLabel && onAction && (
-        <button type="button" onClick={onAction} className={actionClass} style={actionStyle}>
+        <Button
+          variant="secondary"
+          tone={isError ? 'destructive' : 'default'}
+          onClick={onAction}
+          className="group"
+          style={actionStyle}
+        >
           <span>{actionLabel}</span>
-          <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-        </button>
+          {arrow}
+        </Button>
       )}
       {actionLabel && actionHref && !onAction && (
-        <Link href={actionHref} className={actionClass} style={actionStyle}>
+        // A link cannot wrap a <button>, so it wears the same pill classes the
+        // secondary Button does.
+        <Link
+          href={actionHref}
+          className="group btn glass-btn inline-flex items-center justify-center gap-2 text-sm font-semibold"
+          style={{ ...actionStyle, padding: '0 18px', color: isError ? 'var(--danger)' : 'var(--text-primary)' }}
+        >
           <span>{actionLabel}</span>
-          <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+          {arrow}
         </Link>
       )}
     </Card>

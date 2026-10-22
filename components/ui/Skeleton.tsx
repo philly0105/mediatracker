@@ -1,19 +1,42 @@
-import React from 'react'
-
 /**
- * A single placeholder block. Uses --zinc-800 rather than --zinc-900: the
- * latter sits within one or two steps of both the page and the card surface,
- * so a skeleton drawn in it is nearly invisible on the very screens it exists
- * to reassure people about.
+ * A single placeholder block: the skeleton fill with a translucent band that
+ * sweeps across it. The band is a child moved with `transform`, so the sweep
+ * composites rather than repainting each block every frame. Callers pass the
+ * radius of the thing the block stands in for; the control radius is the
+ * default. The global reduced-motion rule collapses the animation to a single
+ * instant run, after which the band returns to where it started, off the left
+ * edge, so there is no sweep.
  */
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`bg-[var(--zinc-800)] rounded-[var(--radius-sm)] ${className}`} />
+  // Tailwind orders utilities for the same property by name, not by their
+  // place in the class list, so a default radius sitting in the list would
+  // beat most of the radii callers pass. It only goes in when they pass none.
+  const radius = /(^|\s)rounded(-|\s|$)/.test(className) ? '' : 'rounded-[var(--radius-sm)]'
+  return (
+    <div
+      aria-hidden="true"
+      className={['relative overflow-hidden bg-[var(--skeleton-bg)]', radius, className].filter(Boolean).join(' ')}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(90deg, transparent, var(--skeleton-shimmer), transparent)',
+          // The band composites over the block's own fill, so at full strength
+          // its peak would read as about .15 white. Dimmed, it lands on the .10
+          // the shimmer token names.
+          opacity: 0.43,
+          transform: 'translateX(-100%)',
+          animation: 'dorf-shimmer 1.6s var(--ease-standard) infinite',
+        }}
+      />
+    </div>
+  )
 }
 
 /**
- * The shape most routes load into: a title, then a grid of 2:3 posters.
- * Wrapped in `animate-pulse` so the whole group breathes together rather than
- * each tile pulsing on its own schedule.
+ * The shape most routes load into: a title, then a grid of 2:3 posters at the
+ * poster radius.
  */
 export function PosterGridSkeleton({
   count = 10,
@@ -23,7 +46,7 @@ export function PosterGridSkeleton({
   showHeader?: boolean
 }) {
   return (
-    <div className="animate-pulse space-y-8">
+    <div className="space-y-8">
       {showHeader && (
         <div className="space-y-3">
           <Skeleton className="h-3 w-24" />
@@ -39,25 +62,20 @@ export function PosterGridSkeleton({
   )
 }
 
-/** A stack of horizontal rows — lists, seasons, calendar entries. */
+/** A stack of horizontal rows — lists, seasons, calendar entries — each on the
+ *  row fill they will become. The row's hover lift is for clickable rows, and
+ *  a placeholder is not one. */
 export function RowListSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="animate-pulse space-y-8">
+    <div className="space-y-8">
       <div className="space-y-3">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-8 w-56" />
       </div>
       <div className="space-y-3">
         {Array.from({ length: count }, (_, i) => (
-          <div
-            key={i}
-            className="flex gap-4 p-4 rounded-[var(--radius-lg)]"
-            style={{
-              background: 'var(--glass-card)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <Skeleton className="w-16 h-24 shrink-0 rounded-[var(--radius-xl)]" />
+          <div key={i} className="glass-row hover:bg-[var(--glass-card)] flex gap-4 p-3">
+            <Skeleton className="w-16 h-24 shrink-0 rounded-[var(--radius-md)]" />
             <div className="flex-1 space-y-3 py-1">
               <Skeleton className="h-4 w-1/3" />
               <Skeleton className="h-3 w-1/4" />

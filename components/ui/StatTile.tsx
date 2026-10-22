@@ -6,34 +6,33 @@ interface StatTileProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: React.ReactNode
 }
 
+// A numeral over its label, and nothing else: the tile has no box of its own
+// because it sits inside a glass panel with its siblings, as in the reference's
+// "2026 so far" grid. Pages that still show tiles in the open can add a
+// surface class through `className`.
+// The label stays first in the source, so a screen reader still says "Hours
+// watched, 214" as it always has; column-reverse puts the numeral on top, and
+// flex-end keeps the pair at the top of a tile a grid has stretched.
 export function StatTile({ label, value, icon, style, className, ...rest }: StatTileProps) {
   return (
     <div
-      className={['glass-card', className].filter(Boolean).join(' ')}
-      style={{
-        padding: '18px 20px',
-        borderRadius: 'var(--radius-lg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '16px',
-        ...style,
-      }}
+      className={className}
+      style={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-end', gap: 2, minWidth: 0, ...style }}
       {...rest}
     >
-      <div>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-widest)', fontWeight: 'var(--weight-bold)' as React.CSSProperties['fontWeight'] }}>
-          {label}
-        </span>
-        <p style={{ margin: '4px 0 0', fontSize: 'var(--text-3xl)', fontWeight: 'var(--weight-extrabold)' as React.CSSProperties['fontWeight'], color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', letterSpacing: 'var(--tracking-tight)' }}>
-          {value}
-        </p>
-      </div>
-      {icon && (
-        <div style={{ color: 'var(--text-muted)', opacity: 0.8 }}>
-          {icon}
-        </div>
-      )}
+      <span style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)' }}>
+        {label}
+      </span>
+      <span style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 'var(--text-3xl)', lineHeight: '34px',
+        fontWeight: 'var(--weight-heading)' as React.CSSProperties['fontWeight'],
+        letterSpacing: 'var(--tracking-tighter)', fontVariantNumeric: 'tabular-nums',
+        color: 'var(--text-primary)',
+      }}>
+        {value}
+        {icon && <span style={{ display: 'inline-flex', color: 'var(--text-muted)' }}>{icon}</span>}
+      </span>
     </div>
   )
 }
