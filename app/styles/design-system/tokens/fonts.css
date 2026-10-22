@@ -1,7 +1,12 @@
-/* DorfMovies webfonts — Outfit (the product's actual brand font, via next/font/google).
-   Served from Google's CDN so consumers get the real binaries with no local files. */
+/* DorfMovies webfonts — Inter, variable with optical sizing.
+   The app self-hosts it through next/font/google, which registers the face
+   as 'Inter' and exposes it as --font-inter; app/globals.css imports the
+   token files one by one and skips this file, so the app never carries a
+   second 'Inter' @font-face set. This @import is for consumers that link
+   styles.css directly (the skill's HTML pages), where --font-sans falls
+   through to the 'Inter' family it loads. */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap');
 
-/* Outfit — the single typeface: all UI text, labels, headings, and numerals.
-   Headings run heavy (extrabold/black); tiny uppercase labels are widely tracked. */
+/* Inter — the single typeface: all UI text, labels, headings, and numerals.
+   Weights in use are 500, 600 and 650; numerals are tabular. */

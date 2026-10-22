@@ -1,117 +1,172 @@
 /* ============================================================
-   DorfMovies — Color tokens  ·  "Autumn Pine" earthy theme
-   Warm brown-black canvas, film-grain warmth, soft & low-contrast.
-   Deep PINE-GREEN primary, with a small playful accent set:
-   AMBER, RUST, and DUSTY-TEAL. Rust is reserved for "live",
-   teal for "watched", amber for star ratings.
+   DorfMovies — Color tokens  ·  "Spatial Glass"
+   A cool blue-black canvas under the featured title's backdrop,
+   blurred 80px. The chrome is translucent white over that art:
+   glass panels, hairline edges, white or translucent-white text.
+   One accent, aqua, marks progress, "next", current state and
+   focus. Gold is for star ratings only. Nothing else is coloured.
+
+   Every Autumn Pine name is kept so the ~340 existing call sites
+   re-theme in place: the green, teal and rust ramps now alias to
+   aqua, amber to gold. Rust is deprecated; destructive text uses
+   --danger instead.
    ============================================================ */
 
 :root {
-  /* ---- Warm brown-black canvas ---- */
+  /* ---- Canvas ---- */
   --black: #000000;
-  --bg-void: #100e09;     /* deepest page base */
-  --bg-base: #15120c;     /* app shell / sidebar */
-  --bg-raised: #1b1711;   /* cards */
-  --bg-elevated: #201b13; /* modals / popovers */
-  --bg-bar: #241f17;      /* bars / chips */
+  --bg-void: #061015;    /* canvas, themeColor, end of the ambient tint */
+  --bg-deep: #0B1A21;    /* solid surface behind artwork and the no-blur fallback */
+  --bg-base: rgba(9, 20, 27, 0.46);         /* glass tint under the shell and panels */
+  --bg-raised: rgba(255, 255, 255, 0.05);   /* rows and cards inside panels */
+  --bg-elevated: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04)), rgba(9, 20, 27, 0.72); /* modals / popovers */
+  --bg-bar: rgba(255, 255, 255, 0.09);      /* bars / chips, row hover */
 
-  /* ---- Warm stone neutral ramp (text scale) ----
-     Low contrast is intentional, but 500 and 600 carry real body and meta
-     text, so they are held to WCAG AA (4.5) and the 3:1 UI minimum against
-     the card surface #1b1711 — 4.87 and 3.50 respectively. 700 and below are
-     border/disabled values and are never legible as text by design. */
-  --zinc-100: #e9e2d3;
-  --zinc-200: #dcd3c1;
-  --zinc-300: #c8bda7;
-  --zinc-400: #9d9079;
-  --zinc-500: #918470;
-  --zinc-600: #776d5b;
-  --zinc-700: #3d362b;
-  --zinc-800: #2a241b;
-  --zinc-900: #1a160f;
+  /* ---- Cool neutral ramp (text scale) ----
+     Solid values, so Tailwind alpha modifiers (text-zinc-400/80) keep
+     working. On the canvas #061015 the ramp measures 100: 17.95, 400: 9.51,
+     500: 7.45, 600: 5.07 — every step down to 600 clears WCAG AA. 700 and
+     below are border and disabled values, never legible text by design. */
+  --zinc-100: #F3F8FA;
+  --zinc-200: #DCE6EA;
+  --zinc-300: #C3D1D7;
+  --zinc-400: #A9B9C0;
+  --zinc-500: #93A4AB;
+  --zinc-600: #74868E;
+  --zinc-700: #3A4A51;
+  --zinc-800: #1E2E35;
+  --zinc-900: #0F1D23;
   --white: #ffffff;
 
-  /* ---- Pine green — the primary brand accent ---- */
-  --green-300: #b3c79f;
-  --green-400: #97b27e;
-  --green-500: #7c9a6a;  /* primary */
-  --green-600: #5f7c4f;
-  --green-700: #47603b;
+  /* ---- Aqua — the single accent ---- */
+  --green-300: #C6F2F8;
+  --green-400: #B4EEF6;
+  --green-500: #8FE3F0;  /* accent */
+  --green-600: #5FC4D6;
+  --green-700: #3C8E9C;
 
-  /* ---- Amber — playful accent + star ratings ---- */
-  --amber-300: #e6c489;
-  --amber-400: #d3a85c;
-  --amber-500: #bf9248;
-  --amber-yellow: #ddb866;
+  /* ---- Gold — star ratings only ---- */
+  --amber-300: #F7D899;
+  --amber-400: #F2C46D;
+  --amber-500: #D9A94E;
+  --amber-yellow: #F2C46D;
 
-  /* ---- Rust — playful accent, reserved for "live / now watching" ---- */
-  --rust-300: #d8a18a;
-  --rust-400: #c4805f;
-  --rust-500: #ad6647;
-  --rust-600: #8c4f36;
+  /* ---- Rust — deprecated. Aliased to aqua so "live / now watching"
+     reads as the accent; nothing should reach for it in new code. ---- */
+  --rust-300: var(--green-300);
+  --rust-400: var(--green-400);
+  --rust-500: var(--green-500);
+  --rust-600: var(--green-600);
 
-  /* ---- Dusty teal — playful accent + "watched" success ---- */
-  --teal-300: #9ab8b1;
-  --teal-400: #6f9089;
-  --teal-500: #577670;
+  /* ---- Teal — "watched" success, now the accent ---- */
+  --teal-300: var(--green-300);
+  --teal-400: var(--green-400);
+  --teal-500: var(--green-500);
 
-  /* ---- Flat surfaces (solid, opaque — NO blur) ---- */
-  --glass-card: #1b1711;
-  --glass-card-hover: #241f17;
-  --glass-panel: #18140e;
-  --glass-input: #211c14;
-  --glass-chip: #211c14;
-  --glass-modal: #201b13;
-  --scrim: rgba(10, 8, 5, 0.82);
+  /* ---- Glass surfaces ----
+     Tier 1 (--glass-panel, --glass-slab, --glass-hero, --glass-modal) sits
+     under backdrop-filter and is a gradient over a dark tint. Tier 2 is a
+     flat white alpha with no blur, for everything inside a panel. */
+  --glass-card: rgba(255, 255, 255, 0.05);
+  --glass-card-hover: rgba(255, 255, 255, 0.09);
+  --glass-panel: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)), rgba(9, 20, 27, 0.46);
+  /* The hero slab sits over the sharp, untinted artwork inside the hero frame,
+     not over the tinted ambient layer, so its base is darker than a panel's.
+     Over a white backdrop primary text stays above 4.5:1 only with this
+     recipe (the reference's); the lighter panel recipe drops to about 2.9:1. */
+  --glass-slab: radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 60%), linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)), rgba(6, 15, 21, 0.66);
+  --glass-hero: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)), rgba(9, 20, 27, 0.34);
+  --glass-modal: var(--bg-elevated);
+  --glass-input: rgba(0, 0, 0, 0.24);
+  --glass-chip: rgba(255, 255, 255, 0.10);
+  --glass-inset-card: rgba(255, 255, 255, 0.06); /* a card inside a slab or row (next episode); edge is --glass-inset-card-edge, radius --radius-lg */
+  --glass-badge: rgba(6, 15, 21, 0.62);          /* badge over a poster (Rewatch, rating); edge is --glass-badge-edge. No blur: posters live in grids */
+  --glass-fallback: rgba(12, 24, 31, 0.94); /* tier 1 when blur is unavailable or transparency is reduced */
+  --glass-rim: linear-gradient(160deg, rgba(255, 255, 255, 0.40), rgba(255, 255, 255, 0.10) 28%, rgba(255, 255, 255, 0.04) 62%, rgba(255, 255, 255, 0.16));
+  --scrim: rgba(3, 9, 12, 0.62);
 
-  /* ---- Hairline borders (warm cream at low alpha; emphasis = green) ---- */
-  --border-faint: rgba(236, 231, 218, 0.04);
-  --border-subtle: rgba(236, 231, 218, 0.07);
-  --border-soft: rgba(236, 231, 218, 0.10);
-  --border-default: rgba(236, 231, 218, 0.13);
-  --border-strong: rgba(124, 154, 106, 0.42);
-  --border-focus: rgba(124, 154, 106, 0.65);
+  /* ---- Interaction fills (white alpha; components never write the literal) ---- */
+  --glass-fill-hover: rgba(255, 255, 255, 0.08);    /* ghost button, nav item and link hover; kbd */
+  --glass-fill-selected: rgba(255, 255, 255, 0.12); /* keyboard-highlighted result, header pill */
+  --glass-fill-active: rgba(255, 255, 255, 0.15);   /* active nav item, selected segment */
+  --skeleton-bg: rgba(255, 255, 255, 0.06);
+  --skeleton-shimmer: rgba(255, 255, 255, 0.10);
+  --progress-track: rgba(255, 255, 255, 0.16);      /* ring track, unwatched segments */
+
+  /* ---- Charts ----
+     Bars, average line and baseline follow the reference mock's hours chart
+     (.26 / .60 / .14); the spec's §5.5 figures (.22 / .35) were lighter, and
+     the reference wins by its own rule. */
+  --chart-bar: rgba(255, 255, 255, 0.26);
+  --chart-line: rgba(255, 255, 255, 0.60);          /* dashed average */
+  --chart-baseline: rgba(255, 255, 255, 0.14);      /* the x axis under the bars */
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-axis: rgba(236, 245, 249, 0.70);
+
+  /* ---- Hairline edges (white at low alpha; emphasis = aqua) ---- */
+  --border-faint: rgba(255, 255, 255, 0.04);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-soft: rgba(255, 255, 255, 0.10);
+  --border-divider: rgba(255, 255, 255, 0.08); /* 1px rule between sidebar sections */
+  --border-medium: rgba(255, 255, 255, 0.12);  /* chip ring, generic hover ring */
+  --border-default: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(143, 227, 240, 0.42);
+  --border-focus: #9BE7F5;
 
   /* ---- Semantic aliases ---- */
   --text-primary: var(--zinc-100);
-  --text-secondary: var(--zinc-400);
-  --text-muted: var(--zinc-500);
-  --text-faint: var(--zinc-600);
-  --text-inverse: var(--bg-elevated);
+  --text-strong: rgba(236, 245, 249, 0.86);  /* emphasised meta: the hero's genre line, must-watch titles, kbd */
+  --text-secondary: rgba(236, 245, 249, 0.80);
+  --text-muted: rgba(236, 245, 249, 0.74);
+  --text-faint: rgba(236, 245, 249, 0.66); /* placeholders only */
+  --ink: #08161C;                           /* text on the white primary button and the logo mark */
+  --text-inverse: var(--ink);
 
   --surface-page: var(--bg-void);
   --surface-shell: var(--bg-base);
   --surface-card: var(--glass-card);
-  --surface-modal: var(--glass-modal);
+  /* Flat rather than the --glass-modal gradient: three call sites read this
+     through bg-[var(--surface-modal)], which Tailwind emits as
+     background-color, where a gradient is invalid and the sheet goes
+     transparent. Modals rebuilt on .glass-panel get the gradient from there. */
+  --surface-modal: rgba(9, 20, 27, 0.72);
   --surface-input: var(--glass-input);
 
   --accent: var(--green-500);
   --accent-hover: var(--green-400);
+  --accent-tint: rgba(143, 227, 240, 0.38);        /* progress track under an accent fill */
+  --accent-ring: 0 0 0 3px rgba(143, 227, 240, 0.20); /* selected or current outline */
   --brand-mark: var(--green-500);
-  --live: var(--rust-400);
+  --live: var(--accent);
   --rating: var(--amber-400);
-  --success: var(--teal-400);
+  --rating-empty: rgba(236, 245, 249, 0.30);
+  --success: var(--accent);
+  /* Destructive text on a glass button. 9.5:1 on the canvas and 4.7:1 on a
+     panel mid-viewport over white art, but only 3.1:1 at the very top of the
+     viewport over white art, where the ambient tint is lightest. */
+  --danger: #FF9B9B;
 
-  /* Primary button = solid pine green; ghost = warm hairline */
-  --btn-primary-bg: var(--green-500);
-  --btn-primary-fg: #11160d;
-  --btn-primary-bg-hover: var(--green-400);
-  --btn-ghost-bg: rgba(236, 231, 218, 0.05);
-  --btn-ghost-bg-hover: rgba(236, 231, 218, 0.10);
+  /* Primary button = white pill with ink text; ghost = glass pill */
+  --btn-primary-bg: var(--zinc-100);
+  --btn-primary-fg: var(--ink);
+  --btn-primary-bg-hover: var(--white);
+  --btn-ghost-bg: rgba(255, 255, 255, 0.16);
+  --btn-ghost-bg-hover: rgba(255, 255, 255, 0.22);
 
   /* ---- Accent tints (bg/border pairs for badges & icon chips) ---- */
-  --green-tint-bg: rgba(124, 154, 106, 0.14);
-  --green-tint-border: rgba(124, 154, 106, 0.30);
-  --amber-tint-bg: rgba(211, 168, 92, 0.14);
-  --amber-tint-border: rgba(211, 168, 92, 0.30);
-  --rust-tint-bg: rgba(196, 128, 95, 0.15);
-  --rust-tint-border: rgba(196, 128, 95, 0.32);
-  --teal-tint-bg: rgba(111, 144, 137, 0.14);
-  --teal-tint-border: rgba(111, 144, 137, 0.30);
+  --green-tint-bg: rgba(143, 227, 240, 0.14);
+  --green-tint-border: rgba(143, 227, 240, 0.30);
+  --amber-tint-bg: rgba(242, 196, 109, 0.14);
+  --amber-tint-border: rgba(242, 196, 109, 0.30);
+  --rust-tint-bg: var(--green-tint-bg);
+  --rust-tint-border: var(--green-tint-border);
+  --teal-tint-bg: var(--green-tint-bg);
+  --teal-tint-border: var(--green-tint-border);
 
-  /* ---- Ambient warmth (very subtle, behind everything) ---- */
-  --orb-violet: rgba(124, 154, 106, 0.13);
-  --orb-orange: rgba(196, 128, 95, 0.12);
-  --orb-rose: rgba(211, 168, 92, 0.10);
-  --page-radial: radial-gradient(circle at 50% -10%, rgba(42, 33, 20, 0.9) 0%, rgba(16, 14, 9, 1) 55%); /* @kind other */
+  /* ---- Ambient backdrop ----
+     The tint over the blurred artwork (viewport-fixed, so percentage stops),
+     and the faint aqua radial the default layer shows when no title is
+     featured. */
+  --ambient-tint: linear-gradient(180deg, rgba(4, 12, 17, 0.50) 0%, rgba(4, 12, 17, 0.62) 55%, rgba(5, 13, 18, 0.84) 100%); /* @kind other */
+  --ambient-radial: radial-gradient(1200px 600px at 20% -10%, rgba(143, 227, 240, 0.10), transparent 60%); /* @kind other */
 }

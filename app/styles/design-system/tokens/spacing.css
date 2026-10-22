@@ -1,7 +1,7 @@
 /* ============================================================
    DorfMovies — Spacing & layout tokens
-   4px base grid (Tailwind-derived). Generous outer padding on
-   cards (28px), comfortable gaps in poster grids.
+   4px base grid. Gaps run 2 / 6 / 8 / 12 / 16 / 24; the shell
+   padding and panel gap are 24 (12 under 760px); panels pad 20–28.
    ============================================================ */
 
 :root {
@@ -12,17 +12,20 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
-  --space-7: 28px;   /* card interior padding */
+  --space-7: 28px;   /* panel interior padding (upper bound) */
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;  /* major section rhythm */
   --space-16: 64px;
 
   /* ---- Layout ---- */
-  --sidebar-width: 256px;     /* w-64 desktop rail */
-  --content-max: 1280px;      /* max-w-7xl bento container */
-  --content-narrow: 672px;    /* max-w-2xl search/forms */
-  --content-pad-x: 32px;      /* md:px-8 main padding */
+  --sidebar-width: 232px;     /* floating glass sidebar (lg and up) */
+  --rail-width: 76px;         /* compact icon rail (md to lg) */
+  --shell-pad: 24px;          /* page wrapper padding and panel gap */
+  --shell-max: 1720px;        /* sidebar plus content */
+  --content-max: 1440px;      /* content column */
+  --content-narrow: 720px;    /* settings and import column */
+  --content-pad-x: 24px;      /* main padding */
 
   /* ---- Poster aspect ---- */
   --poster-ratio: 2 / 3; /* @kind other */
