@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DorfMovies — Spatial Glass reference (Home)</title>
+<!-- APPROVED REFERENCE for the Spatial Glass redesign. Static mock: all user data (watch history, ratings, stats) is SAMPLE data;
+     title facts and artwork are real TMDB data. Source of truth for spec docs/superpowers/specs/2026-10-22-spatial-glass-redesign.md.
+     Images live in ./assets/. Open this file directly in a browser (it loads Inter from Google Fonts). -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#061015}
+a{color:inherit;text-decoration:none}
+.rim::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(160deg,rgba(255,255,255,.40),rgba(255,255,255,.10) 28%,rgba(255,255,255,.04) 62%,rgba(255,255,255,.16));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:3}
+.nav-i:hover{background:rgba(255,255,255,.08)}
+.gbtn:hover{background:rgba(255,255,255,.22)!important}
+.pbtn:hover{background:#FFFFFF!important}
+.row:hover{background:rgba(255,255,255,.09)!important}
+.lnk:hover{color:#FFFFFF!important;background:rgba(255,255,255,.08)}
+.q::placeholder{color:rgba(236,245,249,.66)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #9BE7F5!important;outline-offset:2px}
+.rail{scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+@media (max-width:1020px){
+.side{flex:1 1 100%!important;padding:12px!important;border-radius:24px!important}
+.side-in{position:static!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;gap:10px 16px!important}
+.side-search{flex:0 1 320px;margin-left:auto}
+.side-navwrap{flex:1 1 100%;min-width:0}
+.side-nav{flex-direction:row!important;overflow-x:auto!important;margin:0 -12px!important;padding:0 12px!important;gap:4px!important;scrollbar-width:none}
+.side-nav::-webkit-scrollbar{display:none}
+.side-nav li{flex:0 0 auto}
+.side-foot{display:none!important}
+}
+@media (max-width:760px){
+.shell{padding:12px!important;gap:12px!important}
+.side-search{flex:1 1 100%;margin-left:0}
+.h1{font-size:24px!important;line-height:30px!important}
+.hide-sm{display:none!important}
+.hero-stage{height:auto!important;flex-direction:column!important}
+.hero-img{position:static!important;width:100%!important;height:220px!important;object-position:64% 18%!important}
+.hero-slab{width:auto!important;margin:0!important;border-radius:0!important;padding:20px!important}
+.hero-actions{flex-wrap:wrap!important}
+.hero-actions .pbtn{flex:1 1 100%!important;justify-content:center!important}
+.hero-actions .ep-btn{flex:1 1 auto!important;justify-content:center!important}
+.panel{padding:14px!important;border-radius:24px!important}
+.un-row{gap:12px!important}
+.un-still{width:104px!important;height:58px!important;border-radius:10px!important}
+.byw-stage{min-height:320px!important}
+.byw-img{height:340px!important}
+.byw-scrim{height:270px!important}
+.rail{margin:0 -14px!important;padding:0 14px 4px!important}
+.ne-thumb{width:96px!important;height:64px!important}
+}
+</style>
+
+</head>
+<body>
+
+
+<div style="position: relative; overflow: hidden; min-height: 100vh; background: #061015; color: #F3F8FA; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; line-height: 22px; letter-spacing: -0.006em; -webkit-font-smoothing: antialiased">
+
+<img src="assets/severance-backdrop-hd.jpg" alt="" aria-hidden="true" style="position: absolute; top: -180px; left: -180px; width: calc(100% + 360px); height: 2400px; object-fit: cover; object-position: 50% 30%; filter: blur(80px) saturate(1.3); transform: scale(1.08); pointer-events: none">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,12,17,0.46) 0px, rgba(4,12,17,0.58) 900px, rgba(5,13,18,0.84) 1700px, #061015 2250px); pointer-events: none"></div>
+
+<div class="shell" style="position: relative; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; max-width: 1720px; margin: 0 auto; padding: 24px">
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="side rim" aria-label="Sidebar" style="flex: 0 0 232px; align-self: stretch; min-width: 0; position: relative; z-index: 2; padding: 16px 12px 12px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 100%), rgba(9,20,27,0.46); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 30px 60px -24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.16)">
+<div class="side-in" style="position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px">
+
+<a href="#" aria-label="DorfMovies — Home" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px">
+<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect x="0.5" y="0.5" width="31" height="31" rx="10" fill="#EAF6F9"></rect><path d="M10.5 8h5.7a8 8 0 0 1 0 16h-5.7z" fill="#08161C"></path><circle cx="16.2" cy="16" r="2.6" fill="#EAF6F9"></circle></svg>
+<span style="font-size: 17px; line-height: 22px; font-weight: 650; letter-spacing: -0.02em">DorfMovies</span>
+</a>
+
+<div role="search" class="side-search">
+<label for="dm-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">Search movies, shows and people</label>
+<div style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 8px 0 12px; border-radius: 14px; background: rgba(0,0,0,0.24); box-shadow: inset 0 1px 2px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.07), 0 1px 0 rgba(255,255,255,0.06)">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: rgba(236,245,249,0.72)"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4.2-4.2"></path></svg>
+<input id="dm-search" class="q" type="search" placeholder="Search" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; background: transparent; color: #F3F8FA; font-family: inherit; font-size: 14px">
+<kbd style="flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 6px; border-radius: 6px; background: rgba(255,255,255,0.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14); font-family: inherit; font-size: 12px; font-weight: 500; color: rgba(236,245,249,0.86)">⌘K</kbd>
+</div>
+</div>
+
+<nav aria-label="Main" class="side-navwrap">
+<ul class="side-nav" style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px">
+<li><a href="#" aria-current="page" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; background: rgba(255,255,255,0.15); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 6px 16px -8px rgba(0,0,0,0.5); color: #FFFFFF; font-size: 14px; font-weight: 600; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10.2 12 3.5l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-6v6H5A1.5 1.5 0 0 1 3.5 19z"></path></svg>Home</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="9" width="17" height="11.5" rx="2.5"></rect><path d="M5.5 6h13M7.5 3h9"></path></svg>Library</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg>Watchlist</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13.5" rx="2.5"></rect><path d="M8.5 21h7"></path><path d="m10.2 8.3 4.3 2.45-4.3 2.45z"></path></svg>Streaming</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7.5-4.4-7.5-10.1A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 7.5 2.9C19.5 15.6 12 20 12 20z"></path></svg>For You</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Calendar</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12.5" height="12.5" rx="2.5"></rect><path d="M16 4.5H6A2.5 2.5 0 0 0 3.5 7v9"></path></svg>Franchises</a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500; white-space: nowrap">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 19.5v-6M12 19.5v-14M18 19.5v-9"></path></svg>Stats</a></li>
+</ul>
+</nav>
+
+<section class="side-foot" aria-labelledby="mw-title" style="padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; margin-bottom: 4px">
+<h2 id="mw-title" style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0; color: rgba(236,245,249,0.74)">Must watch</h2>
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">12</span>
+</div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px 0 11px; border-radius: 14px; font-size: 13px; font-weight: 500; color: rgba(236,245,249,0.86)"><img src="assets/hamnet-poster.jpg" alt="" style="flex: none; width: 22px; height: 33px; border-radius: 4px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.12)"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Hamnet</span></a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px 0 11px; border-radius: 14px; font-size: 13px; font-weight: 500; color: rgba(236,245,249,0.86)"><img src="assets/shogun-poster.jpg" alt="" style="flex: none; width: 22px; height: 33px; border-radius: 4px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.12)"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Shōgun</span></a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px 0 11px; border-radius: 14px; font-size: 13px; font-weight: 500; color: rgba(236,245,249,0.86)"><img src="assets/the-brutalist-poster.jpg" alt="" style="flex: none; width: 22px; height: 33px; border-radius: 4px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.12)"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">The Brutalist</span></a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px 0 11px; border-radius: 14px; font-size: 13px; font-weight: 500; color: rgba(236,245,249,0.86)"><img src="assets/the-last-of-us-poster.jpg" alt="" style="flex: none; width: 22px; height: 33px; border-radius: 4px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.12)"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">The Last of Us</span></a></li>
+<li><a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px 0 11px; border-radius: 14px; font-size: 13px; font-weight: 500; color: rgba(236,245,249,0.86)"><img src="assets/bugonia-poster.jpg" alt="" style="flex: none; width: 22px; height: 33px; border-radius: 4px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.12)"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Bugonia</span></a></li>
+</ul>
+</section>
+
+<div class="side-foot" style="padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08)">
+<a href="#" class="nav-i" style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: rgba(236,245,249,0.8); font-size: 14px; font-weight: 500">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"></path><circle cx="15" cy="7" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg>Settings</a>
+</div>
+</div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+
+<header style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 0 0 4px">
+<div style="flex: 1 1 auto; min-width: 0">
+<p style="margin: 0; font-size: 13px; line-height: 18px; font-weight: 500; color: rgba(236,245,249,0.8)">Thursday, October 22</p>
+<h1 class="h1" style="margin: 2px 0 0; font-size: 30px; line-height: 36px; font-weight: 650; letter-spacing: -0.024em">Good evening, Richard</h1>
+</div>
+<div style="flex: none; display: flex; align-items: center; gap: 12px">
+<button type="button" class="gbtn hide-sm" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 14px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.12); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%); color: #F3F8FA; font-family: inherit; font-size: 14px; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.06), 0 8px 20px -10px rgba(0,0,0,0.5); cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Log a watch</button>
+<button type="button" aria-label="Account: Richard" style="width: 44px; height: 44px; border: 0; border-radius: 50%; background: linear-gradient(160deg, #EEF8FB 0%, #A9D4DF 100%); color: #08161C; font-family: inherit; font-size: 16px; font-weight: 650; box-shadow: 0 0 0 2px rgba(255,255,255,0.16), 0 8px 20px -8px rgba(0,0,0,0.5); cursor: pointer">R</button>
+</div>
+</header>
+
+<!-- ============ HERO: NOW WATCHING ============ -->
+<section aria-labelledby="hero-title" class="rim" style="position: relative; padding: 8px; border-radius: 32px; background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%), rgba(9,20,27,0.34); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 40px 80px -32px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.2)">
+<div class="hero-stage" style="position: relative; display: flex; height: 520px; border-radius: 24px; overflow: hidden; background: #0B1A21">
+<img class="hero-img" src="assets/severance-backdrop-hd.jpg" alt="" style="position: absolute; top: 0; left: 0; width: max(1230px, 115%); height: 520px; object-fit: cover; object-position: 50% 18%">
+<div class="hide-sm" aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 520px; background: linear-gradient(180deg, rgba(4,10,14,0) 58%, rgba(4,10,14,0.34) 100%), linear-gradient(270deg, rgba(4,10,14,0.22) 0%, rgba(4,10,14,0) 16%); pointer-events: none"></div>
+
+<div class="hero-slab rim" style="position: relative; z-index: 1; width: 480px; margin: 16px; display: flex; flex-direction: column; padding: 28px; border-radius: 22px; background: radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%), rgba(6,15,21,0.66); backdrop-filter: blur(40px) saturate(150%); -webkit-backdrop-filter: blur(40px) saturate(150%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 24px 48px -16px rgba(0,0,0,0.5)">
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; font-weight: 600; color: rgba(236,245,249,0.84)"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #8FE3F0; box-shadow: 0 0 0 3px rgba(143,227,240,0.2)"></span>Continue watching</p>
+<span style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,0.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); font-size: 12px; font-weight: 600; color: #F3F8FA">Apple TV+</span>
+</div>
+
+<h2 id="hero-title" style="margin: 24px 0 0; line-height: 0"><img src="assets/severance-logo.png" alt="Severance" style="width: 288px; max-width: 100%; height: auto"></h2>
+<p style="margin: 14px 0 0; font-size: 15px; line-height: 22px; color: rgba(236,245,249,0.9)">There’s more to work than life.</p>
+<p style="margin: 10px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; line-height: 20px; color: rgba(236,245,249,0.86)">
+<span style="display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(236,245,249,0.42); font-size: 12px; font-weight: 600; color: #F3F8FA">TV-MA</span>
+<span>Drama · Mystery · Sci-Fi</span><span aria-hidden="true">·</span><span>TMDB 84%</span>
+</p>
+
+<div style="margin-top: 24px; display: flex; align-items: center; gap: 14px">
+<div style="position: relative; flex: none; width: 52px; height: 52px">
+<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="22" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="5"></circle><circle cx="26" cy="26" r="22" fill="none" stroke="#8FE3F0" stroke-width="5" stroke-linecap="round" stroke-dasharray="77.94 200" stroke-dashoffset="-2.5" transform="rotate(-90 26 26)"></circle></svg>
+<span style="position: absolute; top: 0; left: 0; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 650; letter-spacing: -0.01em">S2</span>
+</div>
+<div style="min-width: 0">
+<p style="margin: 0; font-size: 15px; line-height: 20px; font-weight: 600">6 of 10 episodes watched</p>
+<p style="margin: 2px 0 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.86); font-variant-numeric: tabular-nums">4 left this season · 3h 42m to go</p>
+</div>
+</div>
+
+<div style="margin-top: 16px; display: flex; align-items: center; gap: 14px; padding: 10px; border-radius: 16px; background: rgba(255,255,255,0.06); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(255,255,255,0.04)">
+<div class="ne-thumb" style="flex: none; width: 128px; height: 72px; border-radius: 10px; overflow: hidden; background: #000000"><img class="ne-thumb" src="assets/severance-s2e07.jpg" alt="Still from Chikhai Bardo" style="display: block; width: 128px; height: 72px; object-fit: cover; transform: scale(1.35)"></div>
+<div style="min-width: 0">
+<p style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 600; color: #8FE3F0; font-variant-numeric: tabular-nums">Next · S2 · E7</p>
+<p style="margin: 2px 0 0; font-size: 18px; line-height: 24px; font-weight: 650; letter-spacing: -0.015em">Chikhai Bardo</p>
+<p style="margin: 2px 0 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.86); font-variant-numeric: tabular-nums">53m · Aired Feb 27, 2025</p>
+</div>
+</div>
+
+<div class="hero-actions" style="margin-top: auto; padding-top: 20px; display: flex; align-items: center; gap: 8px">
+<button type="button" class="pbtn" style="display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 20px 0 16px; border: 0; border-radius: 999px; background: #F1F7F9; color: #061015; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; box-shadow: 0 10px 24px -8px rgba(0,0,0,0.5); cursor: pointer; white-space: nowrap">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>Mark E7 watched</button>
+<button type="button" class="gbtn ep-btn" style="display: inline-flex; align-items: center; height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); color: #F3F8FA; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.07); cursor: pointer">Episodes</button>
+<button type="button" class="gbtn" aria-label="Rate Severance" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.14); color: #F3F8FA; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.07); cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"></path></svg></button>
+<button type="button" class="gbtn" aria-label="Add Severance to a list" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.14); color: #F3F8FA; box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 0 1px rgba(255,255,255,0.07); cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============ ROW: UP NEXT + COMING SOON ============ -->
+<div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 24px">
+
+<section aria-labelledby="upnext-title" class="panel rim" style="position: relative; flex: 1.7 1 520px; min-width: 0; display: flex; flex-direction: column; padding: 20px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.03) 100%), rgba(9,20,27,0.48); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 30px 60px -24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.16)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding-left: 4px">
+<div style="min-width: 0">
+<h2 id="upnext-title" style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 650; letter-spacing: -0.015em">Up next</h2>
+<p style="margin: 2px 0 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">4 more shows in progress</p>
+</div>
+<a href="#" class="lnk" style="display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 8px 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: rgba(236,245,249,0.8)">See all<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></a>
+</div>
+
+<ul style="flex: 1; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px">
+
+<li class="row rim un-row" style="position: relative; display: flex; align-items: center; gap: 16px; padding: 10px 12px 10px 10px; border-radius: 20px; background: rgba(255,255,255,0.05)">
+<img class="un-still" src="assets/the-bear-s4e03.jpg" alt="Still from The Bear, Scallop" style="flex: none; width: 160px; height: 90px; border-radius: 12px; object-fit: cover">
+<div style="flex: 1; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px">
+<h3 style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em">The Bear</h3>
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74)">FX on Hulu</span>
+</div>
+<p style="margin: 2px 0 0; font-size: 14px; line-height: 20px; font-weight: 500; color: rgba(236,245,249,0.94); text-indent: -0.42em">“Scallop”</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">S4 · E3 · 38m</p>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 12px">
+<div role="img" aria-label="2 of 10 episodes watched" style="flex: 1; display: flex; gap: 3px">
+<span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(143,227,240,0.38)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span>
+</div>
+<span style="flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">2 of 10</span>
+</div>
+</div>
+<button type="button" class="gbtn" aria-label="Mark The Bear S4 E3 watched" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.1); color: #F3F8FA; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 0 0 1px rgba(255,255,255,0.06); cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button>
+</li>
+
+<li class="row rim un-row" style="position: relative; display: flex; align-items: center; gap: 16px; padding: 10px 12px 10px 10px; border-radius: 20px; background: rgba(255,255,255,0.05)">
+<img class="un-still" src="assets/slow-horses-s5e02.jpg" alt="Still from Slow Horses, Incommunicado" style="flex: none; width: 160px; height: 90px; border-radius: 12px; object-fit: cover">
+<div style="flex: 1; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px">
+<h3 style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em">Slow Horses</h3>
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74)">Apple TV+</span>
+</div>
+<p style="margin: 2px 0 0; font-size: 14px; line-height: 20px; font-weight: 500; color: rgba(236,245,249,0.94); text-indent: -0.42em">“Incommunicado”</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">S5 · E2 · 48m</p>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 12px">
+<div role="img" aria-label="1 of 6 episodes watched" style="flex: 1; display: flex; gap: 3px">
+<span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(143,227,240,0.38)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span>
+</div>
+<span style="flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">1 of 6</span>
+</div>
+</div>
+<button type="button" class="gbtn" aria-label="Mark Slow Horses S5 E2 watched" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.1); color: #F3F8FA; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 0 0 1px rgba(255,255,255,0.06); cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button>
+</li>
+
+<li class="row rim un-row" style="position: relative; display: flex; align-items: center; gap: 16px; padding: 10px 12px 10px 10px; border-radius: 20px; background: rgba(255,255,255,0.05)">
+<img class="un-still" src="assets/andor-s2e10.jpg" alt="Still from Andor, Make It Stop" style="flex: none; width: 160px; height: 90px; border-radius: 12px; object-fit: cover">
+<div style="flex: 1; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px">
+<h3 style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em">Andor</h3>
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74)">Disney+</span>
+</div>
+<p style="margin: 2px 0 0; font-size: 14px; line-height: 20px; font-weight: 500; color: rgba(236,245,249,0.94); text-indent: -0.42em">“Make It Stop”</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">S2 · E10 · 51m</p>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 12px">
+<div role="img" aria-label="9 of 12 episodes watched" style="flex: 1; display: flex; gap: 3px">
+<span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(143,227,240,0.38)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span>
+</div>
+<span style="flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">9 of 12</span>
+</div>
+</div>
+<button type="button" class="gbtn" aria-label="Mark Andor S2 E10 watched" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.1); color: #F3F8FA; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 0 0 1px rgba(255,255,255,0.06); cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button>
+</li>
+
+<li class="row rim un-row" style="position: relative; display: flex; align-items: center; gap: 16px; padding: 10px 12px 10px 10px; border-radius: 20px; background: rgba(255,255,255,0.05)">
+<img class="un-still" src="assets/the-pitt-s2e09.jpg" alt="Still from The Pitt, 3:00 P.M." style="flex: none; width: 160px; height: 90px; border-radius: 12px; object-fit: cover">
+<div style="flex: 1; min-width: 0">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px">
+<h3 style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em">The Pitt</h3>
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74)">HBO Max</span>
+</div>
+<p style="margin: 2px 0 0; font-size: 14px; line-height: 20px; font-weight: 500; color: rgba(236,245,249,0.94); text-indent: -0.42em">“3:00 P.M.”</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">S2 · E9 · 49m</p>
+<div style="margin-top: 8px; display: flex; align-items: center; gap: 12px">
+<div role="img" aria-label="8 of 15 episodes watched" style="flex: 1; display: flex; gap: 3px">
+<span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: #8FE3F0"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(143,227,240,0.38)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span><span style="flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.16)"></span>
+</div>
+<span style="flex: none; font-size: 12px; line-height: 16px; font-weight: 500; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">8 of 15</span>
+</div>
+</div>
+<button type="button" class="gbtn" aria-label="Mark The Pitt S2 E9 watched" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,0.1); color: #F3F8FA; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 0 0 1px rgba(255,255,255,0.06); cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg></button>
+</li>
+</ul>
+</section>
+
+<section aria-labelledby="soon-title" class="panel rim" style="position: relative; flex: 1 1 340px; min-width: 0; padding: 20px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.03) 100%), rgba(9,20,27,0.48); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 30px 60px -24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.16)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding-left: 4px">
+<div style="min-width: 0">
+<h2 id="soon-title" style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 650; letter-spacing: -0.015em">Coming soon</h2>
+<p style="margin: 2px 0 0; display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">In theaters · <svg width="12" height="12" viewBox="0 0 24 24" fill="#8FE3F0" aria-hidden="true"><path d="M6.5 3h11a1.5 1.5 0 0 1 1.5 1.5V21l-7-4.5L5 21V4.5A1.5 1.5 0 0 1 6.5 3z"></path></svg>3 on your watchlist</p>
+</div>
+<a href="#" class="lnk" style="display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 8px 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: rgba(236,245,249,0.8)">Calendar<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></a>
+</div>
+
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
+
+<li style="display: flex; align-items: center; gap: 12px">
+<div style="flex: none; width: 40px; text-align: center"><div style="font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.74)">Oct</div><div style="font-size: 20px; line-height: 24px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">30</div></div>
+<img src="assets/the-mongoose-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">The Mongoose</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 8 days</p></div>
+<button type="button" class="gbtn" aria-label="Add The Mongoose to watchlist" aria-pressed="false" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: rgba(236,245,249,0.7); cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px">
+<div style="flex: none; width: 40px; text-align: center"><div style="font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.74)">Nov</div><div style="font-size: 20px; line-height: 24px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">3</div></div>
+<img src="assets/godzilla-minus-zero-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">Godzilla Minus Zero</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Tue · in 12 days</p></div>
+<button type="button" class="gbtn" aria-label="On your watchlist: Godzilla Minus Zero" aria-pressed="true" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #8FE3F0; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px">
+<div style="flex: none; width: 40px; text-align: center"><div style="font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.74)">Nov</div><div style="font-size: 20px; line-height: 24px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">6</div></div>
+<img src="assets/wild-horse-nine-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">Wild Horse Nine</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 15 days</p></div>
+<button type="button" class="gbtn" aria-label="On your watchlist: Wild Horse Nine" aria-pressed="true" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #8FE3F0; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px">
+<div style="flex: none; width: 40px; text-align: center"><div style="font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.74)">Nov</div><div style="font-size: 20px; line-height: 24px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">13</div></div>
+<img src="assets/ebenezer-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">Ebenezer</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 22 days</p></div>
+<button type="button" class="gbtn" aria-label="Add Ebenezer to watchlist" aria-pressed="false" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: rgba(236,245,249,0.7); cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px; margin-top: -9px">
+<div style="flex: none; width: 40px" aria-hidden="true"></div>
+<img src="assets/how-to-rob-a-bank-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">How to Rob a Bank</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 22 days</p></div>
+<button type="button" class="gbtn" aria-label="Add How to Rob a Bank to watchlist" aria-pressed="false" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: rgba(236,245,249,0.7); cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px">
+<div style="flex: none; width: 40px; text-align: center"><div style="font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.74)">Nov</div><div style="font-size: 20px; line-height: 24px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">20</div></div>
+<img src="assets/the-hunger-games-sunrise-on-the-reaping-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">The Hunger Games: Sunrise on the Reaping</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 29 days</p></div>
+<button type="button" class="gbtn" aria-label="Add The Hunger Games: Sunrise on the Reaping to watchlist" aria-pressed="false" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: rgba(236,245,249,0.7); cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px">
+<div style="flex: none; width: 40px; text-align: center"><div style="font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.74)">Dec</div><div style="font-size: 20px; line-height: 24px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">18</div></div>
+<img src="assets/dune-part-three-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">Dune: Part Three</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 57 days</p></div>
+<button type="button" class="gbtn" aria-label="On your watchlist: Dune: Part Three" aria-pressed="true" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #8FE3F0; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+
+<li style="display: flex; align-items: center; gap: 12px; margin-top: -9px">
+<div style="flex: none; width: 40px" aria-hidden="true"></div>
+<img src="assets/avengers-doomsday-poster.jpg" alt="" style="flex: none; width: 34px; height: 51px; border-radius: 6px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 6px 14px -6px rgba(0,0,0,0.6)">
+<div style="flex: 1; min-width: 0"><p style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 600">Avengers: Doomsday</p><p style="margin: 2px 0 0; font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums">Fri · in 57 days</p></div>
+<button type="button" class="gbtn" aria-label="Add Avengers: Doomsday to watchlist" aria-pressed="false" style="display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: rgba(236,245,249,0.7); cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg></button>
+</li>
+</ul>
+</section>
+</div>
+
+<!-- ============ RECENTLY WATCHED ============ -->
+<section aria-labelledby="recent-title" class="panel rim" style="position: relative; padding: 20px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.03) 100%), rgba(9,20,27,0.48); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 30px 60px -24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.16)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding-left: 4px">
+<div style="min-width: 0">
+<h2 id="recent-title" style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 650; letter-spacing: -0.015em">Recently watched</h2>
+<p style="margin: 2px 0 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">Your ratings, newest first</p>
+</div>
+<a href="#" class="lnk" style="display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 8px 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: rgba(236,245,249,0.8)">Library<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></a>
+</div>
+
+<ul class="rail" style="list-style: none; margin: 0; padding: 0 0 4px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(118px, 1fr); gap: 16px; overflow-x: auto">
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/sinners-poster.jpg" alt="Sinners poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Sinners</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 4.5 out of 5"><g fill="#FFFFFF" fill-opacity="0.22"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path><path d="M8 1.2L6.12 6.01L.96 6.31L4.96 9.59L3.65 14.59L8 11.8Z" transform="translate(72 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Oct 19</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/past-lives-poster.jpg" alt="Past Lives poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Past Lives</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 5 out of 5"><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Oct 16</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/one-battle-after-another-poster.jpg" alt="One Battle After Another poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">One Battle After Another</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 4.5 out of 5"><g fill="#FFFFFF" fill-opacity="0.22"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path><path d="M8 1.2L6.12 6.01L.96 6.31L4.96 9.59L3.65 14.59L8 11.8Z" transform="translate(72 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Oct 12</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/frankenstein-poster.jpg" alt="Frankenstein poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Frankenstein</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 4 out of 5"><g fill="#FFFFFF" fill-opacity="0.22"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Oct 8</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/weapons-poster.jpg" alt="Weapons poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Weapons</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 4 out of 5"><g fill="#FFFFFF" fill-opacity="0.22"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Oct 3</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/conclave-poster.jpg" alt="Conclave poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Conclave</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 3.5 out of 5"><g fill="#FFFFFF" fill-opacity="0.22"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L6.12 6.01L.96 6.31L4.96 9.59L3.65 14.59L8 11.8Z" transform="translate(54 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Sep 28</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/anora-poster.jpg" alt="Anora poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover"></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Anora</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 4 out of 5"><g fill="#FFFFFF" fill-opacity="0.22"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Sep 24</span>
+</div>
+</a></li>
+
+<li style="min-width: 0"><a href="#" style="display: block">
+<div class="rim" style="position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 32px -14px rgba(0,0,0,0.7)"><img src="assets/dune-part-two-poster.jpg" alt="Dune: Part Two poster" style="display: block; width: 100%; height: auto; aspect-ratio: 2 / 3; object-fit: cover">
+<span style="position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 6px; border-radius: 999px; background: rgba(6,15,21,0.62); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); font-size: 12px; font-weight: 600; color: #F3F8FA"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"></path><path d="M3.5 4v4.5H8"></path></svg>Rewatch</span></div>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Dune: Part Two</p>
+<div style="margin-top: 4px; display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<svg width="66" height="12" viewBox="0 0 88 16" role="img" aria-label="Rated 5 out of 5"><g fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(18 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(36 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(54 0)"></path><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" transform="translate(72 0)"></path></g></svg>
+<span style="font-size: 12px; line-height: 16px; color: rgba(236,245,249,0.74); font-variant-numeric: tabular-nums; white-space: nowrap">Sep 20</span>
+</div>
+</a></li>
+</ul>
+</section>
+
+<!-- ============ ROW: STATS + BECAUSE YOU WATCHED ============ -->
+<div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 24px">
+
+<section aria-labelledby="stats-title" class="panel rim" style="position: relative; flex: 1.7 1 520px; min-width: 0; padding: 20px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.03) 100%), rgba(9,20,27,0.48); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 30px 60px -24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.16)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding-left: 4px">
+<div style="min-width: 0">
+<h2 id="stats-title" style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 650; letter-spacing: -0.015em">2026 so far</h2>
+<p style="margin: 2px 0 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">January 1 – October 22</p>
+</div>
+<a href="#" class="lnk" style="display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 8px 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: rgba(236,245,249,0.8)">All stats<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg></a>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 24px 32px; padding: 0 4px">
+<dl style="flex: 1 1 250px; min-width: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: space-between; gap: 14px 16px">
+<div style="display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0"><dt style="font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">Titles logged</dt><dd style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums">87</dd></div>
+<div style="display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0"><dt style="font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">Hours watched</dt><dd style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums">214</dd></div>
+<div style="display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0"><dt style="font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">Average rating</dt><dd style="margin: 0; display: flex; align-items: center; font-size: 28px; line-height: 34px; font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums">3.9<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" style="margin-left: 6px"><path d="M8 1.2L9.88 6.01L15.04 6.31L11.04 9.59L12.35 14.59L8 11.8L3.65 14.59L4.96 9.59L.96 6.31L6.12 6.01Z" fill="#F2C46D" stroke="#F2C46D" stroke-width="0.8" stroke-linejoin="round"></path></svg></dd></div>
+<div style="display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0"><dt style="font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">Top genre</dt><dd style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums">Drama</dd></div>
+<div style="display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0"><dt style="font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">In progress</dt><dd style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums">5<span style="margin-left: 5px; font-size: 15px; line-height: 18px; font-weight: 500; letter-spacing: -0.01em; color: rgba(236,245,249,0.76)">shows</span></dd></div>
+<div style="display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0"><dt style="font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)">On Must watch</dt><dd style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 650; letter-spacing: -0.025em; font-variant-numeric: tabular-nums">12<span style="margin-left: 5px; font-size: 15px; line-height: 18px; font-weight: 500; letter-spacing: -0.01em; color: rgba(236,245,249,0.76)">titles</span></dd></div>
+</dl>
+
+<figure style="flex: 1.35 1 280px; min-width: 0; margin: 0">
+<figcaption style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.76)"><span>Hours per month</span><span style="display: inline-flex; align-items: center; gap: 12px"><span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: #8FE3F0"></span>Oct 25h</span><span style="display: inline-flex; align-items: center; gap: 6px"><svg width="14" height="2" viewBox="0 0 14 2" aria-hidden="true"><path d="M0 1h14" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1.5" stroke-dasharray="3 2.5"></path></svg>Avg 21h</span></span></figcaption>
+<svg viewBox="0 0 300 120" role="img" aria-label="Hours watched per month in 2026: January 18, February 22, March 25, April 16, May 19, June 24, July 21, August 17, September 27, October 25" style="display: block; width: 100%; height: auto; margin-top: 14px">
+<path d="M0 116.5H300" stroke="#FFFFFF" stroke-opacity="0.14"></path>
+<g fill="#FFFFFF" fill-opacity="0.26">
+<path d="M7 116V55.2Q7 51.2 11 51.2H19Q23 51.2 23 55.2V116Z"></path>
+<path d="M37 116V40.8Q37 36.8 41 36.8H49Q53 36.8 53 40.8V116Z"></path>
+<path d="M67 116V30.0Q67 26.0 71 26.0H79Q83 26.0 83 30.0V116Z"></path>
+<path d="M97 116V62.4Q97 58.4 101 58.4H109Q113 58.4 113 62.4V116Z"></path>
+<path d="M127 116V51.6Q127 47.6 131 47.6H139Q143 47.6 143 51.6V116Z"></path>
+<path d="M157 116V33.6Q157 29.6 161 29.6H169Q173 29.6 173 33.6V116Z"></path>
+<path d="M187 116V44.4Q187 40.4 191 40.4H199Q203 40.4 203 44.4V116Z"></path>
+<path d="M217 116V58.8Q217 54.8 221 54.8H229Q233 54.8 233 58.8V116Z"></path>
+<path d="M247 116V22.8Q247 18.8 251 18.8H259Q263 18.8 263 22.8V116Z"></path>
+</g>
+<path d="M277 116V30.0Q277 26.0 281 26.0H289Q293 26.0 293 30.0V116Z" fill="#8FE3F0"></path>
+<path d="M0 39H300" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1.2" stroke-dasharray="3 3"></path>
+</svg>
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); margin-top: 6px; font-size: 12px; line-height: 16px; text-align: center; color: rgba(236,245,249,0.72)"><span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span style="color: #8FE3F0; font-weight: 600">O</span></div>
+</figure>
+</div>
+</section>
+
+<section aria-labelledby="byw-title" class="rim" style="position: relative; flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; padding: 8px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 100%), rgba(9,20,27,0.40); backdrop-filter: blur(40px) saturate(160%); -webkit-backdrop-filter: blur(40px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 30px 60px -24px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.16)">
+<div class="byw-stage" style="position: relative; flex: 1 1 auto; min-height: 268px; border-radius: 20px; overflow: hidden; background: #0B1A21">
+<img class="byw-img" src="assets/pluribus-backdrop-hd.jpg" alt="" style="position: absolute; top: 0; left: 0; width: 100%; height: 330px; object-fit: cover; object-position: 50% 22%">
+<div class="byw-scrim" aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 210px; background: linear-gradient(180deg, rgba(5,12,16,0) 0%, rgba(5,12,16,0.62) 38%, rgba(5,12,16,0.86) 68%, rgba(5,12,16,0.94) 100%)"></div>
+<div style="position: absolute; left: 20px; right: 20px; bottom: 18px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 16px">
+<div style="flex: 1 1 210px; min-width: 0">
+<p style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(236,245,249,0.84)">Because you watched Severance</p>
+<h2 id="byw-title" style="margin: 10px 0 0; line-height: 0"><img src="assets/pluribus-logo.png" alt="Pluribus" style="width: 168px; max-width: 100%; height: auto"></h2>
+<p style="margin: 10px 0 0; font-size: 13px; line-height: 18px; color: rgba(236,245,249,0.84)">Apple TV+ · 2025 · Drama · Sci-Fi</p>
+</div>
+<button type="button" class="gbtn" aria-pressed="true" aria-label="Pluribus is on your Must watch list" style="display: inline-flex; align-items: center; gap: 6px; flex: none; height: 44px; padding: 0 16px 0 13px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.16); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: #F3F8FA; font-family: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(255,255,255,0.08); cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="#8FE3F0" stroke="#8FE3F0" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.2-6.5 4.2v-16a1 1 0 0 1 1-1z"></path></svg>Must watch</button>
+</div>
+</div>
+</section>
+</div>
+
+</main>
+</div>
+</div>
+
+</body>
+</html>
