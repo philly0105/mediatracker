@@ -7,8 +7,11 @@
 // own. Instead:
 //
 //   <AmbientHost />            mounted once in the root layout, paints the one
-//                              layer (two during the 400ms crossfade; three
-//                              only if a third title arrives mid-fade).
+//                              layer (two during the 400ms crossfade; while
+//                              titles change faster than a fade, each painted
+//                              layer stays until its fade-out, or the fade-in
+//                              over it, has ended, so a burst of changes can
+//                              briefly stack more).
 //   <AmbientBackdrop src />    rendered by a page, the title page or the media
 //                              modal; registers its image in a module-level
 //                              registry and renders nothing. On unmount the
@@ -120,10 +123,14 @@ const IMG_STYLE: CSSProperties = {
   transform: 'scale(1.15)',
 }
 
-type Layer = { src: string; loaded: boolean }
+// `leaving` marks a layer that was fading out when newer art was pushed over
+// it. It then sits under the wanted layer, where its place alone would show it
+// again.
+type Layer = { src: string; loaded: boolean; leaving?: boolean }
 // The images on screen, bottom to top, and the one wanted. Layers under the
-// wanted one are the art it fades in over; layers above it are on their way
-// out, fading to nothing over it. Only the wanted layer can be unloaded.
+// wanted one are the art it fades in over; layers above it, and leaving ones
+// under it, are on their way out, fading to nothing. Only the wanted layer can
+// be unloaded, and it is never leaving.
 type Shown = { src: string | null; layers: Layer[] }
 
 const wantedIndex = (state: Shown) => state.layers.findIndex((layer) => layer.src === state.src)
@@ -132,9 +139,21 @@ function retarget(state: Shown, src: string | null): Shown {
   // A layer that never painted goes at once. Painted ones stay: under the new
   // art until it has faded in, or, past the one coming back, fading out over
   // it. Coming back is by src, so the image keeps its decoded node rather
-  // than mounting a second copy under the same key.
-  const layers = state.layers.filter((layer) => layer.loaded)
-  if (src && !layers.some((layer) => layer.src === src)) layers.push({ src, loaded: false })
+  // than mounting a second copy under the same key, and it stops leaving.
+  // New art pushed on top marks the layers fading out over the old wanted one
+  // as leaving, so they keep fading out under it rather than showing again.
+  // Not after a null src: then the last art stays under the new title, as on
+  // a first swap.
+  const oldWanted = wantedIndex(state)
+  const back = state.layers.some((layer) => layer.loaded && layer.src === src)
+  const layers = state.layers
+    .map((layer, i) => {
+      if (layer.src === src) return { ...layer, leaving: false }
+      if (src && !back && oldWanted >= 0 && i > oldWanted) return { ...layer, leaving: true }
+      return layer
+    })
+    .filter((layer) => layer.loaded)
+  if (src && !back) layers.push({ src, loaded: false })
   return { src, layers }
 }
 
@@ -143,23 +162,26 @@ function markLoaded(state: Shown, src: string): Shown {
   return layers.some((layer, i) => layer !== state.layers[i]) ? { ...state, layers } : state
 }
 
-// A layer's opacity fade has ended. Faded out, it goes. Faded in, it hides
-// whatever is under it, so that goes; a fade-in carried over from before a
-// swap (the layer is now under newer art) drops the same thing, nothing.
+// A layer's opacity fade has ended. Faded out (above the wanted layer, or
+// leaving), it goes. Faded in, it hides whatever is under it, so that goes; a
+// fade-in carried over from before a swap (the layer is now under newer art)
+// drops the same thing, nothing.
 function afterFade(state: Shown, src: string): Shown {
   const index = state.layers.findIndex((layer) => layer.src === src)
   if (index < 0) return state
-  if (index > wantedIndex(state)) return { ...state, layers: state.layers.filter((_, i) => i !== index) }
-  return index > 0 && state.layers[index].loaded ? { ...state, layers: state.layers.slice(index) } : state
+  const layer = state.layers[index]
+  if (index > wantedIndex(state) || layer.leaving) return { ...state, layers: state.layers.filter((_, i) => i !== index) }
+  return index > 0 && layer.loaded ? { ...state, layers: state.layers.slice(index) } : state
 }
 
-// What the fades leave at rest: nothing above the wanted layer, nothing under
-// the topmost painted one. The same state back means nothing is pending.
+// What the fades leave at rest: nothing above the wanted layer, nothing
+// leaving, nothing under the topmost painted one. The same state back means
+// nothing is pending.
 function settle(state: Shown): Shown {
   const wanted = wantedIndex(state)
   let from = 0
-  for (let i = 0; i <= wanted; i++) if (state.layers[i].loaded) from = i
-  const layers = state.layers.slice(from, wanted + 1)
+  for (let i = 0; i <= wanted; i++) if (state.layers[i].loaded && !state.layers[i].leaving) from = i
+  const layers = state.layers.slice(from, wanted + 1).filter((layer) => !layer.leaving)
   return layers.length === state.layers.length ? state : { ...state, layers }
 }
 
@@ -211,8 +233,9 @@ export function AmbientHost() {
   const wanted = wantedIndex(shown)
   // Art is on screen once the wanted image has loaded, or while older art is
   // still painted under it. Before the first load and during the final
-  // fade-out nothing opaque is up, so the radial shows through.
-  const hasArt = shown.layers.slice(0, wanted + 1).some((layer) => layer.loaded)
+  // fade-out nothing opaque is up, so the radial shows through. A leaving
+  // layer is fading out, so it does not count.
+  const hasArt = shown.layers.slice(0, wanted + 1).some((layer) => layer.loaded && !layer.leaving)
 
   // Images are keyed by src and never reordered, so an image that changes
   // role keeps its DOM node: a transition only runs on a style change to an
@@ -235,8 +258,8 @@ export function AmbientHost() {
           className="ambient-img"
           onLoad={() => onLoad(layer.src)}
           onTransitionEnd={(event) => { if (isFade(event)) setShown((state) => afterFade(state, layer.src)) }}
-          // Above the wanted layer is on the way out.
-          style={{ ...IMG_STYLE, opacity: layer.loaded && index <= wanted ? 1 : 0, transition }}
+          // Above the wanted layer, or leaving, is on the way out.
+          style={{ ...IMG_STYLE, opacity: layer.loaded && !layer.leaving && index <= wanted ? 1 : 0, transition }}
         />
       ))}
       <div style={{ position: 'absolute', inset: 0, background: TINT }} />

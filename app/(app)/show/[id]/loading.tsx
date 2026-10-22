@@ -46,9 +46,11 @@ export default function ShowLoading() {
         <Skeleton className="mb-4 h-6 w-28" />
         <Skeleton className="mb-4 h-11 w-64 rounded-[var(--radius-md)]" />
         <div className="space-y-2">
+          {/* EpisodeTracker's rows: MediaRow's padding and gap with its small
+              still, copied rather than imported, as MediaRow is a client module. */}
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="glass-row flex items-center gap-4 p-[10px]">
-              <Skeleton className="h-[58px] w-[104px] shrink-0 rounded-[var(--radius-thumb)] md:h-[90px] md:w-40" />
+            <div key={i} className="glass-row flex items-center gap-2 p-2 md:gap-4 md:py-2.5 md:pl-2.5 md:pr-3">
+              <Skeleton className="h-10 w-[72px] shrink-0 rounded-[var(--radius-thumb)] md:h-[90px] md:w-40" />
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-1/3" />
                 <Skeleton className="h-3 w-1/4" />

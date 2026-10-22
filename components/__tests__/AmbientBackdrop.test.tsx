@@ -374,6 +374,94 @@ describe('AmbientHost', () => {
     expect(images(container)).toEqual([next])
   })
 
+  // The Bear loaded and fading in over Severance, then Severance again, so
+  // The Bear is fading back out over it.
+  function returnMidFade() {
+    const { container, rerender } = crossfade()
+    const [painted, bear] = images(container)
+    load(bear)
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={SEVERANCE} />
+      </>
+    )
+    return { container, rerender, painted, bear }
+  }
+
+  it('keeps fading out the art leaving when a third title arrives before its fade ends', () => {
+    // Close a modal on a title whose art was fading in, then open another.
+    const { container, rerender, painted, bear } = returnMidFade()
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={ANDOR} />
+      </>
+    )
+    const next = current(container)!
+    expect(next).toHaveAttribute('src', ANDOR_780)
+    // The Bear now sits under the wanted layer, but it does not show again.
+    expect(images(container)).toEqual([painted, bear, next])
+    expect([painted.style.opacity, bear.style.opacity, next.style.opacity]).toEqual(['1', '0', '0'])
+
+    // Its fade-out ending drops it alone: the painted art stays under Andor.
+    fadeEnd(bear)
+    expect(images(container)).toEqual([painted, next])
+
+    load(next)
+    fadeEnd(next)
+    expect(images(container)).toEqual([next])
+  })
+
+  it('keeps the art leaving through a further swap before the new art has loaded', () => {
+    const { container, rerender, painted, bear } = returnMidFade()
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={ANDOR} />
+      </>
+    )
+    // Another title before Andor has loaded: Andor never painted, so it goes,
+    // and The Bear stays on its way out under the new one.
+    const DUNE_780 = 'https://image.tmdb.org/t/p/w780/dune.jpg'
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={DUNE_780} />
+      </>
+    )
+    const next = current(container)!
+    expect(next).toHaveAttribute('src', DUNE_780)
+    expect(images(container)).toEqual([painted, bear, next])
+    expect([painted.style.opacity, bear.style.opacity, next.style.opacity]).toEqual(['1', '0', '0'])
+
+    fadeEnd(bear)
+    expect(images(container)).toEqual([painted, next])
+  })
+
+  it('brings back art that was leaving when its title returns before the fade ends', () => {
+    // The Bear is on its way out under Andor, then The Bear is opened again.
+    const { container, rerender, painted, bear } = returnMidFade()
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={ANDOR} />
+      </>
+    )
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={BEAR} />
+      </>
+    )
+    // Andor never painted, so it goes; The Bear stops leaving and shows again.
+    expect(images(container)).toEqual([painted, bear])
+    expect([painted.style.opacity, bear.style.opacity]).toEqual(['1', '1'])
+
+    fadeEnd(bear)
+    expect(images(container)).toEqual([bear])
+  })
+
   it('swaps without a fade under prefers-reduced-motion', () => {
     vi.useFakeTimers()
     stubReducedMotion(true)

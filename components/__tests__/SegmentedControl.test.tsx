@@ -64,10 +64,10 @@ describe('SegmentedControl', () => {
     }
   })
 
-  it('scrolls the selected segment, then a focused one, into its sideways scroller', () => {
-    // jsdom has no layout: the scroller is 300 wide with 500 of content, the
-    // selected Season 4 sits at 380-460, past its right edge, and Season 1 at
-    // -120 to -40, past its left one.
+  // jsdom has no layout: the scroller is 300 wide with 500 of content, the
+  // selected Season 4 sits at 380-460, past its right edge, and Season 1 at
+  // -120 to -40, past its left one.
+  function renderInScroller() {
     const box = (left: number, right: number) => ({ left, right, top: 0, bottom: 36, x: left, y: 0, width: right - left, height: 36, toJSON: () => ({}) })
     const isScroller = (el: Element) => el instanceof HTMLElement && el.dataset.testid === 'scroller'
     const spots: Record<string, [number, number]> = { 'Season 1': [-120, -40], 'Season 4': [380, 460] }
@@ -87,13 +87,37 @@ describe('SegmentedControl', () => {
         />
       </div>
     )
+    return screen.getByTestId('scroller')
+  }
 
+  // jsdom's :focus-visible heuristic needs a real Tab keystroke history, so
+  // the modality is stubbed: the reveal consults the selector and nothing else.
+  function focusedByKeyboard(keyboard: boolean) {
+    const matches = Element.prototype.matches
+    vi.spyOn(Element.prototype, 'matches').mockImplementation(function (this: Element, selector: string) {
+      return selector === ':focus-visible' ? keyboard : matches.call(this, selector)
+    })
+  }
+
+  it('scrolls the selected segment, then a focused one, into its sideways scroller', () => {
+    const scroller = renderInScroller()
     // The 160px it overhangs, plus 8 so the ring and the edge show.
-    const scroller = screen.getByTestId('scroller')
     expect(scroller.scrollLeft).toBe(168)
 
+    focusedByKeyboard(true)
     act(() => screen.getByRole('radio', { name: 'Season 1' }).focus())
     expect(scroller.scrollLeft).toBe(168 - 128)
+  })
+
+  it('leaves the scroller alone when a click or tap focuses a segment', () => {
+    // Scrolling under the pressed pointer would move the segment away before
+    // the click lands, so a pointer focus waits for the selection instead.
+    const scroller = renderInScroller()
+    expect(scroller.scrollLeft).toBe(168)
+
+    focusedByKeyboard(false)
+    act(() => screen.getByRole('radio', { name: 'Season 1' }).focus())
+    expect(scroller.scrollLeft).toBe(168)
   })
 
   it('shows a count as a muted suffix and folds it into the name', () => {

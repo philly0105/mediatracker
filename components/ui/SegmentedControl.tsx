@@ -59,7 +59,10 @@ export function SegmentedControl<T extends string>({
   // overflows into whatever scroller the call site gives it (EpisodeTracker's
   // seasons, the watchlist's priorities on a phone). The selected segment is
   // brought into that box, or a show opening on its latest season starts with
-  // it off the edge, and so is a focused one.
+  // it off the edge, and so is a focused one. Keyboard focus only: a click or
+  // tap focuses too, and scrolling the track under a pressed pointer moves the
+  // segment away before the click lands. A clicked segment comes in anyway
+  // once it is selected.
   const groupRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const radio = groupRef.current?.querySelector<HTMLElement>('[aria-checked="true"]')
@@ -71,7 +74,7 @@ export function SegmentedControl<T extends string>({
       ref={groupRef}
       role="radiogroup"
       aria-label={label}
-      onFocus={(e) => revealInScroller(e.target)}
+      onFocus={(e) => { if (e.target.matches(':focus-visible')) revealInScroller(e.target) }}
       className={`glass-inset inline-flex items-center gap-0.5 p-1 relative select-none ${className}`}
     >
       {options.map((option) => {

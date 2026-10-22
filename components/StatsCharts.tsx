@@ -230,7 +230,9 @@ export default function StatsCharts({ data }: { data: StatsData }) {
   const genreMax = genres[0]?.count ?? 0
 
   // Once the years outgrow the period track it scrolls, so the current period
-  // is brought into it, as a focused pill is.
+  // is brought into it, as a pill focused from the keyboard is. Not a clicked
+  // one: scrolling the track under a pressed pointer moves the pill away
+  // before the click lands, and the period it opens is brought in here.
   const periodRef = useRef<HTMLElement>(null)
   useLayoutEffect(() => {
     const current = periodRef.current?.querySelector<HTMLElement>('[aria-current="page"]')
@@ -255,7 +257,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
             <nav
               ref={periodRef}
               aria-label="Activity period"
-              onFocus={(e) => revealInScroller(e.target)}
+              onFocus={(e) => { if (e.target.matches(':focus-visible')) revealInScroller(e.target) }}
               className="glass-inset scrollbar-none inline-flex max-w-full items-center gap-0.5 overflow-x-auto p-1"
             >
               <Link
