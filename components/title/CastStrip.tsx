@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { revealRailItem } from './MoreLikeThisRail'
 
 export interface CastMember {
   name: string
@@ -40,13 +41,18 @@ export function CastStrip({ cast, title = 'Cast', onNavigate, newTabLinks = fals
       <SectionHeader title={title} />
       {/* Bleeds through the panel's padding (--panel-pad, set by Card's panel
           variant; --space-5 where no panel sets it) like the poster rail, so
-          a cut-off tile sits at the rim and reads as scrollable. */}
+          a cut-off tile sits at the rim and reads as scrollable. The 8px of
+          block padding, cancelled by the negative margin, is room for the
+          focus ring on a lifted tile (ring and offset, scaled, plus the 1.02
+          lift's extra height): overflow-x:auto clips the y axis too. */}
       <ul
         className="scrollbar-none"
+        onFocus={revealRailItem}
         style={{
           listStyle: 'none',
-          margin: '0 calc(var(--panel-pad, var(--space-5)) * -1)',
-          padding: '0 var(--panel-pad, var(--space-5)) 4px',
+          margin: '-8px calc(var(--panel-pad, var(--space-5)) * -1)',
+          padding: '8px var(--panel-pad, var(--space-5)) 12px',
+          scrollPaddingInline: 'var(--panel-pad, var(--space-5))',
           display: 'grid',
           gridAutoFlow: 'column',
           gridAutoColumns: 112,

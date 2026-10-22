@@ -168,11 +168,16 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
           const meta = episodeMap.get(`${season.id}-${ep}`)
           const airLabel = meta?.air_date ? formatAirDate(meta.air_date) : null
           const unaired = isUnaired(meta?.air_date ?? null)
+          const runtime = meta?.runtime_mins ? formatMinutes(meta.runtime_mins) : null
+          const dateLabel = airLabel ? (unaired ? `Airs ${airLabel}` : airLabel) : null
           const label = cascadeLabel(season.season_number, ep, watched, season.episode_count, meta?.name)
           const isNext = nextUp?.season_id === season.id && nextUp.episode_number === ep
           return (
             <li
               key={ep}
+              // Forced colours drop box-shadow, so there the ring is an outline
+              // in the system Highlight.
+              className={isNext ? 'forced-colors:outline-2 forced-colors:outline-offset-2 forced-colors:outline-[color:Highlight]' : undefined}
               style={{
                 opacity: unaired && !watched ? 0.55 : 1,
                 borderRadius: 'var(--radius-row)',
@@ -186,24 +191,41 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                 type="show"
                 stillUrl={meta?.still_url}
                 thumbShape="still"
-                aside={meta?.runtime_mins ? formatMinutes(meta.runtime_mins) : ''}
-                subtitle={airLabel ? (unaired ? `Airs ${airLabel}` : airLabel) : undefined}
+                // A phone's 330px row: the small still leaves the title and
+                // the two-line synopsis about 170px beside the toggle.
+                stillSize="sm"
+                // The runtime is the aside from the content breakpoint up. A
+                // phone's text column has no room for a second column, so there
+                // it leads the date line instead of wrapping under the title.
+                aside={runtime ? <span className={dateLabel ? 'max-md:hidden' : undefined}>{runtime}</span> : ''}
+                subtitle={dateLabel
+                  ? (runtime ? <><span className="md:hidden">{runtime} · </span>{dateLabel}</> : dateLabel)
+                  : undefined}
                 actions={
                   // The one control per episode, as the old grid cell was: the
                   // number, the check once watched, and the cascade as its name.
+                  // A watched pill drops the glass fill (keeping its edge) so
+                  // the accent label sits on the row, where it clears 4.5:1
+                  // even on a light backdrop; on the fill it did not. The pill
+                  // tightens on phones, staying 44px tall and at least as wide.
                   <button
                     type="button"
                     onClick={() => handleEpisodeClick(season.id, ep, watched)}
                     aria-pressed={watched}
                     aria-label={label}
                     title={label}
-                    className="glass-btn inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 transition-colors"
+                    className={[
+                      'glass-btn inline-flex h-11 min-w-11 items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 transition-colors md:gap-1.5 md:px-3',
+                      // On the row rather than the .16 fill: the accent label
+                      // measured under 4.5:1 on the fill.
+                      watched && 'bg-transparent hover:bg-[var(--glass-fill-hover)]',
+                    ].filter(Boolean).join(' ')}
                     style={{
                       fontSize: 'var(--text-sm)',
                       lineHeight: '18px',
                       fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
                       fontVariantNumeric: 'tabular-nums',
-                      color: watched ? 'var(--accent)' : 'var(--text-secondary)',
+                      color: watched ? 'var(--accent)' : 'var(--text-primary)',
                     }}
                   >
                     {watched && <Check aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.8} />}
@@ -212,15 +234,15 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
                 }
               >
                 {meta?.overview && (
+                  // One line from the content breakpoint up; a phone's narrow
+                  // column gets two, where one showed a dozen characters.
                   <p
+                    className="truncate max-md:line-clamp-2 max-md:whitespace-normal"
                     style={{
                       margin: 0,
                       fontSize: 'var(--text-sm)',
                       lineHeight: '18px',
                       color: 'var(--text-muted)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
                     }}
                   >
                     {meta.overview}

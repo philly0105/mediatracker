@@ -240,14 +240,16 @@ function StreamingContent() {
           </Select>
 
           {/* A toggle chip: pressed takes the glass-button fill with the
-              accent text and ring, the chip rest state otherwise. */}
+              accent text and ring, the chip rest state otherwise. Forced
+              colours get a border in both states, and the pressed Highlight
+              opts out of the forced palette so no backplate hides its label. */}
           <button
             type="button"
             onClick={toggleHideWatched}
             aria-pressed={hideWatched}
-            className={`inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[var(--radius-pill)] px-4 text-[length:var(--text-sm)] font-semibold transition-colors duration-200 ${
+            className={`inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[var(--radius-pill)] px-4 text-[length:var(--text-sm)] font-semibold transition-colors duration-200 forced-colors:border forced-colors:border-[color:ButtonText] ${
               hideWatched
-                ? 'glass-btn text-[var(--accent)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                ? 'glass-btn text-[var(--accent)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
                 : 'bg-[var(--glass-chip)] text-[var(--text-secondary)] shadow-[var(--glass-chip-edge)] hover:bg-[var(--glass-fill-selected)] hover:text-[var(--text-primary)]'
             }`}
             style={hideWatched ? { boxShadow: 'var(--glass-btn-edge), var(--accent-ring)' } : undefined}

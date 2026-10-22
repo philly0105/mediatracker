@@ -26,8 +26,10 @@ interface Props {
 // inline so it beats the row's own hover fill; the pointer moves the highlight
 // anyway, so hover and selection never disagree. Forced colours drops both the
 // fill and the ring, so the selected row takes the system Highlight there;
-// `!` is what lets the class beat the inline fill, as in Sidebar's tabs.
-const ROW_CLASS = 'glass-row rounded-[var(--radius-md)] flex items-center gap-3 w-full text-left cursor-pointer aria-selected:forced-colors:bg-[color:Highlight]! aria-selected:forced-colors:text-[color:HighlightText]!'
+// `!` is what lets the class beat the inline fill, as in Sidebar's tabs. The
+// row opts out of the forced palette, or a Canvas backplate hides its text,
+// so everything inside it is set to HighlightText by hand, inline colours too.
+const ROW_CLASS = 'glass-row rounded-[var(--radius-md)] flex items-center gap-3 w-full text-left cursor-pointer aria-selected:forced-colors:forced-color-adjust-none aria-selected:forced-colors:bg-[color:Highlight]! aria-selected:forced-colors:text-[color:HighlightText]! aria-selected:forced-colors:**:text-[color:HighlightText]!'
 const SELECTED_STYLE: CSSProperties = {
   background: 'var(--glass-fill-selected)',
   boxShadow: 'var(--glass-row-edge), var(--accent-ring)',
@@ -383,7 +385,7 @@ export default function SearchOverlay({ onClose }: Props) {
               onClick={() => switchMode(value)}
               className={`inline-flex min-h-11 items-center rounded-full px-4 transition-colors ${
                 mode === value
-                  ? 'bg-[var(--glass-fill-active)] text-[var(--text-primary)] shadow-[var(--inset-hairline)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                  ? 'bg-[var(--glass-fill-active)] text-[var(--text-primary)] shadow-[var(--inset-hairline)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--glass-fill-hover)] hover:text-[var(--text-primary)]'
               }`}
               style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', fontWeight: SEMIBOLD, letterSpacing: 'var(--tracking-text)' }}

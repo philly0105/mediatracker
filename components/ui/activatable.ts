@@ -3,7 +3,7 @@ import type { KeyboardEvent } from 'react'
 /**
  * Props that make a clickable card reachable from the keyboard.
  *
- * The cards these serve — `Card`, `MediaRow`, the recommendation grid — all
+ * The cards these serve — `Card` and the recommendation grid — both
  * carry their own buttons (rating stars, action chips), so their root cannot be
  * a `<button>` the way `PosterCard`'s is without nesting interactive elements.
  * `role="button"` plus an explicit Enter/Space handler puts the card in tab

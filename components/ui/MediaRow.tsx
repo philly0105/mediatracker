@@ -1,10 +1,9 @@
 'use client'
 import Image from 'next/image'
-import React, { useState } from 'react'
+import React, { useId, useState } from 'react'
 import RatingStars from '@/components/RatingStars'
 import { Calendar, Star } from 'lucide-react'
 import { formatDateLabel } from '@/lib/formatDate'
-import { activatableProps } from './activatable'
 
 interface MediaRowProps {
   title: string
@@ -19,6 +18,12 @@ interface MediaRowProps {
    * an episode with no still keeps its siblings' 16:9 shape.
    */
   thumbShape?: 'poster' | 'still'
+  /**
+   * The still's size under the content breakpoint: 104x58, or 72x40 ('sm') for
+   * an episode list, whose rows also fit a two-line synopsis and a wide toggle.
+   * 160x90 from md up either way.
+   */
+  stillSize?: 'md' | 'sm'
   rating?: number | null
   onRate?: (rating: number | null) => void
   review?: string | null
@@ -43,6 +48,16 @@ const metaStyle: React.CSSProperties = {
   fontVariantNumeric: 'tabular-nums',
 }
 
+// The reference's 16 gap and 10/12 padding from the content breakpoint up. A
+// phone's 330px row tightens both to 8 so the text column keeps a usable
+// width beside the still and the trailing action.
+const ROW_LAYOUT = 'relative flex items-center gap-2 p-2 md:gap-4 md:py-2.5 md:pl-2.5 md:pr-3'
+
+// Controls inside a clickable row sit above its stretched opener (which is the
+// row's first child, so DOM order alone would paint them under it). Kept below
+// SelectableOverlay's z-10 select-mode shield.
+const ABOVE_OPENER = 'relative z-[1]'
+
 export function MediaRow({
   title,
   year,
@@ -50,6 +65,7 @@ export function MediaRow({
   posterUrl,
   stillUrl,
   thumbShape,
+  stillSize = 'md',
   rating = null,
   onRate,
   review,
@@ -65,6 +81,7 @@ export function MediaRow({
   // fall back to the poster rather than straight to the placeholder.
   const [stillErr, setStillErr] = useState(false)
   const [posterErr, setPosterErr] = useState(false)
+  const titleId = useId()
   const typeLabel = type === 'show' ? 'TV' : 'Movie'
   const thumbStyle: React.CSSProperties = {
     flexShrink: 0,
@@ -72,10 +89,13 @@ export function MediaRow({
     objectFit: 'cover',
     boxShadow: 'var(--shadow-sm)',
   }
-  // The still is the reference's 160x90, shrinking to 104x58 under the content
-  // breakpoint. The placeholder for a missing still uses the same class so it
-  // shrinks with its siblings instead of widening that one row on phones.
-  const stillSize = 'w-[104px] h-[58px] md:w-40 md:h-[90px]'
+  // The still is the reference's 160x90 from the content breakpoint up and
+  // 104x58 under it, or 72x40 when the row asks for the small still. The
+  // placeholder for a missing still uses the same class so it shrinks with its
+  // siblings instead of widening that one row on phones.
+  const stillClass = stillSize === 'sm'
+    ? 'w-[72px] h-10 md:w-40 md:h-[90px]'
+    : 'w-[104px] h-[58px] md:w-40 md:h-[90px]'
 
   // Fixed thumbs, so width/height props rather than `fill`. They also reserve
   // the space, which is what stops the list jumping as images load.
@@ -83,7 +103,7 @@ export function MediaRow({
   if (stillUrl && !stillErr) {
     thumb = (
       <Image src={stillUrl} alt="" width={160} height={90} onError={() => setStillErr(true)}
-        className={stillSize} style={thumbStyle} />
+        className={stillClass} style={thumbStyle} />
     )
   } else if (posterUrl && !posterErr) {
     // Both sides pinned: preflight's `height: auto` would otherwise let the
@@ -95,7 +115,7 @@ export function MediaRow({
   } else {
     const stillShaped = thumbShape ? thumbShape === 'still' : !!stillUrl
     thumb = (
-      <div className={stillShaped ? stillSize : undefined} style={{
+      <div className={stillShaped ? stillClass : undefined} style={{
         ...thumbStyle, ...(stillShaped ? {} : { width: 60, height: 90 }),
         background: 'linear-gradient(150deg, var(--zinc-800), var(--bg-void))',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -110,25 +130,31 @@ export function MediaRow({
 
   return (
     <div
-      onClick={onClick}
-      {...activatableProps(onClick, title)}
       // The reference's "Up next" row: a tier-2 fill with the gradient rim,
       // no blur, because rows render once per list item. A clickable row also
-      // takes the hover fill on keyboard focus.
-      className={onClick ? 'glass-row glass-rim media-row-interactive' : 'glass-row glass-rim'}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-4)',
-        padding: '10px 12px 10px 10px',
-        cursor: onClick ? 'pointer' : 'default',
-      }}
+      // takes the hover fill while its opener has keyboard focus.
+      className={onClick
+        ? `glass-row glass-rim media-row-interactive has-[.media-row-open:focus-visible]:bg-[var(--glass-card-hover)] ${ROW_LAYOUT}`
+        : `glass-row glass-rim ${ROW_LAYOUT}`}
     >
+      {onClick && (
+        // The row's one opener: a real button stretched over the row, named by
+        // the visible title. The root is not a button, so the stars and actions
+        // are siblings rather than nested controls, and the button's own focus
+        // ring wraps the row as the root's did.
+        <button
+          type="button"
+          onClick={onClick}
+          aria-labelledby={titleId}
+          className="media-row-open absolute inset-0 cursor-pointer rounded-[inherit]"
+        />
+      )}
+
       {thumb}
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: 12 }}>
-          <p style={{
+          <p id={titleId} style={{
             margin: 0, fontSize: 'var(--text-md)', lineHeight: '22px',
             fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
             letterSpacing: 'var(--tracking-text)', color: 'var(--text-primary)',
@@ -163,7 +189,7 @@ export function MediaRow({
         {(showStars || review || watchedAt || children) && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {showStars && (
-              <div onClick={(e) => e.stopPropagation()}>
+              <div className={`${ABOVE_OPENER} self-start`}>
                 <RatingStars value={rating} onChange={onRate} readOnly={!onRate} size={onRate ? 'md' : 'sm'} />
               </div>
             )}
@@ -186,7 +212,7 @@ export function MediaRow({
       </div>
 
       {actions && (
-        <div onClick={e => e.stopPropagation()} style={{ flex: 'none', display: 'flex', alignItems: 'center' }}>
+        <div className={ABOVE_OPENER} style={{ flex: 'none', display: 'flex', alignItems: 'center' }}>
           {actions}
         </div>
       )}

@@ -562,7 +562,9 @@ export default function MediaInfoModal({
               The chip's icon takes the accent on the pressed one, where
               FilterPills adds a dot: the fill alone is a 6% step. A bare .btn
               is not in the forced-colours border list, and that mode drops
-              the chip edge, so the chips draw their own border there. */}
+              the chip edge, so the chips draw their own border there. The
+              pressed one opts out of the forced palette (a Canvas backplate
+              would hide its label), so its accent icon goes HighlightText. */}
           {currentPriority && (
             <section aria-label="Watchlist Priority">
               <SectionHeader title="Watchlist Priority" />
@@ -580,14 +582,18 @@ export default function MediaInfoModal({
                       onClick={() => handlePriorityClick(value)}
                       className={`btn inline-flex min-h-11 flex-auto items-center justify-center gap-2 px-4 text-[length:var(--text-sm)] font-semibold whitespace-nowrap transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 forced-colors:border forced-colors:border-[color:CanvasText] ${
                         isActive
-                          ? 'glass-btn text-[var(--text-primary)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                          ? 'glass-btn text-[var(--text-primary)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
                           : 'bg-[var(--glass-chip)] shadow-[var(--glass-chip-edge)] text-[var(--text-secondary)] hover:bg-[var(--glass-fill-selected)] hover:text-[var(--text-primary)]'
                       }`}
                     >
                       {isActioning ? (
                         <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" />
                       ) : (
-                        <Icon className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" style={isActive ? { color: 'var(--accent)' } : undefined} />
+                        <Icon
+                          className={`h-4 w-4 ${isActive ? 'text-[var(--accent)] forced-colors:text-[color:HighlightText]' : ''}`}
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
                       )}
                       <span>{PRIORITY_LABELS[value]}</span>
                     </button>

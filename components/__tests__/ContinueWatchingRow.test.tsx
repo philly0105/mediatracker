@@ -156,6 +156,14 @@ describe('ContinueWatchingRow', () => {
     expect(screen.getByText('“Mijo”')).toBeInTheDocument()
     expect(screen.getByText('S1 · E2 · 47m')).toBeInTheDocument()
 
+    // The row opens the show page from a real button named by the title, with
+    // the check as its sibling rather than nested inside a button role.
+    const opener = screen.getByRole('button', { name: 'Better Call Saul' })
+    expect(opener.tagName).toBe('BUTTON')
+    expect(opener).not.toContainElement(screen.getByRole('button', { name: 'Mark Better Call Saul season 1 episode 2 watched' }))
+    fireEvent.click(opener)
+    expect(push).toHaveBeenCalledWith('/show/m2')
+
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Mark Better Call Saul season 1 episode 2 watched' }))
     })

@@ -30,7 +30,7 @@ This is a **visual redesign**. Routes, behaviour, data flow, keyboard shortcuts 
 | Role | Value | Notes |
 |---|---|---|
 | Canvas | `#061015` | `body` background, `themeColor`, end of the ambient tint |
-| Ambient tint (over the blurred art) | `linear-gradient(180deg, rgba(4,12,17,.46) 0, rgba(4,12,17,.58) 900px, rgba(5,13,18,.84) 1700px, #061015 2250px)` | In production the layer is viewport-fixed, so use `rgba(4,12,17,.50) 0%, rgba(4,12,17,.62) 55%, rgba(5,13,18,.84) 100%` |
+| Ambient tint (over the blurred art) | `linear-gradient(180deg, rgba(4,12,17,.46) 0, rgba(4,12,17,.58) 900px, rgba(5,13,18,.84) 1700px, #061015 2250px)` | In production the layer is viewport-fixed, so use `rgba(4,12,17,.70) 0%, rgba(4,12,17,.74) 55%, rgba(5,13,18,.86) 100%` (darker than the mock's: the §5.3 contrast guard, measured over the lightest backdrops) |
 | Text primary | `#F3F8FA` | headings, primary labels |
 | Text secondary | `rgba(236,245,249,.80)` | body and meta (the reference uses .86/.80/.76; normalise to .86 / .80 / .74) |
 | Text muted | `rgba(236,245,249,.74)` | captions, timestamps |
@@ -75,7 +75,7 @@ This is a **visual redesign**. Routes, behaviour, data flow, keyboard shortcuts 
 | 768–1023 (`md`) | Compact icon rail, 76px, label under the icon (as in the Adaptive mock), tooltips on hover |
 | < 768 | Keep the existing mobile top bar, bottom tab bar and "More" drawer from `components/Sidebar.tsx`, restyled as glass bars (blur 24px). The reference's ≤1020 wrapped top bar is a mock-up shortcut, not the target. |
 
-Content breakpoint: at < 760px the hero stacks (image above, content slab below) and panels use radius 24, padding 14.
+Content breakpoint: at < 760px panels use radius 24, padding 14. The heroes (Home and title) stack below 1024 (`lg`): the image is a band above the slab, 220px on phones and 320px beside the rail. From `lg` the slab is `min(480px, 60% of the stage - 32px)`, so at least 40% of the art stays in view. Beside the 76px rail the stage is only about 600-700px wide, and a fixed 480px slab there left a strip of art.
 
 ## 5. Architecture
 

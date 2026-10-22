@@ -7,7 +7,8 @@
 // own. Instead:
 //
 //   <AmbientHost />            mounted once in the root layout, paints the one
-//                              layer (two only during the 400ms crossfade).
+//                              layer (two during the 400ms crossfade; three
+//                              only if a third title arrives mid-fade).
 //   <AmbientBackdrop src />    rendered by a page, the title page or the media
 //                              modal; registers its image in a module-level
 //                              registry and renders nothing. On unmount the
@@ -25,9 +26,11 @@
 // Never animate the blur. Only opacity crossfades, and not at all under
 // prefers-reduced-motion. globals.css hides .ambient-img under
 // prefers-reduced-transparency and forced colours, leaving the tint.
-import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type TransitionEvent } from 'react'
 
-const TINT = 'linear-gradient(180deg, rgba(4,12,17,.50) 0%, rgba(4,12,17,.62) 55%, rgba(5,13,18,.84) 100%)'
+// .70 at the top is the contrast guard (spec §5.3): over the lightest
+// backdrops, text sitting on the bare ambient has to keep 4.5:1.
+const TINT = 'linear-gradient(180deg, rgba(4,12,17,.70) 0%, rgba(4,12,17,.74) 55%, rgba(5,13,18,.86) 100%)'
 // With no artwork the canvas gets a faint aqua radial so it is not a flat slab.
 const AQUA_RADIAL = 'radial-gradient(1200px 600px at 20% -10%, rgba(143,227,240,.10), transparent 60%)'
 const FADE_MS = 400
@@ -117,75 +120,125 @@ const IMG_STYLE: CSSProperties = {
   transform: 'scale(1.15)',
 }
 
-type Shown = { src: string | null; previous: string | null; loaded: boolean }
+type Layer = { src: string; loaded: boolean }
+// The images on screen, bottom to top, and the one wanted. Layers under the
+// wanted one are the art it fades in over; layers above it are on their way
+// out, fading to nothing over it. Only the wanted layer can be unloaded.
+type Shown = { src: string | null; layers: Layer[] }
+
+const wantedIndex = (state: Shown) => state.layers.findIndex((layer) => layer.src === state.src)
+
+function retarget(state: Shown, src: string | null): Shown {
+  // A layer that never painted goes at once. Painted ones stay: under the new
+  // art until it has faded in, or, past the one coming back, fading out over
+  // it. Coming back is by src, so the image keeps its decoded node rather
+  // than mounting a second copy under the same key.
+  const layers = state.layers.filter((layer) => layer.loaded)
+  if (src && !layers.some((layer) => layer.src === src)) layers.push({ src, loaded: false })
+  return { src, layers }
+}
+
+function markLoaded(state: Shown, src: string): Shown {
+  const layers = state.layers.map((layer) => (layer.src === src && !layer.loaded ? { src, loaded: true } : layer))
+  return layers.some((layer, i) => layer !== state.layers[i]) ? { ...state, layers } : state
+}
+
+// A layer's opacity fade has ended. Faded out, it goes. Faded in, it hides
+// whatever is under it, so that goes; a fade-in carried over from before a
+// swap (the layer is now under newer art) drops the same thing, nothing.
+function afterFade(state: Shown, src: string): Shown {
+  const index = state.layers.findIndex((layer) => layer.src === src)
+  if (index < 0) return state
+  if (index > wantedIndex(state)) return { ...state, layers: state.layers.filter((_, i) => i !== index) }
+  return index > 0 && state.layers[index].loaded ? { ...state, layers: state.layers.slice(index) } : state
+}
+
+// What the fades leave at rest: nothing above the wanted layer, nothing under
+// the topmost painted one. The same state back means nothing is pending.
+function settle(state: Shown): Shown {
+  const wanted = wantedIndex(state)
+  let from = 0
+  for (let i = 0; i <= wanted; i++) if (state.layers[i].loaded) from = i
+  const layers = state.layers.slice(from, wanted + 1)
+  return layers.length === state.layers.length ? state : { ...state, layers }
+}
+
+const isFade = (event: TransitionEvent<HTMLImageElement>) => event.propertyName === 'opacity'
 
 export function AmbientHost() {
   const src = useSyncExternalStore(subscribe, winner, () => null)
   const reducedMotion = useReducedMotion()
-  const [shown, setShown] = useState<Shown>({ src, previous: null, loaded: false })
+  const [shown, setShown] = useState<Shown>(() => retarget({ src: null, layers: [] }, src))
+  const host = useRef<HTMLDivElement>(null)
 
   if (shown.src !== src) {
     // Adjusting state on a prop change during render, so no frame paints the
-    // old src as "current". The last fully loaded image stays painted
-    // underneath until the new one has loaded, then the new one fades in over
-    // it; that is the whole crossfade.
-    setShown(
-      src && src === shown.previous
-        ? // Back to the image still on its way out: it is decoded and painted,
-          // so promote it rather than mounting a second copy under the same key.
-          { src, previous: shown.loaded ? shown.src : null, loaded: true }
-        : { src, previous: shown.loaded ? shown.src : shown.previous, loaded: false },
-    )
+    // old src as wanted. The painted art stays underneath until the new one
+    // has loaded, then the new one fades in over it; that is the whole
+    // crossfade.
+    setShown(retarget(shown, src))
   }
 
   useEffect(() => {
-    if (!shown.previous) return
-    // Keep the old art until the new one has loaded. Once it has (or there is
-    // no new one and the old is fading out), drop the extra layer after the
-    // fade so at rest only one blurred image is ever painted.
-    if (shown.src && !shown.loaded) return
-    const timer = setTimeout(() => setShown((state) => ({ ...state, previous: null })), reducedMotion ? 0 : FADE_MS)
+    // Keep the old art until the new one has loaded. Once it has (or it is
+    // fading out with nothing under it), the fade's transitionend drops the
+    // extra layer so at rest only one blurred image is ever painted. The
+    // timer covers the cases where no transition runs: reduced motion, a
+    // background tab. It must not fire into a fade still in flight (frames
+    // stall while the new art rasterises, so a fade can start long after this
+    // effect ran), so while anything in the host still animates it waits and
+    // looks again.
+    if (settle(shown) === shown) return
+    let timer: ReturnType<typeof setTimeout>
+    const drop = () => {
+      if (host.current?.getAnimations?.({ subtree: true }).length) timer = setTimeout(drop, FADE_MS)
+      else setShown(settle)
+    }
+    timer = setTimeout(drop, reducedMotion ? 0 : FADE_MS)
     return () => clearTimeout(timer)
-  }, [shown.previous, shown.src, shown.loaded, reducedMotion])
+  }, [shown, reducedMotion])
+
+  const onLoad = (loadedSrc: string) => {
+    const show = () => setShown((state) => markLoaded(state, loadedSrc))
+    // Two frames, so the opacity-0 start has painted before the change to 1:
+    // a cached image loads inside the mount's own frame, and the two styles
+    // would coalesce into a cut. Reduced motion wants the cut.
+    if (reducedMotion) show()
+    else requestAnimationFrame(() => requestAnimationFrame(show))
+  }
 
   const transition = reducedMotion ? 'none' : `opacity ${FADE_MS}ms var(--ease-standard)`
-  // Art is on screen once the new image has loaded, or while the old one is
+  const wanted = wantedIndex(shown)
+  // Art is on screen once the wanted image has loaded, or while older art is
   // still painted under it. Before the first load and during the final
   // fade-out nothing opaque is up, so the radial shows through.
-  const hasArt = Boolean(shown.src && (shown.loaded || shown.previous))
+  const hasArt = shown.layers.slice(0, wanted + 1).some((layer) => layer.loaded)
 
-  // Both images are keyed by src so that an image demoted from current to
-  // previous keeps its DOM node: a transition only runs on a style change to
-  // an existing node, so a fresh node mounted at opacity 0 would cut, not fade.
+  // Images are keyed by src and never reordered, so an image that changes
+  // role keeps its DOM node: a transition only runs on a style change to an
+  // existing node, so a fresh (or re-inserted) node would cut, not fade.
   return (
     <div
+      ref={host}
       aria-hidden="true"
       data-ambient-host=""
       style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}
     >
-      {shown.previous && (
+      {shown.layers.map((layer, index) => (
         // eslint-disable-next-line @next/next/no-img-element -- decorative, blurred; next/image adds nothing here
         <img
-          key={shown.previous}
-          src={shown.previous}
-          alt=""
-          className="ambient-img"
-          style={{ ...IMG_STYLE, opacity: shown.src ? 1 : 0, transition }}
-        />
-      )}
-      {shown.src && (
-        // eslint-disable-next-line @next/next/no-img-element -- decorative, blurred; next/image adds nothing here
-        <img
-          key={shown.src}
-          src={shown.src}
+          key={layer.src}
+          src={layer.src}
           alt=""
           decoding="async"
           fetchPriority="low"
           className="ambient-img"
-          onLoad={() => setShown((state) => (state.src === shown.src ? { ...state, loaded: true } : state))}
-          style={{ ...IMG_STYLE, opacity: shown.loaded ? 1 : 0, transition }}
+          onLoad={() => onLoad(layer.src)}
+          onTransitionEnd={(event) => { if (isFade(event)) setShown((state) => afterFade(state, layer.src)) }}
+          // Above the wanted layer is on the way out.
+          style={{ ...IMG_STYLE, opacity: layer.loaded && index <= wanted ? 1 : 0, transition }}
         />
-      )}
+      ))}
       <div style={{ position: 'absolute', inset: 0, background: TINT }} />
       {/* A gradient cannot transition, so the radial gets its own layer and
           fades with the art rather than popping in and out around it. */}

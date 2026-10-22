@@ -1,5 +1,7 @@
 'use client'
 
+import { useLayoutEffect, useRef } from 'react'
+
 export interface SegmentedControlOption<T extends string> {
   id: T
   label: string
@@ -17,13 +19,30 @@ interface SegmentedControlProps<T extends string> {
   className?: string
 }
 
+// Brings `el` wholly inside the nearest sideways scroller around it. Only that
+// box's scrollLeft moves: scrollIntoView would scroll the page as well, and
+// Chromium's focus scroll leaves a half-visible item where it is. The 8px past
+// the edge clears the focus ring and leaves a sliver of the next item.
+export function revealInScroller(el: HTMLElement) {
+  for (let box = el.parentElement; box && box !== document.body; box = box.parentElement) {
+    if (box.scrollWidth <= box.clientWidth || !/auto|scroll/.test(getComputedStyle(box).overflowX)) continue
+    const outer = box.getBoundingClientRect()
+    const inner = el.getBoundingClientRect()
+    if (inner.left - 8 < outer.left) box.scrollLeft -= outer.left - inner.left + 8
+    else if (inner.right + 8 > outer.right) box.scrollLeft += inner.right - outer.right + 8
+    return
+  }
+}
+
 // The track is the inset well (`.glass-inset`, radius 14) and the segments sit
 // 4px inside it, 36px tall, so the whole control still clears the 44px target.
 // The selected segment is the glass-button fill with its top highlight; the
 // rest are text only until hovered. Keyboard focus is the global outline.
 // Forced colours drop the shadow and repaint the fill, which would leave the
 // selected segment looking like the others, so there it takes the system
-// Highlight pair, as the nav's current item does.
+// Highlight pair, as the nav's current item does. It opts out of the forced
+// palette there, or the Canvas backplate hides its label, so the muted count
+// inside is set to HighlightText by hand.
 export function SegmentedControl<T extends string>({
   options,
   value,
@@ -36,10 +55,23 @@ export function SegmentedControl<T extends string>({
     ? 'px-3 text-xs'
     : 'px-4 text-sm'
 
+  // Segments never shrink or wrap, so a control wider than its column
+  // overflows into whatever scroller the call site gives it (EpisodeTracker's
+  // seasons, the watchlist's priorities on a phone). The selected segment is
+  // brought into that box, or a show opening on its latest season starts with
+  // it off the edge, and so is a focused one.
+  const groupRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const radio = groupRef.current?.querySelector<HTMLElement>('[aria-checked="true"]')
+    if (radio) revealInScroller(radio)
+  }, [value])
+
   return (
     <div
+      ref={groupRef}
       role="radiogroup"
       aria-label={label}
+      onFocus={(e) => revealInScroller(e.target)}
       className={`glass-inset inline-flex items-center gap-0.5 p-1 relative select-none ${className}`}
     >
       {options.map((option) => {
@@ -55,16 +87,19 @@ export function SegmentedControl<T extends string>({
             // The visible tally is decoration; the name carries it instead.
             aria-label={option.count != null ? `${option.label} · ${option.count}` : undefined}
             onClick={() => onChange(option.id)}
-            className={`relative flex items-center justify-center gap-1.5 h-9 rounded-[var(--radius-thumb)] transition-colors duration-200 ${sizeClasses} ${
+            className={`relative flex shrink-0 items-center justify-center gap-1.5 h-9 whitespace-nowrap rounded-[var(--radius-thumb)] transition-colors duration-200 ${sizeClasses} ${
               isSelected
-                ? 'font-semibold text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                ? 'font-semibold text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
                 : 'font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)]'
             }`}
           >
             {Icon && <Icon className="w-4 h-4" strokeWidth={1.8} />}
             <span>{option.label}</span>
             {option.count != null && (
-              <span aria-hidden="true" className="tabular font-medium text-[var(--text-muted)]">
+              <span
+                aria-hidden="true"
+                className={`tabular font-medium text-[var(--text-muted)] ${isSelected ? 'forced-colors:text-[color:HighlightText]' : ''}`}
+              >
                 {option.count}
               </span>
             )}

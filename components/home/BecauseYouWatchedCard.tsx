@@ -11,6 +11,14 @@ import { useMediaModal } from '@/components/MediaModalProvider'
 const SCRIM = 'linear-gradient(180deg, rgba(5,12,16,0) 0%, rgba(5,12,16,.62) 38%, rgba(5,12,16,.86) 68%, rgba(5,12,16,.94) 100%)'
 const semibold = 'var(--weight-semibold)' as CSSProperties['fontWeight']
 
+// The title text: the heading when there is no logo, and the logo's stand-in
+// under forced colours.
+const TITLE: CSSProperties = {
+  fontSize: 'var(--text-2xl)', lineHeight: '28px',
+  fontWeight: 'var(--weight-heading)' as CSSProperties['fontWeight'],
+  letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)',
+}
+
 type Props = {
   item: TmdbSearchResult
   seedTitle: string
@@ -62,24 +70,29 @@ export default function BecauseYouWatchedCard({ item, seedTitle, backdropUrl, lo
             <p style={{ margin: 0, fontSize: 'var(--text-xs)', lineHeight: '16px', fontWeight: semibold, color: 'var(--text-secondary)' }}>
               Because you watched {seedTitle}
             </p>
-            {/* The title is the section's heading, as the logo is in the hero. */}
-            {logoUrl ? (
-              <h2 id="byw-title" style={{ margin: '10px 0 0', lineHeight: 0 }}>
-                {/* Sized like the hero logo: CSS width, height from the art, 2x props. */}
-                <Image src={logoUrl} alt={item.title} width={336} height={112} sizes="168px" style={{ width: 168, maxWidth: '100%', height: 'auto' }} />
-              </h2>
-            ) : (
-              <h2
-                id="byw-title"
-                style={{
-                  margin: '8px 0 0', fontSize: 'var(--text-2xl)', lineHeight: '28px',
-                  fontWeight: 'var(--weight-heading)' as CSSProperties['fontWeight'],
-                  letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)',
-                }}
-              >
-                {item.title}
-              </h2>
-            )}
+            {/* The title is the section's heading, as the logo is in the hero.
+                With a logo the text rides along screen-reader-only and takes
+                the logo's place under forced colours. */}
+            <h2 id="byw-title" style={logoUrl ? { margin: '10px 0 0', lineHeight: 0 } : { margin: '8px 0 0', ...TITLE }}>
+              {logoUrl ? (
+                <>
+                  {/* Sized like the hero logo: CSS width, height from the art, 2x props. */}
+                  <Image
+                    src={logoUrl}
+                    alt=""
+                    aria-hidden="true"
+                    width={336}
+                    height={112}
+                    sizes="168px"
+                    className="forced-colors:hidden"
+                    style={{ width: 168, maxWidth: '100%', height: 'auto' }}
+                  />
+                  <span className="sr-only forced-colors:not-sr-only" style={{ display: 'block', ...TITLE }}>{item.title}</span>
+                </>
+              ) : (
+                item.title
+              )}
+            </h2>
             {meta && (
               <p style={{ margin: '8px 0 0', fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-strong)' }}>
                 {meta}

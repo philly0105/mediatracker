@@ -35,6 +35,13 @@ const POSTER_H = 120
  *  rows replace the placeholders. */
 export const RECOMMENDATION_ROW_GRID = 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
 
+// These rows stand on the ambient, not inside a panel, so they get a dark
+// base: over a warm backdrop (Sinners) the overview's secondary text otherwise
+// lands just under 4.5:1. The base is the background image only, leaving
+// .glass-row's fill, and its hover fade, on the colour: a gradient cannot
+// transition, so folding the fill into one would snap the hover.
+const ROW_BASE = 'bg-[image:linear-gradient(rgba(9,20,27,.30),rgba(9,20,27,.30))]'
+
 /**
  * One recommendation as a compact glass row (spec §5.6): poster thumb, title
  * with the type chip, year and TMDB rating, the seed line, two lines of
@@ -50,7 +57,7 @@ export function RecommendationCard({ item, actioning, onOpen, onAddToWatchlist, 
       variant="row"
       onClick={onOpen}
       aria-label={item.title}
-      className="motion-item-in group h-full select-none"
+      className={`motion-item-in group h-full select-none ${ROW_BASE}`}
       style={{ display: 'flex', gap: 14, padding: 12 }}
     >
       {item.poster_url ? (
@@ -150,7 +157,7 @@ export function RecommendationCard({ item, actioning, onOpen, onAddToWatchlist, 
  *  for clickable rows, and a placeholder is not one. */
 export function RecommendationCardSkeleton() {
   return (
-    <div className="glass-row flex gap-3.5 p-3 hover:bg-[var(--glass-card)]">
+    <div className={`glass-row flex gap-3.5 p-3 hover:bg-[var(--glass-card)] ${ROW_BASE}`}>
       <Skeleton className="h-30 w-20 shrink-0 rounded-[var(--radius-thumb)]" />
       <div className="flex flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">

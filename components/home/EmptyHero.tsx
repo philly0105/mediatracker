@@ -31,10 +31,10 @@ export default function EmptyHero({ recent, preload = false }: Props) {
       style={{ padding: 8, borderRadius: 32, boxShadow: 'var(--shadow-xl)' }}
     >
       <div
-        className="relative flex flex-col overflow-hidden md:min-h-[360px] md:flex-row"
+        className="@container relative flex flex-col overflow-hidden lg:min-h-[360px] lg:flex-row"
         style={{ borderRadius: 24, background: 'var(--bg-deep)' }}
       >
-        <div className="relative h-[220px] w-full md:absolute md:inset-0 md:h-auto">
+        <div className="relative h-[220px] w-full md:h-[320px] lg:absolute lg:inset-0 lg:h-auto">
           {recent?.backdrop_url && (
             <Image
               src={recent.backdrop_url}
@@ -42,13 +42,13 @@ export default function EmptyHero({ recent, preload = false }: Props) {
               aria-hidden="true"
               fill
               preload={preload}
-              sizes="(max-width: 767px) 100vw, 1200px"
+              sizes="(max-width: 1023px) 100vw, 1200px"
               className="object-cover object-[50%_18%]"
             />
           )}
         </div>
         <div
-          className="glass-slab glass-rim flex flex-col rounded-none p-5 md:m-4 md:w-[480px] md:rounded-[var(--radius-slab)] md:p-7"
+          className="glass-slab glass-rim flex flex-col rounded-none p-5 md:p-7 lg:m-4 lg:w-[min(480px,60cqw-32px)] lg:rounded-[var(--radius-slab)]"
           style={{ flex: 'none', maxWidth: '100%' }}
         >
           <span style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', fontWeight: semibold, color: 'var(--text-muted)' }}>

@@ -305,6 +305,10 @@ describe('EpisodeTracker rows', () => {
     const ringed = () => screen.getAllByRole('listitem').filter((li) => li.style.boxShadow.includes('accent-ring'))
     expect(ringed()).toHaveLength(1)
     expect(ringed()[0]).toContainElement(screen.getByText('E3'))
+    // Forced colours discard the shadow, so the ring there is a Highlight outline.
+    expect(ringed()[0].className).toContain('forced-colors:outline-2')
+    expect(ringed()[0].className).toContain('forced-colors:outline-[color:Highlight]')
+    expect(screen.getByText('E2').closest('li')!.className).toBe('')
 
     rerender(<EpisodeTracker seasons={[season]} progress={watched(1, 2, 3)} onProgressChange={onProgressChange} />)
     expect(ringed()[0]).toContainElement(screen.getByText('E4'))
@@ -319,16 +323,50 @@ describe('EpisodeTracker rows', () => {
         onProgressChange={onProgressChange}
       />
     )
-    expect(screen.getByText('58m')).toBeInTheDocument()
-    expect(screen.getByText('A chemistry teacher is diagnosed.')).toBeInTheDocument()
+    // The runtime is the aside from the content breakpoint up; on a phone it
+    // leads the date line instead, so the two never share a width.
+    const aside = screen.getByText('58m')
+    expect(aside.className).toBe('max-md:hidden')
+    const dateLine = screen.getByText('Jan 20, 2008')
+    expect(dateLine.textContent).toBe('58m · Jan 20, 2008')
+    expect(dateLine.querySelector('span')!.className).toBe('md:hidden')
+    const synopsis = screen.getByText('A chemistry teacher is diagnosed.')
+    expect(synopsis.className).toBe('truncate max-md:line-clamp-2 max-md:whitespace-normal')
+  })
+
+  it('keeps the runtime as the aside when there is no air date to join it to', () => {
+    render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={[]}
+        episodes={[episode(1, 'Pilot', null, { runtime_mins: 58 })]}
+        onProgressChange={onProgressChange}
+      />
+    )
+    expect(screen.getByText('58m').className).toBe('')
+  })
+
+  it('puts the watched pill on the row and the unwatched label in primary text', () => {
+    render(
+      <EpisodeTracker seasons={[season]} progress={watched(1)} onProgressChange={onProgressChange} />
+    )
+    const done = screen.getByRole('button', { name: 'Unmark S1 E1–E5' })
+    const todo = screen.getByRole('button', { name: 'Mark S1 E1–E2 watched' })
+    // The accent on the .16 glass fill measured under 4.5:1; on the row it clears it.
+    expect(done.className).toContain('bg-transparent')
+    expect(done.style.color).toBe('var(--accent)')
+    expect(todo.className).not.toContain('bg-transparent')
+    expect(todo.style.color).toBe('var(--text-primary)')
+    for (const b of [done, todo]) expect(b.className).toContain('h-11 min-w-11')
   })
 
   it('keeps an episode with no still on the still-shaped placeholder', () => {
     renderTracker(watched())
-    // No still anywhere: every placeholder is the 16:9 thumb, not a poster.
+    // No still anywhere: every placeholder is the 16:9 thumb, not a poster,
+    // at the small phone size an episode row asks for.
     for (const li of screen.getAllByRole('listitem')) {
       const thumb = li.querySelector('.glass-row')!.firstElementChild as HTMLElement
-      expect(thumb.className).toContain('md:w-40')
+      expect(thumb.className).toContain('w-[72px] h-10 md:w-40')
       expect(thumb.style.width).toBe('')
     }
   })

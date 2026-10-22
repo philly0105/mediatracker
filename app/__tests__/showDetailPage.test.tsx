@@ -194,6 +194,10 @@ describe('ShowDetailPage server page & cross-show navigation', () => {
     expect(screen.getByText('Mark show as watched')).toBeInTheDocument()
     expect(screen.queryByRole('slider', { name: 'Rating' })).not.toBeInTheDocument()
     expect(screen.queryByText('Breaking Bad')).not.toBeInTheDocument()
+    // Below md the secondary pills grow to fill their rows evenly.
+    expect(screen.getByRole('link', { name: 'Episodes' })).toHaveClass('max-md:grow')
+    expect(screen.getByRole('button', { name: 'Mark show as watched' })).toHaveClass('max-md:grow')
+    expect(screen.getByRole('button', { name: 'Details' })).toHaveClass('max-md:grow')
   })
 
   it('fills the cast strip from the TMDB credits, and falls back to the stored names', async () => {

@@ -53,7 +53,12 @@ describe('BecauseYouWatchedCard', () => {
     renderCard('https://image.tmdb.org/t/p/w500/pluribus-logo.png')
 
     const heading = screen.getByRole('heading', { level: 2, name: 'Pluribus' })
-    expect(heading.querySelector('img')).toHaveAttribute('alt', 'Pluribus')
+    // The logo is decorative art; the text beside it names the heading and
+    // takes the logo's place under forced colours.
+    const logo = heading.querySelector('img')
+    expect(logo).toHaveAttribute('alt', '')
+    expect(logo).toHaveClass('forced-colors:hidden')
+    expect(screen.getByText('Pluribus')).toHaveClass('sr-only', 'forced-colors:not-sr-only')
   })
 
   it('opens the title into the Must watch bucket', () => {

@@ -37,6 +37,10 @@ describe('TitleHero', () => {
     expect(logo).toHaveAttribute('src', LOGO)
     // The logo is the title drawn as art; the text beside it is the name.
     expect(logo).toHaveAttribute('alt', '')
+    // Under forced colours a white logo can vanish on the Canvas slab, so it
+    // hides and the text takes its place.
+    expect(logo).toHaveClass('forced-colors:hidden')
+    expect(screen.getByText('Severance')).toHaveClass('sr-only', 'forced-colors:not-sr-only')
   })
 
   it('renders a second-level heading for the modal', () => {

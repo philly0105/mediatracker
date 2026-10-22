@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { PosterCard, PosterBadge } from '@/components/ui/PosterCard'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { revealRailItem } from '@/components/title/MoreLikeThisRail'
 import { formatShortDate } from '@/components/home/format'
 
 interface Props {
@@ -109,10 +110,18 @@ export default function DashboardRecentCards({ entries, preloadFirst = false }: 
         // A column-flow grid: every card is the same width and the rail
         // overflows sideways inside the panel. On phones it bleeds into the
         // panel's padding so the last card is cut at the panel edge, not short of it.
+        // overflow-x:auto clips the y axis too, so the rail carries 8px of
+        // block padding (and 8px inline from md) cancelled by a matching
+        // negative margin: the focus ring (2px + 2px offset, scaled by the
+        // 1.02 lift, plus the lift's own extra height) fits and nothing
+        // moves. scroll-padding matches the bleed so a focused card scrolls
+        // to the rim, not under it; revealRailItem does that scroll, since
+        // Chrome leaves a card that is only partly out of view where it is.
         <ul
           ref={scrollerRef}
           onScroll={updateScrollState}
-          className="scrollbar-none grid grid-flow-col auto-cols-[minmax(118px,1fr)] gap-4 overflow-x-auto scroll-smooth mx-[calc(var(--panel-pad)*-1)] px-[var(--panel-pad)] pb-1 md:mx-0 md:px-0"
+          onFocus={revealRailItem}
+          className="scrollbar-none grid grid-flow-col auto-cols-[minmax(118px,1fr)] gap-4 overflow-x-auto scroll-smooth -my-2 pt-2 pb-3 mx-[calc(var(--panel-pad)*-1)] px-[var(--panel-pad)] scroll-px-[var(--panel-pad)] md:-mx-2 md:px-2 md:scroll-px-2"
           style={{ listStyle: 'none' }}
         >
           {entries.map((entry, index) => (

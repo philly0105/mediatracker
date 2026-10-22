@@ -262,22 +262,22 @@ describe('LibraryView', () => {
     renderLibrary()
     await screen.findByText('Heat')
 
-    // Both layouts expose the title as a button — MediaRow via role="button" on
-    // its div root, PosterCard via a real <button>. The tag name is what tells
-    // them apart. (This used to assert that the list row was *not* a button,
-    // which was really asserting that list view had no keyboard access.)
-    expect(screen.getByRole('button', { name: /^Heat/ }).tagName).toBe('DIV')
+    // Both layouts expose the title as a real <button> — MediaRow's stretched
+    // opener inside the row, PosterCard's root. The class is what tells them
+    // apart. (This used to assert that the list row was *not* a button, which
+    // was really asserting that list view had no keyboard access.)
+    expect(screen.getByRole('button', { name: /^Heat/ }).className).toContain('media-row-open')
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Grid view' }))
     })
-    expect(screen.getByRole('button', { name: /^Heat/ }).tagName).toBe('BUTTON')
+    expect(screen.getByRole('button', { name: /^Heat/ }).className).toContain('poster-card')
     expect(screen.getByRole('button', { name: 'Grid view' })).toHaveAttribute('aria-pressed', 'true')
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'List view' }))
     })
-    expect(screen.getByRole('button', { name: /^Heat/ }).tagName).toBe('DIV')
+    expect(screen.getByRole('button', { name: /^Heat/ }).className).toContain('media-row-open')
   })
 
   it('opens a library row from the keyboard', async () => {
@@ -294,13 +294,17 @@ describe('LibraryView', () => {
     renderLibrary()
     await screen.findByText('Heat')
 
-    const row = screen.getByRole('button', { name: /^Heat/ })
-    expect(row).toHaveAttribute('tabindex', '0')
-
     // List view is the default, so this is the app's primary way of opening a
-    // title — it has to work without a mouse.
+    // title — it has to work without a mouse. A native button is in the tab
+    // order and activates on Enter and Space by itself; the row's root is not
+    // a button, so nothing interactive is nested in it.
+    const row = screen.getByRole('button', { name: /^Heat/ })
+    expect(row.tagName).toBe('BUTTON')
+    expect(row).not.toHaveAttribute('tabindex')
+    expect(row.closest('.glass-row')).not.toHaveAttribute('role')
+
     await act(async () => {
-      fireEvent.keyDown(row, { key: 'Enter' })
+      fireEvent.click(row)
     })
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })

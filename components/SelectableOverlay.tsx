@@ -5,7 +5,18 @@ import { useMultiSelect, selectionKey } from './MultiSelectProvider'
 import type { TmdbSearchResult } from '@/types'
 import { ReactNode, useEffect } from 'react'
 
-export default function SelectableOverlay({ item, children }: { item: TmdbSearchResult | null, children: ReactNode }) {
+interface Props {
+  item: TmdbSearchResult | null
+  children: ReactNode
+  /**
+   * Replaces the chip's default top-left placement (`top-2 left-2`) for rows
+   * whose corner holds text, e.g. the calendar's date stack. Position
+   * utilities only; the chip's size and hit area stay.
+   */
+  chipClassName?: string
+}
+
+export default function SelectableOverlay({ item, children, chipClassName = 'top-2 left-2' }: Props) {
   // Hooks must run before any early return — a row with a missing media join
   // would otherwise change the hook count between renders and kill the page.
   const { selectedItems, toggleSelection, isSelectMode, register, unregister } = useMultiSelect()
@@ -30,9 +41,14 @@ export default function SelectableOverlay({ item, children }: { item: TmdbSearch
   return (
     // A selected card wears the accent ring at the row radius; it is a shadow,
     // so it never changes the card's box. Posters and rows both live in grids,
-    // so nothing here blurs.
+    // so nothing here blurs. `--poster-badge-top` is what a PosterCard inside
+    // reads to drop its badges under the chip (8 + the 36px chip + 8), set
+    // exactly while the chip shows: on hover, when the chip has keyboard
+    // focus, and in select mode. At rest the badges keep their corner.
     <div
-      className="relative group h-full w-full rounded-[var(--radius-row)]"
+      className={`relative group h-full w-full rounded-[var(--radius-row)] hover:[--poster-badge-top:52px] has-[>button:focus-visible]:[--poster-badge-top:52px] ${
+        isSelectMode ? '[--poster-badge-top:52px]' : ''
+      }`}
       style={isSelected ? { boxShadow: 'var(--accent-ring)' } : undefined}
     >
       {/* Checkbox chip on the dark badge fill (it sits over poster art), visible
@@ -48,7 +64,7 @@ export default function SelectableOverlay({ item, children }: { item: TmdbSearch
           e.stopPropagation()
           toggleSelection(item)
         }}
-        className={`absolute top-2 left-2 z-20 flex items-center justify-center w-9 h-9 rounded-[var(--radius-thumb)] bg-[var(--glass-badge)] shadow-[var(--glass-badge-edge)] after:absolute after:-inset-1 after:content-[''] transition-[opacity,transform,color] duration-200 hover:text-[var(--text-primary)] ${
+        className={`absolute ${chipClassName} z-20 flex items-center justify-center w-9 h-9 rounded-[var(--radius-thumb)] bg-[var(--glass-badge)] shadow-[var(--glass-badge-edge)] after:absolute after:-inset-1 after:content-[''] transition-[opacity,transform,color] duration-200 hover:text-[var(--text-primary)] ${
           isSelected
             ? 'text-[var(--accent)] opacity-100 scale-100'
             : isSelectMode

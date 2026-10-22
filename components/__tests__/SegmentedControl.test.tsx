@@ -1,4 +1,4 @@
-import { render, fireEvent, screen } from '@testing-library/react'
+import { act, render, fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
@@ -35,8 +35,65 @@ describe('SegmentedControl', () => {
 
     const selected = screen.getByRole('radio', { name: 'Movies' })
     expect(selected.className).toContain('forced-colors:bg-[color:Highlight]')
+    // Without it Chromium paints a Canvas backplate over the label.
+    expect(selected.className).toContain('forced-colors:forced-color-adjust-none')
     expect(selected.style.background).toBe('')
     expect(screen.getByRole('radio', { name: 'TV Shows' }).className).not.toContain('forced-colors:')
+  })
+
+  it('keeps the selected count readable once the segment opts out of forced colours', () => {
+    render(
+      <SegmentedControl
+        options={[{ id: 'must', label: 'Must Watch', count: 12 }, { id: 'someday', label: 'Someday', count: 3 }]}
+        value="must"
+        onChange={vi.fn()}
+      />
+    )
+
+    const tally = (name: string) => screen.getByRole('radio', { name }).querySelector('[aria-hidden="true"]')!
+    expect(tally('Must Watch · 12').className).toContain('forced-colors:text-[color:HighlightText]')
+    expect(tally('Someday · 3').className).not.toContain('forced-colors:')
+  })
+
+  it('keeps each segment on one line so a long control scrolls instead of wrapping', () => {
+    render(<SegmentedControl options={options} value="movie" onChange={vi.fn()} />)
+
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio.className).toContain('shrink-0')
+      expect(radio.className).toContain('whitespace-nowrap')
+    }
+  })
+
+  it('scrolls the selected segment, then a focused one, into its sideways scroller', () => {
+    // jsdom has no layout: the scroller is 300 wide with 500 of content, the
+    // selected Season 4 sits at 380-460, past its right edge, and Season 1 at
+    // -120 to -40, past its left one.
+    const box = (left: number, right: number) => ({ left, right, top: 0, bottom: 36, x: left, y: 0, width: right - left, height: 36, toJSON: () => ({}) })
+    const isScroller = (el: Element) => el instanceof HTMLElement && el.dataset.testid === 'scroller'
+    const spots: Record<string, [number, number]> = { 'Season 1': [-120, -40], 'Season 4': [380, 460] }
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) { return isScroller(this) ? 500 : 0 })
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) { return isScroller(this) ? 300 : 0 })
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (isScroller(this)) return box(0, 300)
+      return box(...(spots[this.textContent ?? ''] ?? [0, 0]))
+    })
+
+    render(
+      <div data-testid="scroller" style={{ overflowX: 'auto' }}>
+        <SegmentedControl
+          options={[1, 2, 3, 4].map(n => ({ id: `s${n}`, label: `Season ${n}` }))}
+          value="s4"
+          onChange={vi.fn()}
+        />
+      </div>
+    )
+
+    // The 160px it overhangs, plus 8 so the ring and the edge show.
+    const scroller = screen.getByTestId('scroller')
+    expect(scroller.scrollLeft).toBe(168)
+
+    act(() => screen.getByRole('radio', { name: 'Season 1' }).focus())
+    expect(scroller.scrollLeft).toBe(168 - 128)
   })
 
   it('shows a count as a muted suffix and folds it into the name', () => {

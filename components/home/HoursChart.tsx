@@ -94,9 +94,11 @@ export default function HoursChart({ months, currentIndex, average }: HoursChart
 
   return (
     <>
+      {/* No accessibility layer: it makes the svg a nameless tab stop inside
+          an img whose label already carries the numbers. */}
       <div role="img" aria-label={summary} style={{ marginTop: 14 }}>
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <BarChart data={data} margin={{ top: 6, right: 2, bottom: 0, left: 2 }} barCategoryGap="30%">
+          <BarChart data={data} margin={{ top: 6, right: 2, bottom: 0, left: 2 }} barCategoryGap="30%" accessibilityLayer={false}>
             <XAxis
               dataKey="label"
               interval={0}
@@ -111,6 +113,7 @@ export default function HoursChart({ months, currentIndex, average }: HoursChart
                   fontSize={12}
                   fontWeight={index === currentIndex ? 600 : 400}
                   fill={index === currentIndex ? 'var(--accent)' : 'var(--chart-axis)'}
+                  className={index === currentIndex ? 'chart-tick-on' : undefined}
                 >
                   {String(payload.value)}
                 </text>
@@ -123,7 +126,7 @@ export default function HoursChart({ months, currentIndex, average }: HoursChart
             )}
             <Bar dataKey="hours" name="Hours" fill="var(--chart-bar)" radius={4} maxBarSize={16} isAnimationActive={!reducedMotion}>
               {data.map((_, i) => (
-                <Cell key={i} fill={i === currentIndex ? 'var(--accent)' : 'var(--chart-bar)'} />
+                <Cell key={i} fill={i === currentIndex ? 'var(--accent)' : 'var(--chart-bar)'} className={i === currentIndex ? 'chart-bar-on' : undefined} />
               ))}
             </Bar>
           </BarChart>

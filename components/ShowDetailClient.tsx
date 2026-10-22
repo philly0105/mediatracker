@@ -299,7 +299,7 @@ export default function ShowDetailClient({
 
   const markNext = nextUp != null && !nextUpUnaired
   const detailsButton = (
-    <Button variant="secondary" size="lg" onClick={openDetails}>
+    <Button variant="secondary" size="lg" className="max-md:grow" onClick={openDetails}>
       <Info className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
       <span>Details</span>
     </Button>
@@ -332,7 +332,8 @@ export default function ShowDetailClient({
           <>
             {nextUp && !nextUpUnaired && (
               // The primary action is the next episode. Under md it takes the
-              // whole row, as the reference's does.
+              // whole row, as the reference's does, and the secondaries grow
+              // to fill their rows evenly rather than wrapping ragged.
               <div className="max-md:basis-full">
                 <Button size="lg" fullWidth onClick={() => handleProgressChange(nextUp.season_id, nextUp.episode_number, true)}>
                   <Check className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
@@ -345,7 +346,7 @@ export default function ShowDetailClient({
               // classes, as EmptyState's action link does.
               <a
                 href="#episodes"
-                className="btn glass-btn inline-flex items-center justify-center gap-2 text-[var(--text-primary)]"
+                className="btn glass-btn inline-flex items-center justify-center gap-2 text-[var(--text-primary)] max-md:grow"
                 style={{
                   minHeight: 48,
                   padding: '0 20px',
@@ -361,6 +362,7 @@ export default function ShowDetailClient({
               <Button
                 variant={markNext ? 'secondary' : 'primary'}
                 size="lg"
+                className="max-md:grow"
                 onClick={handleMarkShowWatched}
                 disabled={markingWatched}
               >

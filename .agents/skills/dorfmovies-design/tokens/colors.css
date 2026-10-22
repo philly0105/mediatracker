@@ -168,6 +168,6 @@
      The tint over the blurred artwork (viewport-fixed, so percentage stops),
      and the faint aqua radial the default layer shows when no title is
      featured. */
-  --ambient-tint: linear-gradient(180deg, rgba(4, 12, 17, 0.50) 0%, rgba(4, 12, 17, 0.62) 55%, rgba(5, 13, 18, 0.84) 100%); /* @kind other */
+  --ambient-tint: linear-gradient(180deg, rgba(4, 12, 17, 0.70) 0%, rgba(4, 12, 17, 0.74) 55%, rgba(5, 13, 18, 0.86) 100%); /* @kind other */
   --ambient-radial: radial-gradient(1200px 600px at 20% -10%, rgba(143, 227, 240, 0.10), transparent 60%); /* @kind other */
 }

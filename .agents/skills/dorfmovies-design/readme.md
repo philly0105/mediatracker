@@ -167,7 +167,7 @@ Gradient tokens go through `background`, never `bg-[var(--x)]`: Tailwind emits t
 | `--glass-saturate` | `160%` | tier-1 saturation (150% on the slab) |
 | `--ambient-blur` | `80px` | ambient art |
 | `--ambient-saturate` | `1.3` | ambient art |
-| `--ambient-tint` | `linear-gradient(180deg, rgba(4, 12, 17, 0.50) 0%, rgba(4, 12, 17, 0.62) 55%, rgba(5, 13, 18, 0.84) 100%)` | over the ambient art |
+| `--ambient-tint` | `linear-gradient(180deg, rgba(4, 12, 17, 0.70) 0%, rgba(4, 12, 17, 0.74) 55%, rgba(5, 13, 18, 0.86) 100%)` | over the ambient art |
 | `--ambient-radial` | `radial-gradient(1200px 600px at 20% -10%, rgba(143, 227, 240, 0.10), transparent 60%)` | the no-art state |
 
 ### Interaction fills and charts
@@ -343,7 +343,9 @@ Panels pad 20 to 28.
 | `--poster-ratio` | `2 / 3` | posters |
 
 Below 768px the app keeps its mobile top bar, bottom tab bar and More drawer, as glass
-bars blurred 24px. Below 760px the hero stacks and panels use radius 24.
+bars blurred 24px. Below 760px panels use radius 24. The heroes stack below 1024 (`lg`),
+with the art as a band above the slab; from `lg` the slab is `min(480px, 60cqw - 32px)`
+of the stage.
 
 ### Retired
 

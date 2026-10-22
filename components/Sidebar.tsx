@@ -93,8 +93,10 @@ const TAB_CLASS =
 
 // Forced colours strips the fill and the hairline that mark an active tab, the
 // way it does for `.nav-item` in globals.css, so the state needs the system
-// highlight there. `!` is what beats the inline background below.
-const TAB_FORCED_ACTIVE = 'forced-colors:bg-[color:Highlight]! forced-colors:text-[color:HighlightText]!'
+// highlight there. `!` is what beats the inline background below, and
+// forced-color-adjust-none stops the Canvas backplate hiding the label.
+const TAB_FORCED_ACTIVE =
+  'forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight]! forced-colors:text-[color:HighlightText]!'
 
 function tabClass(active: boolean, extra = TAB_CLASS) {
   return active ? `${extra} ${TAB_FORCED_ACTIVE}` : extra
@@ -145,11 +147,13 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
 
           {/* Search is an action, not a destination — a field-shaped trigger reads
               as "summons the palette" and teaches the shortcut. The rail has no
-              room for the field, so it shows the magnifier alone. */}
+              room for the field, so it shows the magnifier alone. Neither may
+              shrink: a short viewport scrolls the column instead of
+              squashing the 44px target. */}
           <button
             type="button"
             onClick={openSearchOverlay}
-            className="glass-inset hidden h-11 items-center gap-2 pl-3 pr-2 text-left text-sm lg:flex"
+            className="glass-inset hidden h-11 shrink-0 items-center gap-2 pl-3 pr-2 text-left text-sm lg:flex"
           >
             <Search size={18} strokeWidth={1.8} className="shrink-0" style={{ color: 'var(--text-muted)' }} />
             <span className="flex-1 truncate" style={{ color: 'var(--text-faint)' }}>Search…</span>
@@ -159,7 +163,7 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
             type="button"
             onClick={openSearchOverlay}
             aria-label="Search"
-            className="glass-btn mx-auto flex h-11 w-11 items-center justify-center rounded-full lg:hidden"
+            className="glass-btn mx-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full lg:hidden"
           >
             <Search size={20} strokeWidth={1.8} />
           </button>
@@ -186,8 +190,10 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
 
       {/* Mobile Top Bar (DorfMovies). The bars blur at 24px rather than the
           panel's 40px: they sit over scrolling content, so they are the one
-          place the blur is repainted every frame. */}
-      <div className="glass-panel glass-rim md:hidden fixed top-0 left-0 right-0 z-40 rounded-none flex items-center justify-between px-4 py-2.5 [--glass-blur:var(--blur-md)]">
+          place the blur is repainted every frame. A 24px blur of a light
+          hero leaves the panel's .46 base a light grey band (labels near
+          2.9:1), so both bars take the elevated recipe's .72 base. */}
+      <div className="glass-panel glass-rim md:hidden fixed top-0 left-0 right-0 z-40 rounded-none flex items-center justify-between px-4 py-2.5 [--glass-blur:var(--blur-md)] [--glass-panel:var(--bg-elevated)]">
         <Wordmark />
         <div className="flex items-center gap-2">
           {/* Was a bare icon with no link and no handler: it looked tappable
@@ -225,7 +231,7 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
       {/* Mobile Bottom Navigation Bar */}
       <nav
         aria-label="Main"
-        className="glass-panel glass-rim md:hidden fixed bottom-0 left-0 right-0 z-40 rounded-none px-2 pt-1.5 flex items-center justify-around pb-safe-bottom select-none [--glass-blur:var(--blur-md)]"
+        className="glass-panel glass-rim md:hidden fixed bottom-0 left-0 right-0 z-40 rounded-none px-2 pt-1.5 flex items-center justify-around pb-safe-bottom select-none [--glass-blur:var(--blur-md)] [--glass-panel:var(--bg-elevated)]"
       >
         {primaryMobileItems.map((item) => {
           const isActive = isNavActive(pathname, item.href)
@@ -337,14 +343,15 @@ export function MustWatchList({ items, total }: { items: MustWatchItem[]; total:
     })
   }
 
+  // A div, not a section: it already sits in the sidebar landmark, and a
+  // region would repeat the watchlist page's own "Must watch" one.
   return (
-    <section
-      aria-labelledby="sidebar-must-watch"
+    <div
       className="hidden border-t pt-3.5 lg:block"
       style={{ borderColor: 'var(--border-divider)' }}
     >
       <div className="mb-1 flex items-center justify-between gap-2 px-3">
-        <h2 id="sidebar-must-watch" className="text-xs font-semibold leading-4" style={{ color: 'var(--text-muted)' }}>
+        <h2 className="text-xs font-semibold leading-4" style={{ color: 'var(--text-muted)' }}>
           Must watch
         </h2>
         <span className="tabular text-xs font-medium leading-4" style={{ color: 'var(--text-muted)' }}>
@@ -381,7 +388,7 @@ export function MustWatchList({ items, total }: { items: MustWatchItem[]; total:
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 'use client'
-import React, { useSyncExternalStore, type ReactNode } from 'react'
+import React, { useLayoutEffect, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import {
   BarChart,
   Bar,
@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { revealInScroller } from '@/components/ui/SegmentedControl'
 
 // Tokens rather than literals: `var()` resolves in SVG presentation
 // attributes, so the charts retheme with the rest of the app.
@@ -132,11 +133,14 @@ function glassTooltip(heading: (props: TooltipContentProps) => ReactNode) {
   }
 }
 
-function LegendKey({ swatch, dashed, children }: { swatch?: string; dashed?: boolean; children: ReactNode }) {
+// `swatchClass` is the swatch's forced-colours fill: that mode repaints the
+// inline token to Canvas, so it needs `!` to come back.
+function LegendKey({ swatch, swatchClass, dashed, children }: { swatch?: string; swatchClass?: string; dashed?: boolean; children: ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
         aria-hidden="true"
+        className={swatchClass}
         style={dashed
           ? { width: 14, height: 0, borderTop: '2px dashed var(--chart-line)' }
           : { width: 10, height: 10, borderRadius: 2, background: swatch }}
@@ -193,8 +197,11 @@ interface StatsData {
 
 const LIST_TEXT: React.CSSProperties = { fontSize: 'var(--text-sm)', lineHeight: '18px' }
 
-const YEAR_PILL = 'inline-flex h-9 items-center rounded-[var(--radius-thumb)] px-3 text-xs tabular transition-colors duration-200'
-const YEAR_PILL_ON = 'font-semibold text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+// 8px sides below sm so the rolling window and four years share one row in a
+// 390 phone's 330px panel; a year pill is still 48 wide. Pills never shrink:
+// a longer history scrolls inside the track instead of wrapping.
+const YEAR_PILL = 'inline-flex h-9 shrink-0 items-center rounded-[var(--radius-thumb)] px-2 sm:px-3 text-xs tabular transition-colors duration-200'
+const YEAR_PILL_ON = 'font-semibold text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
 const YEAR_PILL_OFF = 'font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)]'
 
 const ActivityTooltip = glassTooltip((props) => props.payload[0]?.payload?.long ?? props.label)
@@ -222,6 +229,14 @@ export default function StatsCharts({ data }: { data: StatsData }) {
   const genres = data.genreBreakdown.slice(0, 8)
   const genreMax = genres[0]?.count ?? 0
 
+  // Once the years outgrow the period track it scrolls, so the current period
+  // is brought into it, as a focused pill is.
+  const periodRef = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const current = periodRef.current?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (current) revealInScroller(current)
+  }, [data.selectedYear])
+
   return (
     <div className="space-y-6">
       <Card as="section" variant="panel" aria-labelledby="stats-activity">
@@ -234,9 +249,15 @@ export default function StatsCharts({ data }: { data: StatsData }) {
           {/* Plain links rather than a client toggle: the year is a server-side
               query param, so this needs no JavaScript and stays bookmarkable.
               The track is the segmented control's inset well, 36px segments
-              inside a 44px track. */}
+              inside a 44px track, and one row that scrolls sideways when the
+              years outgrow it. */}
           {data.years.length > 0 && (
-            <nav aria-label="Activity period" className="glass-inset inline-flex flex-wrap items-center gap-0.5 p-1">
+            <nav
+              ref={periodRef}
+              aria-label="Activity period"
+              onFocus={(e) => revealInScroller(e.target)}
+              className="glass-inset scrollbar-none inline-flex max-w-full items-center gap-0.5 overflow-x-auto p-1"
+            >
               <Link
                 href="/stats"
                 aria-current={data.selectedYear === null ? 'page' : undefined}
@@ -261,8 +282,8 @@ export default function StatsCharts({ data }: { data: StatsData }) {
           className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 pl-1 tabular"
           style={{ fontSize: 'var(--text-xs)', lineHeight: '16px', color: 'var(--text-muted)' }}
         >
-          <LegendKey swatch="var(--chart-bar-strong)">Movies</LegendKey>
-          <LegendKey swatch="var(--chart-bar)">Episodes</LegendKey>
+          <LegendKey swatch="var(--chart-bar-strong)" swatchClass="forced-colors:bg-[color:GrayText]!">Movies</LegendKey>
+          <LegendKey swatch="var(--chart-bar)" swatchClass="forced-colors:bg-[color:CanvasText]!">Episodes</LegendKey>
           {average > 0 && <LegendKey dashed>Avg {Math.round(average)}</LegendKey>}
         </div>
         <ChartFigure
@@ -295,6 +316,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                       fontSize={12}
                       fontWeight={on ? 600 : 400}
                       fill={on ? 'var(--accent)' : 'var(--chart-axis)'}
+                      className={on ? 'chart-tick-on' : undefined}
                     >
                       {String(payload.value)}
                     </text>
@@ -310,15 +332,16 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                   against the average line, and movies sit under episodes
                   because the brighter fill belongs at the base. The
                   highlighted column is the accent (spec §5.5), with the
-                  lighter accent-hover at its base for the same reason. */}
-              <Bar dataKey="movies" name="Movies" stackId="month" fill="var(--chart-bar-strong)" isAnimationActive={!reducedMotion}>
+                  lighter accent-hover at its base for the same reason. The
+                  classes are the forced-colours hooks in globals.css. */}
+              <Bar dataKey="movies" name="Movies" stackId="month" fill="var(--chart-bar-strong)" className="chart-bar-base" isAnimationActive={!reducedMotion}>
                 {activity.map((_, i) => (
-                  <Cell key={i} fill={i === highlight ? 'var(--accent-hover)' : 'var(--chart-bar-strong)'} />
+                  <Cell key={i} fill={i === highlight ? 'var(--accent-hover)' : 'var(--chart-bar-strong)'} className={i === highlight ? 'chart-bar-on' : undefined} />
                 ))}
               </Bar>
               <Bar dataKey="episodes" name="Episodes" stackId="month" fill="var(--chart-bar)" radius={BAR_TOP} isAnimationActive={!reducedMotion}>
                 {activity.map((_, i) => (
-                  <Cell key={i} fill={i === highlight ? 'var(--accent)' : 'var(--chart-bar)'} />
+                  <Cell key={i} fill={i === highlight ? 'var(--accent)' : 'var(--chart-bar)'} className={i === highlight ? 'chart-bar-on' : undefined} />
                 ))}
               </Bar>
             </BarChart>
@@ -331,7 +354,9 @@ export default function StatsCharts({ data }: { data: StatsData }) {
           <SectionHeader id="stats-genres" title="Genres" />
           {/* A real list rather than a chart: each bar already has its label
               and count in the open, so it needs no image summary or hidden
-              table. The top genre is the accent bar, as the current month is. */}
+              table. The top genre is the accent bar, as the current month is.
+              Forced colours repaint the inline fills to Canvas, so there the
+              bars take SegmentedProgress's system colours, `!` to beat them. */}
           {genres.length === 0 ? (
             <p style={{ ...LIST_TEXT, margin: 0, color: 'var(--text-muted)' }}>No genres recorded yet.</p>
           ) : (
@@ -342,9 +367,9 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                     <span className="truncate" style={{ color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{g.genre}</span>
                     <span className="tabular shrink-0" style={{ color: 'var(--text-muted)' }}>{g.count}</span>
                   </div>
-                  <div aria-hidden="true" className="mt-1 h-1.5 rounded-full" style={{ background: 'var(--progress-track)' }}>
+                  <div aria-hidden="true" className="mt-1 h-1.5 rounded-full forced-colors:bg-[color:GrayText]!" style={{ background: 'var(--progress-track)' }}>
                     <div
-                      className="h-full rounded-full"
+                      className={`h-full rounded-full ${i === 0 ? 'forced-colors:bg-[color:Highlight]!' : 'forced-colors:bg-[color:CanvasText]!'}`}
                       style={{
                         width: `${genreMax > 0 ? Math.round((g.count / genreMax) * 100) : 0}%`,
                         background: i === 0 ? 'var(--accent)' : 'var(--chart-bar)',
@@ -375,7 +400,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
                 <Tooltip content={RatingTooltip} cursor={CURSOR} />
                 <Bar dataKey="count" name="Titles" fill="var(--chart-bar)" radius={BAR_TOP} isAnimationActive={!reducedMotion}>
                   {data.ratingDist.map((_, i) => (
-                    <Cell key={i} fill={i === ratingPeak ? 'var(--accent)' : 'var(--chart-bar)'} />
+                    <Cell key={i} fill={i === ratingPeak ? 'var(--accent)' : 'var(--chart-bar)'} className={i === ratingPeak ? 'chart-bar-on' : undefined} />
                   ))}
                 </Bar>
               </BarChart>

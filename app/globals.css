@@ -301,8 +301,7 @@ body {
               box-shadow var(--dur-base) var(--ease-out-expo);
 }
 
-.media-row-interactive:hover,
-.media-row-interactive:focus-visible {
+.media-row-interactive:hover {
   background: var(--glass-card-hover);
 }
 
@@ -561,7 +560,9 @@ body {
    its neighbours. This block is unlayered on purpose, since the `border: 0`
    rules it has to beat are unlayered too. The .glass-* tiers get theirs inside
    the components layer above. Highlight/HighlightText is the system pair for a
-   selected item and keeps clear of the focus outline. */
+   selected item and keeps clear of the focus outline. A Highlight fill needs
+   `forced-color-adjust: none` too, or Chromium paints its Canvas backplate
+   behind the HighlightText label and the label reads as a solid block. */
 @media (forced-colors: active) {
   .card-surface,
   .media-row,
@@ -577,8 +578,52 @@ body {
   }
 
   .nav-item[aria-current='page'] {
+    forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;
+  }
+}
+
+/* Recharts paints with SVG fill and stroke attributes in white alpha, which
+   forced colours leaves alone, so on a light Canvas the bars, grid, ticks and
+   average line all vanish. Bars take CanvasText (the stats activity chart's
+   movies base GrayText, matching its legend), the highlighted bar and its
+   month label Highlight, and the grid GrayText. The tooltip loses its rim, so
+   it gets a border, and its fill becomes Canvas at the recipe's .72 alpha,
+   which lets the hover cursor show through, so it takes a solid Canvas. */
+@media (forced-colors: active) {
+  .recharts-bar-rectangle path {
+    fill: CanvasText;
+  }
+
+  .chart-bar-base .recharts-bar-rectangle path {
+    fill: GrayText;
+  }
+
+  .recharts-bar-rectangle path.chart-bar-on {
+    fill: Highlight;
+  }
+
+  .recharts-cartesian-grid line {
+    stroke: GrayText;
+  }
+
+  .recharts-cartesian-axis-line,
+  .recharts-reference-line line {
+    stroke: CanvasText;
+  }
+
+  .recharts-cartesian-axis-tick-labels text {
+    fill: CanvasText;
+  }
+
+  .recharts-cartesian-axis-tick-labels text.chart-tick-on {
+    fill: Highlight;
+  }
+
+  .recharts-tooltip-wrapper > div {
+    border: 1px solid CanvasText;
+    background-color: Canvas !important;
   }
 }
 
@@ -625,6 +670,16 @@ body {
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
+}
+
+/* Forced colours repaint the ring in Highlight, except on the selected items
+   that opt out with `forced-color-adjust: none` (see above), where the token
+   cyan would stay, near invisible on a light Canvas. It comes after the rule
+   above, whose specificity it matches. */
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 /* No ring on a dialog: useModal focuses the sheet itself (tabindex -1) so

@@ -148,7 +148,11 @@ export default function CalendarClient({ releases }: Props) {
                     ].join(', ')
                     return (
                       <li key={`${item.tmdb_id}-${item.full_release_date}`} className="min-w-0">
-                        <SelectableOverlay item={media}>
+                        {/* The select chip sits over the poster thumb, not the
+                            corner, where it would cover the month: 12px padding
+                            + 40px date stack + 12px gap puts the 34px thumb at
+                            64, so the 36px chip starts at 63. */}
+                        <SelectableOverlay item={media} chipClassName="left-[63px] top-1/2 -translate-y-1/2">
                           <div
                             onClick={open}
                             {...activatableProps(open, name)}
@@ -174,7 +178,10 @@ export default function CalendarClient({ releases }: Props) {
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
+                              {/* Below sm the episode badge drops under the
+                                  title when the two don't fit: beside it,
+                                  "Slow Horses" was truncating at 390. */}
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:flex-nowrap">
                                 <p
                                   className="truncate"
                                   style={{

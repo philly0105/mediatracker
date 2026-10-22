@@ -205,6 +205,31 @@ describe('image loading policy (Next.js 16)', () => {
     expect(preloaded[0].getAttribute('src')).toContain('s1-backdrop')
     expect(preloaded[0].getAttribute('data-fill')).toBe('true')
     expect(preloaded[0].getAttribute('alt')).toBe('')
+    // The art is the stage's width up to lg, where it becomes the whole stage.
+    expect(preloaded[0].getAttribute('data-sizes')).toBe('(max-width: 1023px) 100vw, 1200px')
+  })
+
+  it('keeps the hero logo decorative, with the title text beside it for forced colours', () => {
+    const shows = [
+      { ...makeShow('s1', 'Show 1', 'https://image.tmdb.org/t/p/w500/s1.jpg'), art: { backdrop_url: null, logo_url: 'https://image.tmdb.org/t/p/w500/s1-logo.png' } },
+    ]
+
+    const { container } = render(
+      <ToastProvider>
+        <ContinueWatchingRow shows={shows} />
+      </ToastProvider>
+    )
+
+    const heading = container.querySelector('#hero-title') as HTMLElement
+    expect(heading).toHaveTextContent('Show 1')
+    const logo = heading.querySelector('img')
+    expect(logo?.getAttribute('src')).toContain('s1-logo')
+    expect(logo?.getAttribute('alt')).toBe('')
+    expect(logo?.getAttribute('data-preload')).toBe('false')
+    // A white logo can vanish on the Canvas slab under forced colours, so it
+    // hides there and the screen-reader-only title takes its place.
+    expect(logo?.className).toContain('forced-colors:hidden')
+    expect(heading.querySelector('span')?.className).toBe('sr-only forced-colors:not-sr-only')
   })
 
   it('preloads the empty hero art only when the page asks it to', () => {

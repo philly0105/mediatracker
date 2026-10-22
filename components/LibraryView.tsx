@@ -87,7 +87,7 @@ const FILTER_DEFAULTS = { type: 'all', q: '', sort: 'recent', rating: 'All', gen
 const VIEW_TOGGLE =
   'flex items-center justify-center w-9 h-9 rounded-[var(--radius-thumb)] transition-colors duration-200'
 const VIEW_TOGGLE_ON =
-  'text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+  'text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
 const VIEW_TOGGLE_OFF =
   'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)]'
 
@@ -571,11 +571,11 @@ export default function LibraryView({
                     type="button"
                     onClick={() => setFilter(chip.key, 'All')}
                     aria-label={`Remove ${chip.label} filter`}
-                    className="glass-btn inline-flex items-center gap-2 min-h-11 pl-3 pr-2.5 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-semibold text-[var(--text-primary)] whitespace-nowrap forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]"
+                    className="glass-btn inline-flex items-center gap-2 min-h-11 pl-3 pr-2.5 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-semibold text-[var(--text-primary)] whitespace-nowrap forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]"
                   >
-                    <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                    <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] forced-colors:bg-[color:HighlightText]" />
                     <span>{chip.label}</span>
-                    <X className="w-4 h-4 text-[var(--text-secondary)]" strokeWidth={1.8} aria-hidden="true" />
+                    <X className="w-4 h-4 text-[var(--text-secondary)] forced-colors:text-[color:HighlightText]" strokeWidth={1.8} aria-hidden="true" />
                   </button>
                 ))}
               </div>

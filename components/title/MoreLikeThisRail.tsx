@@ -18,6 +18,32 @@ export interface MoreLikeThisRailProps {
 }
 
 /**
+ * Brings the rail item that just took keyboard focus to the rim. Chrome
+ * scrolls a Tab-focused element into view only when it is wholly out of
+ * sight: one cut by the rim stays cut, and `scrollIntoView({ inline:
+ * 'nearest' })` leaves it there too. For a rail's `onFocus`; the item lands
+ * inside the rail's inline padding, which is the bleed the focus ring needs.
+ * `scrollBy` with no `behavior` follows the rail's own scroll-behavior.
+ * Keyboard focus only: a click or tap focuses too, and scrolling the rail
+ * under a pressed pointer moves the item away before the click lands.
+ * Shared by CastStrip and the home page's DashboardRecentCards.
+ */
+export function revealRailItem(e: React.FocusEvent<HTMLElement>) {
+  if (!(e.target as HTMLElement).matches(':focus-visible')) return
+  const rail = e.currentTarget
+  const item = (e.target as HTMLElement).closest('li')
+  if (!item) return
+  const r = item.getBoundingClientRect()
+  const p = rail.getBoundingClientRect()
+  const cs = getComputedStyle(rail)
+  const left = p.left + (parseFloat(cs.paddingLeft) || 0)
+  const right = p.right - (parseFloat(cs.paddingRight) || 0)
+  // A pixel of slack: fractional widths would otherwise nudge every card.
+  if (r.right > right + 1) rail.scrollBy({ left: r.right - right })
+  else if (r.left < left - 1) rail.scrollBy({ left: r.left - left })
+}
+
+/**
  * The "More like this" poster rail: a scrolling row of `PosterCard`s under a
  * section header. Nothing in it blurs; it sits inside whatever panel the
  * caller puts it in. Renders nothing when there is nothing to recommend.
@@ -32,13 +58,18 @@ export function MoreLikeThisRail({ items, onSelect, title = 'More like this', su
           scrolling sideways with the scrollbar hidden. It bleeds through the
           panel's padding (--panel-pad, or --space-5 outside a Card panel) so
           the last poster is cut at the rim, not short of it, which is what
-          reads as "this scrolls". */}
+          reads as "this scrolls". The 8px of block padding, cancelled by the
+          negative margin, is room for the focus ring on a lifted card (the
+          2px ring and offset, scaled, plus the 1.02 lift's extra height):
+          overflow-x:auto clips the y axis too. */}
       <ul
         className="scrollbar-none"
+        onFocus={revealRailItem}
         style={{
           listStyle: 'none',
-          margin: '0 calc(var(--panel-pad, var(--space-5)) * -1)',
-          padding: '0 var(--panel-pad, var(--space-5)) 4px',
+          margin: '-8px calc(var(--panel-pad, var(--space-5)) * -1)',
+          padding: '8px var(--panel-pad, var(--space-5)) 12px',
+          scrollPaddingInline: 'var(--panel-pad, var(--space-5))',
           display: 'grid',
           gridAutoFlow: 'column',
           gridAutoColumns: 'minmax(118px, 1fr)',

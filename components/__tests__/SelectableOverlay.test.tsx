@@ -106,4 +106,37 @@ describe('SelectableOverlay multiselect behavior', () => {
     expect(keys.textContent).not.toContain('movie-111')
     expect(keys.textContent).toContain('movie-222')
   })
+
+  // PosterCard keeps its badges clear of the chip through `--poster-badge-top`,
+  // which the wrapper sets only while the chip shows: by CSS on hover and chip
+  // focus, and as a plain class in select mode. The calendar moves the chip
+  // off its date stack through the prop.
+  it('lets a caller place the chip and moves badges only while it shows', () => {
+    const { container } = render(
+      <ToastProvider>
+        <MultiSelectProvider>
+          <SelectableOverlay item={item1}><div>default</div></SelectableOverlay>
+          <SelectableOverlay item={item2} chipClassName="left-[63px] top-1/2 -translate-y-1/2"><div>placed</div></SelectableOverlay>
+        </MultiSelectProvider>
+      </ToastProvider>
+    )
+
+    const [chip1, chip2] = Array.from(container.querySelectorAll('button[aria-label^="Select "]'))
+    expect(chip1.className).toContain('top-2 left-2')
+    expect(chip2.className).toContain('left-[63px] top-1/2 -translate-y-1/2')
+    expect(chip2.className).not.toContain('top-2')
+
+    const SHOWN = '[--poster-badge-top:52px]'
+    const wrappers = Array.from(container.querySelectorAll('.group'))
+    expect(wrappers).toHaveLength(2)
+    for (const w of wrappers) {
+      expect(w.classList.contains(`hover:${SHOWN}`)).toBe(true)
+      expect(w.classList.contains(`has-[>button:focus-visible]:${SHOWN}`)).toBe(true)
+      expect(w.classList.contains(SHOWN)).toBe(false)
+    }
+
+    // Selecting one card puts every card in select mode, so every chip shows.
+    fireEvent.click(chip1)
+    for (const w of wrappers) expect(w.classList.contains(SHOWN)).toBe(true)
+  })
 })

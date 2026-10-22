@@ -153,4 +153,51 @@ describe('DashboardRecentCards scroll affordances (F-44)', () => {
     expect(screen.getByLabelText('Scroll right')).toBeDisabled()
     metrics.scrollWidth = 1600
   })
+
+  // Chrome leaves a Tab-focused card that is only partly past the rim where
+  // it is, so the rail scrolls it the rest of the way itself. The rail spans
+  // 0..600 here; the second card hangs 68px past its right edge.
+  function layOutRimCutCard() {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const box = this.tagName === 'UL' ? { left: 0, right: 600 }
+        : this.tagName === 'LI' && this.textContent?.includes('Sinners') ? { left: 550, right: 668 }
+        : { left: 0, right: 0 }
+      return { ...box, top: 0, bottom: 0, width: box.right - box.left, height: 0, x: box.left, y: 0, toJSON: () => ({}) } as DOMRect
+    })
+  }
+
+  // jsdom's :focus-visible heuristic needs a real Tab keystroke history, so
+  // the modality is stubbed: the reveal consults the selector and nothing else.
+  function focusedByKeyboard(keyboard: boolean) {
+    const matches = Element.prototype.matches
+    vi.spyOn(Element.prototype, 'matches').mockImplementation(function (this: Element, selector: string) {
+      return selector === ':focus-visible' ? keyboard : matches.call(this, selector)
+    })
+  }
+
+  it('brings a card cut by the rim into view when it takes keyboard focus', () => {
+    layOutRimCutCard()
+    focusedByKeyboard(true)
+    renderPanel([makeEntry('1', 'Past Lives'), makeEntry('2', 'Sinners')])
+    const [pastLives, sinners] = Array.from(document.querySelectorAll('.poster-card'))
+
+    act(() => { fireEvent.focus(sinners) })
+    expect(metrics.scrollLeft).toBe(68)
+
+    // A card already in view stays put.
+    act(() => { fireEvent.focus(pastLives) })
+    expect(metrics.scrollLeft).toBe(68)
+  })
+
+  // A click focuses too; scrolling then would move the card out from under
+  // the pointer before mouseup and the click would never land.
+  it('leaves the rail alone when a pointer focuses a cut card', () => {
+    layOutRimCutCard()
+    focusedByKeyboard(false)
+    renderPanel([makeEntry('1', 'Past Lives'), makeEntry('2', 'Sinners')])
+    const sinners = document.querySelectorAll('.poster-card')[1]
+
+    act(() => { fireEvent.focus(sinners) })
+    expect(metrics.scrollLeft).toBe(0)
+  })
 })

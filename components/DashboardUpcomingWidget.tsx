@@ -159,8 +159,10 @@ export default function DashboardUpcomingWidget({ releases, watchlistKeys = [], 
                     </span>
                   )}
                   <span style={{ minWidth: 0 }}>
+                    {/* Two lines, as the reference wraps "The Hunger Games:
+                        Sunrise on the Reaping"; the row grows to fit. */}
                     <span
-                      className="block truncate"
+                      className="line-clamp-2"
                       style={{ fontSize: 'var(--text-base)', lineHeight: '18px', fontWeight: semibold, color: 'var(--text-primary)' }}
                     >
                       {item.title}

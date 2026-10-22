@@ -38,11 +38,15 @@ describe('NavItem', () => {
   })
 
   it('shows the rail label when stacked but keeps the plain label as the name', () => {
-    const { getByRole } = render(
+    const { getByRole, getByText } = render(
       <NavItem icon={Home} label="Recommendations" railLabel={'Recom\u00admendations'} href="/recommendations" stacked />
     )
     const link = getByRole('link', { name: 'Recommendations' })
-    expect(link.textContent).toBe('Recom\u00admendations')
+    // The name comes from a visually hidden copy rather than an aria-label,
+    // which axe flagged for not matching the visible "Recom-mendations".
+    expect(link).not.toHaveAttribute('aria-label')
+    expect(getByText('Recom\u00admendations')).toHaveAttribute('aria-hidden', 'true')
+    expect(getByText('Recommendations')).toHaveClass('sr-only')
   })
 
   it('ignores the rail label in the row layout', () => {

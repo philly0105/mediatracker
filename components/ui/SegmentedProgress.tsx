@@ -2,6 +2,8 @@ import React from 'react'
 
 // Past this many episodes the segments would be a few pixels each and the
 // 3px gaps would outweigh them, so a season that long gets one continuous bar.
+// A season with nothing to count yet (max 0) takes the same bar as an empty
+// track, so the header keeps its shape instead of collapsing to nothing.
 const MAX_SEGMENTS = 24
 
 interface SegmentedProgressProps {
@@ -46,7 +48,7 @@ export function SegmentedProgress({
 
   return (
     <div className={className} style={{ display: 'flex', alignItems: 'center', gap: 12, ...style }}>
-      {total > MAX_SEGMENTS ? (
+      {total > MAX_SEGMENTS || total === 0 ? (
         <div role="img" aria-label={label} className={UNWATCHED} style={{ flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' }}>
           <div data-progress-fill className={WATCHED} style={{ width: `${total ? (watched / total) * 100 : 0}%`, height: '100%', borderRadius: 2 }} />
         </div>

@@ -27,9 +27,9 @@ export function HeroSectionSkeleton() {
   return (
     <>
       <div className="card-surface" style={{ padding: 8, borderRadius: 32 }}>
-        <div className="flex flex-col overflow-hidden md:h-[520px] md:flex-row" style={{ borderRadius: 24 }}>
-          <Skeleton className="h-[220px] w-full rounded-none md:hidden" />
-          <div className="glass-row flex flex-col rounded-none p-5 md:m-4 md:w-[480px] md:rounded-[var(--radius-slab)] md:p-7">
+        <div className="@container flex flex-col overflow-hidden lg:min-h-[520px] lg:flex-row" style={{ borderRadius: 24 }}>
+          <Skeleton className="h-[220px] w-full rounded-none md:h-[320px] lg:hidden" />
+          <div className="glass-row flex flex-col rounded-none p-5 md:p-7 lg:m-4 lg:w-[min(480px,60cqw-32px)] lg:rounded-[var(--radius-slab)]">
             <Skeleton className="h-[18px] w-40" />
             <Skeleton className="mt-6 h-20 w-72 max-w-full" />
             <Skeleton className="mt-3.5 h-5 w-3/4" />

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { PosterCard } from '@/components/ui/PosterCard'
+import { PosterCard, PosterBadge } from '@/components/ui/PosterCard'
 
 vi.mock('next/image', () => ({
   default: ({
@@ -25,5 +25,14 @@ describe('PosterCard', () => {
   it('names the card once when there is no poster', () => {
     render(<PosterCard title="Hamnet" year={2025} href="/movie/1" />)
     expect(screen.getByRole('link', { name: 'Hamnet 2025' })).toBeInTheDocument()
+  })
+
+  // The badges rest in the corner and take their offset from a SelectableOverlay
+  // only while its chip shows (see SelectableOverlay.test).
+  it('places its badges by --poster-badge-top, 8px by default', () => {
+    render(<PosterCard title="Hamnet" href="/movie/1" badges={<PosterBadge>Watched</PosterBadge>} />)
+    const slot = screen.getByText('Watched').parentElement!
+    expect(slot.className).toContain('top-[var(--poster-badge-top,8px)]')
+    expect(slot.className).toContain('left-2')
   })
 })

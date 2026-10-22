@@ -137,7 +137,11 @@ export function PosterCard({
           </div>
         )}
         {badges && (
-          <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', flexWrap: 'wrap', gap: 6, zIndex: 1 }}>
+          // A SelectableOverlay sets `--poster-badge-top` while its select chip
+          // is showing, which slides the badges under the chip (below rather
+          // than beside, because a rail poster is only 118 wide); otherwise
+          // they keep the corner.
+          <div className="absolute left-2 top-[var(--poster-badge-top,8px)] z-[1] flex flex-wrap gap-1.5 transition-[top] duration-200">
             {badges}
           </div>
         )}

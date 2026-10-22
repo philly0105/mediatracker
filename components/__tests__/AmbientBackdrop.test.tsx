@@ -22,6 +22,20 @@ function images(container: HTMLElement) {
   return Array.from(container.querySelectorAll<HTMLImageElement>('img'))
 }
 
+// The host shows a loaded image two frames after its load event, so the fade
+// starts from a painted opacity 0. Needs fake timers, which drive the frames.
+function load(img: HTMLImageElement) {
+  fireEvent.load(img)
+  act(() => {
+    vi.advanceTimersToNextFrame()
+    vi.advanceTimersToNextFrame()
+  })
+}
+
+function fadeEnd(img: HTMLImageElement, propertyName = 'opacity') {
+  fireEvent.transitionEnd(img, { propertyName })
+}
+
 // The host renders the outgoing image first and the incoming one after it, so
 // the last <img> is always the one being shown.
 function current(container: HTMLElement) {
@@ -71,6 +85,7 @@ describe('AmbientHost', () => {
   })
 
   it('paints a registered image as decorative art at w780 and fades the radial out once it has loaded', () => {
+    vi.useFakeTimers()
     const { container } = render(
       <>
         <AmbientHost />
@@ -86,7 +101,14 @@ describe('AmbientHost', () => {
     expect(layer).toHaveAttribute('aria-hidden', 'true')
     // Nothing is painted until the image arrives, so the radial stays up.
     expect(radial(container).style.opacity).toBe('1')
+    // A cached image loads in the mount's own frame; showing it at once would
+    // coalesce the opacity 0 and 1 styles into a cut, so it waits two frames.
     fireEvent.load(img)
+    expect(img.style.opacity).toBe('0')
+    act(() => { vi.advanceTimersToNextFrame() })
+    expect(img.style.opacity).toBe('0')
+    act(() => { vi.advanceTimersToNextFrame() })
+    expect(img.style.opacity).toBe('1')
     expect(radial(container).style.opacity).toBe('0')
   })
 
@@ -180,7 +202,8 @@ describe('AmbientHost', () => {
     expect(current(container)).toHaveAttribute('src', ANDOR_780)
   })
 
-  it('crossfades by opacity: keeps the old art under the new one until it loads, then drops it after 400ms', () => {
+  // Severance painted, then The Bear registered and (after `load`) fading in over it.
+  function crossfade() {
     vi.useFakeTimers()
     stubReducedMotion(false)
     const { container, rerender } = render(
@@ -189,7 +212,7 @@ describe('AmbientHost', () => {
         <AmbientBackdrop src={SEVERANCE} />
       </>
     )
-    fireEvent.load(current(container)!)
+    load(current(container)!)
     expect(current(container)!.style.opacity).toBe('1')
 
     rerender(
@@ -198,25 +221,61 @@ describe('AmbientHost', () => {
         <AmbientBackdrop src={BEAR} />
       </>
     )
+    return { container, rerender }
+  }
+
+  it('crossfades by opacity: keeps the old art under the new one until it loads, then drops it when the fade ends', () => {
+    const { container } = crossfade()
     let [previous, next] = images(container)
     expect(previous).toHaveAttribute('src', SEVERANCE_780)
     expect(previous.style.opacity).toBe('1')
     expect(next).toHaveAttribute('src', BEAR_780)
     expect(next.style.opacity).toBe('0')
 
-    // Not loaded yet: the old art stays however long that takes.
+    // Not loaded yet: the old art stays however long that takes, and its own
+    // fade-in ending (it was still fading when the swap came) does not drop it.
     act(() => { vi.advanceTimersByTime(1000) })
+    fadeEnd(previous)
     expect(images(container)).toHaveLength(2)
 
-    fireEvent.load(next)
+    load(next)
     ;[previous, next] = images(container)
     expect(next.style.opacity).toBe('1')
     expect(next.style.transition).toContain('opacity')
     expect(next.style.transition).not.toContain('filter')
 
+    // The old art goes when the new one's fade-in has ended, not before: on a
+    // slow machine the fade can start well after the load.
+    fadeEnd(next, 'filter')
+    expect(images(container)).toHaveLength(2)
+    fadeEnd(next)
+    expect(images(container)).toHaveLength(1)
+    expect(current(container)).toHaveAttribute('src', BEAR_780)
+  })
+
+  it('falls back to dropping the old art after 400ms when no fade runs', () => {
+    const { container } = crossfade()
+    load(images(container)[1])
+
     act(() => { vi.advanceTimersByTime(399) })
     expect(images(container)).toHaveLength(2)
     act(() => { vi.advanceTimersByTime(1) })
+    expect(images(container)).toHaveLength(1)
+    expect(current(container)).toHaveAttribute('src', BEAR_780)
+  })
+
+  it('holds the fallback while a fade is still in flight', () => {
+    const { container } = crossfade()
+    const host = container.querySelector<HTMLElement>('[data-ambient-host]')!
+    // jsdom has no getAnimations; a running transition would be listed here.
+    host.getAnimations = () => [{} as Animation]
+    load(images(container)[1])
+
+    act(() => { vi.advanceTimersByTime(800) })
+    expect(images(container)).toHaveLength(2)
+
+    host.getAnimations = () => []
+    act(() => { vi.advanceTimersByTime(400) })
     expect(images(container)).toHaveLength(1)
     expect(current(container)).toHaveAttribute('src', BEAR_780)
   })
@@ -231,7 +290,7 @@ describe('AmbientHost', () => {
       </>
     )
     const painted = current(container)!
-    fireEvent.load(painted)
+    load(painted)
 
     // Navigate away, then back before the new art has loaded.
     rerender(
@@ -249,6 +308,70 @@ describe('AmbientHost', () => {
     expect(images(container)).toHaveLength(1)
     expect(current(container)).toBe(painted)
     expect(painted.style.opacity).toBe('1')
+  })
+
+  it('fades the art that was coming in back out over the painted one it returns to', () => {
+    // Close a modal and reopen the same title while its art is still fading in.
+    const { container, rerender } = crossfade()
+    const [painted, incoming] = images(container)
+    load(incoming)
+
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={SEVERANCE} />
+      </>
+    )
+    // The same two nodes in the same order: the returning art is not moved
+    // on top at full opacity (a cut), the incoming one fades out over it.
+    expect(images(container)).toEqual([painted, incoming])
+    expect(painted.style.opacity).toBe('1')
+    expect(incoming.style.opacity).toBe('0')
+
+    // Only the fade-out ending drops it, not the painted one's own fade ending.
+    fadeEnd(painted)
+    expect(images(container)).toHaveLength(2)
+    fadeEnd(incoming)
+    expect(images(container)).toEqual([painted])
+  })
+
+  it('falls back to dropping a layer fading out after 400ms when no fade runs', () => {
+    const { container, rerender } = crossfade()
+    load(images(container)[1])
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={SEVERANCE} />
+      </>
+    )
+    act(() => { vi.advanceTimersByTime(400) })
+    expect(images(container)).toHaveLength(1)
+    expect(current(container)).toHaveAttribute('src', SEVERANCE_780)
+  })
+
+  it('keeps the painted art under a second swap until the first new art has faded in', () => {
+    // Open a title, then another from its Similar rail before the first has faded in.
+    const { container, rerender } = crossfade()
+    load(images(container)[1])
+    rerender(
+      <>
+        <AmbientHost />
+        <AmbientBackdrop src={ANDOR} />
+      </>
+    )
+    const [painted, middle, next] = images(container)
+    expect(painted).toHaveAttribute('src', SEVERANCE_780)
+    expect(middle).toHaveAttribute('src', BEAR_780)
+    expect(next).toHaveAttribute('src', ANDOR_780)
+    expect([painted.style.opacity, middle.style.opacity, next.style.opacity]).toEqual(['1', '1', '0'])
+
+    // The middle one reaching full opacity hides the bottom one, not the top.
+    fadeEnd(middle)
+    expect(images(container)).toEqual([middle, next])
+
+    load(next)
+    fadeEnd(next)
+    expect(images(container)).toEqual([next])
   })
 
   it('swaps without a fade under prefers-reduced-motion', () => {
@@ -287,7 +410,7 @@ describe('AmbientHost', () => {
       </>
     )
     const painted = current(container)!
-    fireEvent.load(painted)
+    load(painted)
     expect(radial(container).style.opacity).toBe('0')
 
     rerender(<AmbientHost />)
@@ -298,7 +421,7 @@ describe('AmbientHost', () => {
     expect(outgoing.style.transition).toContain('opacity')
     expect(radial(container).style.opacity).toBe('1')
 
-    act(() => { vi.advanceTimersByTime(400) })
+    fadeEnd(outgoing)
     expect(images(container)).toHaveLength(0)
     expect(radial(container).style.opacity).toBe('1')
   })

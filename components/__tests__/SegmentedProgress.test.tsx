@@ -73,4 +73,15 @@ describe('SegmentedProgress', () => {
     const { container } = render(<SegmentedProgress value={1} max={24} />)
     expect(segments(container)).toHaveLength(24)
   })
+
+  it('draws an empty track, not nothing, when there is nothing to count', () => {
+    // A season with no aired episodes: zero segments left a gap in the header.
+    const { container } = render(<SegmentedProgress value={0} max={0} />)
+    expect(segments(container)).toHaveLength(0)
+    const track = screen.getByRole('img', { name: '0 of 0 episodes watched' })
+    expect(track.className).toContain('bg-[var(--progress-track)]')
+    expect(track.style.height).toBe('4px')
+    expect(container.querySelector<HTMLElement>('[data-progress-fill]')!.style.width).toBe('0%')
+    expect(screen.getByText('0 of 0')).toBeInTheDocument()
+  })
 })

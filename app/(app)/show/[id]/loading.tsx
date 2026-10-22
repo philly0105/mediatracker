@@ -12,14 +12,14 @@ export default function ShowLoading() {
 
       <div className="glass-panel p-2" style={{ borderRadius: 32 }}>
         <div
-          className="relative flex flex-col overflow-hidden md:min-h-[520px] md:flex-row"
+          className="@container relative flex flex-col overflow-hidden lg:min-h-[520px] lg:flex-row"
           style={{ borderRadius: 24, background: 'var(--bg-deep)' }}
         >
-          <div className="h-[220px] w-full md:absolute md:inset-0 md:h-auto">
+          <div className="h-[220px] w-full md:h-[320px] lg:absolute lg:inset-0 lg:h-auto">
             <Skeleton className="h-full w-full rounded-none" />
           </div>
           <div
-            className="glass-slab relative z-[1] flex flex-col gap-4 rounded-none p-5 md:m-4 md:w-[480px] md:rounded-[var(--radius-slab)] md:p-7"
+            className="glass-slab relative z-[1] flex flex-col gap-4 rounded-none p-5 md:p-7 lg:m-4 lg:w-[min(480px,60cqw-32px)] lg:rounded-[var(--radius-slab)]"
             style={{ flex: 'none', maxWidth: '100%' }}
           >
             <Skeleton className="h-4 w-20" />
