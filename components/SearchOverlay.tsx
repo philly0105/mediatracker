@@ -29,7 +29,10 @@ interface Props {
 // `!` is what lets the class beat the inline fill, as in Sidebar's tabs. The
 // row opts out of the forced palette, or a Canvas backplate hides its text,
 // so everything inside it is set to HighlightText by hand, inline colours too.
-const ROW_CLASS = 'glass-row rounded-[var(--radius-md)] flex items-center gap-3 w-full text-left cursor-pointer aria-selected:forced-colors:forced-color-adjust-none aria-selected:forced-colors:bg-[color:Highlight]! aria-selected:forced-colors:text-[color:HighlightText]! aria-selected:forced-colors:**:text-[color:HighlightText]!'
+// Rows may not shrink: the list is a scrolling flex column, and a long result
+// set would squeeze each row to its 44px minimum and spill the 66px posters
+// over the rows around it.
+const ROW_CLASS = 'glass-row rounded-[var(--radius-md)] flex shrink-0 items-center gap-3 w-full text-left cursor-pointer aria-selected:forced-colors:forced-color-adjust-none aria-selected:forced-colors:bg-[color:Highlight]! aria-selected:forced-colors:text-[color:HighlightText]! aria-selected:forced-colors:**:text-[color:HighlightText]!'
 const SELECTED_STYLE: CSSProperties = {
   background: 'var(--glass-fill-selected)',
   boxShadow: 'var(--glass-row-edge), var(--accent-ring)',
