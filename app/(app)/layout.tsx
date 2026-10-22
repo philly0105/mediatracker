@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar'
 import { MultiSelectProvider } from '@/components/MultiSelectProvider'
 import KeyboardShortcuts from '@/components/KeyboardShortcuts'
 import { MediaModalProvider } from '@/components/MediaModalProvider'
+import RecentAmbient from '@/components/RecentAmbient'
 
 // The authenticated shell. Everything that needs a session lives under this
 // group, so the auth read happens once here instead of in the root layout —
@@ -31,6 +32,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Suspense>
           <KeyboardShortcuts />
         </Suspense>
+        {/* The ambient layer's signed-in default (most recent watch). Its own
+            Suspense so the query streams in behind the page instead of
+            delaying it; it renders no markup. */}
+        {user && (
+          <Suspense>
+            <RecentAmbient userId={user.id} />
+          </Suspense>
+        )}
         <div className="relative z-10 min-h-screen flex flex-col md:flex-row">
           {user && <Sidebar userEmail={user.email} />}
 

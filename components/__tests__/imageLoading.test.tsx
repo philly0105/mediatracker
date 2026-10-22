@@ -183,18 +183,18 @@ describe('image loading policy (Next.js 16)', () => {
     expect(source.split(`sizes="${expectedSizes}"`)).toHaveLength(3)
   })
 
-  it('paints the ambient wash as one gradient layer with no blur filter and no fixed body background', () => {
+  it('paints the ambient backdrop as one host layer with no fixed body background', () => {
     const layoutContent = readFileSync(path.join(ROOT, 'app/layout.tsx'), 'utf8')
     const globalsContent = readFileSync(path.join(ROOT, 'app/globals.css'), 'utf8')
 
-    // One element, not four layers. blur() on a 700px orb and a
-    // fixed-attachment body background are both per-scroll-frame paint costs.
-    expect(layoutContent).toContain('className="ambient-layer"')
+    // One fixed host, mounted once, rather than a layer per page. A blur
+    // utility in the layout and a fixed-attachment body background are both
+    // per-scroll-frame paint costs.
+    expect(layoutContent.match(/<AmbientHost \/>/g)).toHaveLength(1)
     expect(layoutContent).not.toMatch(/blur-\[\d+px\]/)
     expect(globalsContent).not.toContain('background-attachment: fixed')
-    expect(globalsContent).toMatch(/\.ambient-layer\s*\{[^}]*radial-gradient/)
 
-    // Still dialled back on mobile, just without a filter to dial back.
-    expect(globalsContent).toMatch(/@media\s*\(\s*max-width:\s*640px\s*\)\s*\{[\s\S]*\.ambient-layer[\s\S]*\}/)
+    // Reduced transparency drops the blurred art and keeps the tint.
+    expect(globalsContent).toMatch(/@media\s*\(\s*prefers-reduced-transparency:\s*reduce\s*\)\s*\{[\s\S]*?\.ambient-img\s*\{\s*display:\s*none/)
   })
 })

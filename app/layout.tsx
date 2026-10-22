@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/ToastProvider'
+import { AmbientHost } from '@/components/AmbientBackdrop'
 
 // Inter variable with its optical-size axis: next/font only ships the weight
 // axis unless asked, and without `opsz` the 28px headings render with the 14px
@@ -49,14 +50,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
-      {/* Canvas, grain and base text colour live in globals.css — an unlayered
+      {/* Canvas and base text colour live in globals.css — an unlayered
           body rule outranks any Tailwind utility set here, so keeping both was
           only ever a way for the two to disagree. */}
       <body className={`${inter.className} min-h-screen relative antialiased`}>
-        {/* Page radial + the three ambient orbs, all of it one painted layer.
-            It was four: a fixed-attachment body background and three blurred
-            divs. See .ambient-layer in globals.css. */}
-        <div className="ambient-layer" aria-hidden="true" />
+        {/* The one fixed layer behind the app: the featured title's backdrop
+            blurred under a tint, or the tint alone when nothing has registered
+            one. Pages register their art through <AmbientBackdrop>; see
+            components/AmbientBackdrop.tsx for why they never paint their own. */}
+        <AmbientHost />
 
         <ToastProvider>
           {children}
