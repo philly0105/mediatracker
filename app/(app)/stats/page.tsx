@@ -16,6 +16,7 @@ import {
   type WatchedEpisode,
 } from '@/lib/stats'
 import { StatTile } from '@/components/ui/StatTile'
+import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BarChart3 } from 'lucide-react'
@@ -132,19 +133,21 @@ export default async function StatsPage({
       />
       {hasData ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <StatTile label="Movies" value={statsData.totals.movies} />
-            <StatTile label="Shows" value={statsData.totals.shows} />
-            <StatTile label="Episodes" value={statsData.totals.episodes} />
-            <StatTile label="Hours" value={statsData.totals.hours} />
-          </div>
-          {/* Not a fixed grid-cols-3: three tiles with 30px numerals and a
-              tracked uppercase label each will not fit a 320px viewport. */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile label="Rewatches" value={statsData.rewatches} />
-            <StatTile label="Current streak" value={statsData.currentStreak} />
-            <StatTile label="Longest streak" value={statsData.longestStreak} />
-          </div>
+          {/* One panel of bare tiles, as the reference's "so far" grid: the
+              tiles have no box of their own. Seven across only from xl; below
+              that they wrap in fours and twos so a 320px viewport still fits
+              a 28px numeral and its label. */}
+          <Card variant="panel">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 xl:grid-cols-7">
+              <StatTile label="Movies" value={statsData.totals.movies} />
+              <StatTile label="Shows" value={statsData.totals.shows} />
+              <StatTile label="Episodes" value={statsData.totals.episodes} />
+              <StatTile label="Hours" value={statsData.totals.hours} />
+              <StatTile label="Rewatches" value={statsData.rewatches} />
+              <StatTile label="Current streak" value={statsData.currentStreak} />
+              <StatTile label="Longest streak" value={statsData.longestStreak} />
+            </div>
+          </Card>
           <DeferredStatsCharts data={statsData} />
         </>
       ) : (

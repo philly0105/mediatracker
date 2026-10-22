@@ -1,11 +1,16 @@
 'use client'
 import Image from 'next/image'
-import { useState } from 'react'
-import { Film, Tv, Clock, Bell, LayoutGrid } from 'lucide-react'
+import React, { useState } from 'react'
+import { Film, Tv, Clock, Bell, Bookmark, LayoutGrid } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
+import { DateStack } from '@/components/ui/DateStack'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { SegmentedControl, type SegmentedControlOption } from '@/components/ui/SegmentedControl'
 import { activatableProps } from '@/components/ui/activatable'
 import { useMediaModal } from '@/components/MediaModalProvider'
 
@@ -22,6 +27,8 @@ interface UpcomingRelease {
   vote_average?: number
   followed?: boolean
   episode_label?: string
+  /** Already on the watchlist: the row's bookmark fills in accent. */
+  onWatchlist?: boolean
 }
 
 type Filter = 'all' | 'movie' | 'show'
@@ -29,6 +36,37 @@ type Filter = 'all' | 'movie' | 'show'
 type Props = {
   releases: UpcomingRelease[]
 }
+
+const FILTER_OPTIONS: SegmentedControlOption<Filter>[] = [
+  { id: 'all', label: 'All', icon: LayoutGrid },
+  { id: 'movie', label: 'Movies', icon: Film },
+  { id: 'show', label: 'TV Shows', icon: Tv },
+]
+
+// Local midnight rather than `new Date(string)`: a bare YYYY-MM-DD parses as
+// UTC and lands a day early west of Greenwich (see lib/formatDate).
+function parseDay(date: string) {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/** The row's countdown: "Today", "Tomorrow", or "in N days". */
+export function countdownLabel(date: string, today: Date) {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((parseDay(date).getTime() - start.getTime()) / 86_400_000)
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  return `in ${days} days`
+}
+
+const POSTER_STYLE = {
+  width: 34,
+  height: 51,
+  flex: 'none',
+  objectFit: 'cover',
+  borderRadius: 'var(--radius-xs)',
+  boxShadow: 'var(--shadow-sm)',
+} as const
 
 export default function CalendarClient({ releases }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
@@ -46,39 +84,34 @@ export default function CalendarClient({ releases }: Props) {
     groupedReleases[monthYear].push(release)
   })
 
+  // Read once per render so every row counts from the same day.
+  const today = new Date()
+
+  // One control, two slots: beside the Select button in the header from lg
+  // up, and on its own row under the header below that. Side by side, the
+  // pair overruns a 390px viewport ("TV Shows" breaks in half) and at the md
+  // breakpoint, where the H1 grows to 28px, wraps the title onto two lines.
+  // Only one is displayed at a time, so only one is in the accessibility tree.
+  const filterControl = (
+    <SegmentedControl
+      options={FILTER_OPTIONS}
+      value={filter}
+      onChange={setFilter}
+      label="Release type"
+      size="sm"
+    />
+  )
+
   return (
-    <div className="space-y-10 pb-12">
+    <div className="pb-12">
       <PageHeader
         eyebrow="Next three months"
         title="Upcoming Releases"
         sub="Premieres and release dates for the movies and shows you follow."
         selectable
+        action={<div className="hidden lg:block">{filterControl}</div>}
       />
-
-      {/* Type filter */}
-      <div className="flex bg-[var(--surface-input)] border border-[var(--border-subtle)] p-1 rounded-sm w-fit">
-        {([
-          { value: 'all', label: 'All', Icon: LayoutGrid },
-          { value: 'movie', label: 'Movies', Icon: Film },
-          { value: 'show', label: 'TV Shows', Icon: Tv },
-        ] as const).map(({ value, label, Icon }) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={filter === value}
-            onClick={() => setFilter(value)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-sm font-bold text-sm transition-all ${
-              filter === value
-                ? 'bg-[var(--accent)] text-[var(--btn-primary-fg)] shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
-      </div>
-
+      <div className="mb-6 lg:hidden">{filterControl}</div>
 
       {filtered.length === 0 ? (
         <EmptyState
@@ -91,89 +124,111 @@ export default function CalendarClient({ releases }: Props) {
           actionHref={filter === 'all' ? '/library' : undefined}
         />
       ) : (
-        <div className="space-y-12 relative before:absolute before:inset-0 before:ml-[23px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent">
-          {Object.entries(groupedReleases).map(([monthYear, items]) => (
-            <div key={monthYear} className="relative z-10">
-              <div className="flex items-center md:justify-center mb-6 sticky top-20 z-20">
-                <span className="bg-[var(--surface-modal)] text-white border border-[var(--border-subtle)] px-4 py-1.5 rounded-full text-sm font-bold shadow-xl">
-                  {monthYear}
-                </span>
-              </div>
-
-              <div className="space-y-6">
-                {items.map((item, idx) => {
-                  const delay = Math.min(idx * 0.05, 0.3)
-                  return (
-                    <div
-                      key={`${item.tmdb_id}-${item.full_release_date}`}
-                      style={delay > 0 ? { animationDelay: `${delay}s` } : undefined}
-                      className="motion-fade-up relative flex items-center justify-between md:justify-normal md:even:flex-row-reverse group"
-                    >
-                      {/* Timeline Node */}
-                      <div className={`absolute left-[23px] md:left-1/2 -translate-x-1/2 flex items-center justify-center w-6 h-6 rounded-full border-4 border-[var(--bg-void)] shadow-lg group-hover:scale-125 transition-transform ${
-                        item.followed
-                          ? 'bg-teal-400 shadow-teal-400/20'
-                          : item.type === 'show'
-                          ? 'bg-rust-400 shadow-rust-400/20'
-                          : 'bg-green-500 shadow-black/30'
-                      }`} />
-
-                      {/* Card Container */}
-                      <div className="w-full pl-12 md:pl-0 md:w-[calc(50%-2rem)]">
-                        <SelectableOverlay item={item as unknown as TmdbSearchResult}>
-                        <div
-                          onClick={() => openMedia(item as unknown as TmdbSearchResult, { priority: 'must_watch' })}
-                          {...activatableProps(() => openMedia(item as unknown as TmdbSearchResult, { priority: 'must_watch' }), item.title)}
-                          className="p-3 flex gap-4 transition-all duration-300 cursor-pointer rounded-lg bg-[var(--glass-card)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--glass-card-hover)] hover:shadow-[var(--glow-violet)] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                        >
-                          {item.poster_url ? (
-                            <Image
-                              src={item.poster_url}
-                              alt={item.title}
-                              width={64}
-                              height={96}
-                              className="w-16 h-24 rounded-[var(--radius-xl)] object-cover shadow-md border border-[var(--border-subtle)] shrink-0"
-                            />
-                          ) : (
-                            <div className="w-16 h-24 rounded-[var(--radius-xl)] bg-[var(--bg-void)] border border-[var(--border-subtle)] flex items-center justify-center text-[10px] text-zinc-700 shrink-0">
-                              No Poster
-                            </div>
-                          )}
-                          <div className="flex flex-col justify-center gap-1">
-                            <p className={`text-xs font-bold mb-0.5 tracking-wider uppercase ${
-                              item.followed ? 'text-teal-400' : item.type === 'show' ? 'text-rust-400' : 'text-green-400'
-                            }`}>
-                              {new Date(item.full_release_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </p>
-                            <span className="font-bold text-white text-base line-clamp-1">
-                              {item.title}
-                            </span>
-                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex-wrap">
-                              {item.type === 'show' ? (
-                                <><Tv className="w-3.5 h-3.5 text-rust-500/80" /><span>TV Show</span></>
-                              ) : (
-                                <><Film className="w-3.5 h-3.5 text-green-500/80" /><span>Movie</span></>
-                              )}
-                              {item.followed && (
-                                <span className="flex items-center gap-1 text-teal-400 bg-teal-400/10 border border-teal-400/20 px-1.5 py-0.5 rounded-md normal-case tracking-normal font-semibold">
-                                  <Bell className="w-3 h-3" />
-                                  {item.episode_label ?? 'Next Episode'}
+        <div className="space-y-6">
+          {Object.entries(groupedReleases).map(([monthYear, items]) => {
+            const headingId = `calendar-${monthYear.replace(/\s+/g, '-').toLowerCase()}`
+            return (
+              <Card key={monthYear} as="section" variant="panel" aria-labelledby={headingId}>
+                <SectionHeader id={headingId} title={monthYear} />
+                {/* Two columns from lg: a 34px poster row is mostly air at full
+                    width, and the agenda runs to forty rows over three months. */}
+                <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                  {items.map((item) => {
+                    const media = item as unknown as TmdbSearchResult
+                    const open = () => openMedia(media, { priority: 'must_watch' })
+                    const day = parseDay(item.full_release_date)
+                    const TypeIcon = item.type === 'show' ? Tv : Film
+                    // The row is a button named by aria-label, so nothing
+                    // inside it is announced: the type icon and the bookmark
+                    // state have to travel in the name.
+                    const name = [
+                      item.title,
+                      item.type === 'show' ? 'TV show' : 'movie',
+                      ...(item.onWatchlist ? ['on your watchlist'] : []),
+                    ].join(', ')
+                    return (
+                      <li key={`${item.tmdb_id}-${item.full_release_date}`} className="min-w-0">
+                        <SelectableOverlay item={media}>
+                          <div
+                            onClick={open}
+                            {...activatableProps(open, name)}
+                            className="glass-row flex cursor-pointer items-center gap-3 p-3"
+                          >
+                            <DateStack date={item.full_release_date} />
+                            {item.poster_url ? (
+                              <Image
+                                src={item.poster_url}
+                                alt=""
+                                aria-hidden="true"
+                                width={34}
+                                height={51}
+                                style={POSTER_STYLE}
+                              />
+                            ) : (
+                              <div
+                                aria-hidden="true"
+                                className="glass-inset flex items-center justify-center text-[var(--text-muted)]"
+                                style={{ ...POSTER_STYLE, boxShadow: 'var(--shadow-well)' }}
+                              >
+                                <TypeIcon size={14} strokeWidth={1.8} />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p
+                                  className="truncate"
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 'var(--text-base)',
+                                    lineHeight: '18px',
+                                    fontWeight: 'var(--weight-semibold)' as React.CSSProperties['fontWeight'],
+                                    color: 'var(--text-primary)',
+                                  }}
+                                >
+                                  {item.title}
+                                </p>
+                                {item.followed && (
+                                  <Badge tone="accent" style={{ flex: 'none' }}>
+                                    <Bell size={12} strokeWidth={1.8} aria-hidden="true" />
+                                    {item.episode_label ?? 'Next Episode'}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p
+                                className="tabular flex items-center gap-1.5 truncate"
+                                style={{ margin: '2px 0 0', fontSize: 'var(--text-xs)', lineHeight: '16px', color: 'var(--text-muted)' }}
+                              >
+                                <TypeIcon size={14} strokeWidth={1.8} aria-hidden="true" style={{ flex: 'none' }} />
+                                {/* The countdown depends on the clock, so the server
+                                    and a client in another timezone can disagree by
+                                    a day around midnight. React only honours the
+                                    flag on the text's own parent, hence the span. */}
+                                <span className="truncate" suppressHydrationWarning>
+                                  {day.toLocaleDateString('en-US', { weekday: 'short' })} · {countdownLabel(item.full_release_date, today)}
                                 </span>
-                              )}
+                              </p>
                             </div>
+                            {/* Status only: nothing on this page toggles the
+                                watchlist, so the bookmark is a mark, not a
+                                button. The row's own click opens the modal. */}
+                            <span
+                              aria-hidden="true"
+                              className="flex h-11 w-11 flex-none items-center justify-center"
+                              style={{ color: item.onWatchlist ? 'var(--accent)' : 'var(--text-secondary)' }}
+                            >
+                              <Bookmark size={18} strokeWidth={1.8} fill={item.onWatchlist ? 'currentColor' : 'none'} />
+                            </span>
                           </div>
-                        </div>
                         </SelectableOverlay>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Card>
+            )
+          })}
         </div>
       )}
-
     </div>
   )
 }

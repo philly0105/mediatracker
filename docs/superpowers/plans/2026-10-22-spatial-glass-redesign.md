@@ -273,10 +273,12 @@ alter table media add column if not exists logo_url text;
 ## Task 11: Calendar and Stats
 **Files:** `components/{CalendarClient,StatsCharts,DeferredStatsCharts}.tsx`, `app/(app)/{calendar,stats}/page.tsx`
 
-- [ ] Calendar: a glass panel; release rows use `DateStack` + poster thumb + title + weekday·countdown + bookmark (accent when on the watchlist); month grid days use `.glass-row` cells, and today gets the accent ring.
-- [ ] Stats: StatTile panels; recharts theme per spec §5.5 (bar fills, accent on the current or peak bar, gridlines, axis text, glass tooltip). Keep the deferred loading.
-- [ ] Update `DeferredStatsCharts.test.tsx` if it asserts colours.
-- [ ] Verify, then commit: `style(stats,calendar): spatial-glass charts and calendar`
+- [x] Calendar: a glass panel; release rows use `DateStack` + poster thumb + title + weekday·countdown + bookmark (accent when on the watchlist); month grid days use `.glass-row` cells, and today gets the accent ring.
+  - The calendar is an agenda with no month view, so the day cells and the today ring have nothing to apply to. The bookmark shows watchlist state only: the calendar has no watchlist toggle, and its state is in each row's accessible name.
+- [x] Stats: StatTile panels; recharts theme per spec §5.5 (bar fills, accent on the current or peak bar, gridlines, axis text, glass tooltip). Keep the deferred loading.
+  - Spec §5.6 also lists a decade breakdown, but the stats query has no release year, so it is left out. Genres stay as horizontal bars.
+- [x] Update `DeferredStatsCharts.test.tsx` if it asserts colours.
+- [x] Verify, then commit: `style(stats,calendar): spatial-glass charts and calendar`
 
 ## Task 12: Settings, import, auth, share, errors
 **Files:** `app/(app)/{settings,import}/**`, `components/{ImportExportPanel,PasswordChangeForm,ShareToggle,ShareFooter,AuthShell,LoginForm,SignupForm,KeyboardHelp,KeyboardShortcutPanels,ToastProvider,BackButton,Presence}.tsx`, `app/(public)/**`, `app/{error,global-error,not-found}.tsx`, route `loading.tsx` / `error.tsx` files
