@@ -1,4 +1,4 @@
-import { Card } from '@/components/ui/Card'
+import { CARD_VARIANT_CLASS } from '@/components/ui/cardVariants'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 // Settings awaits the session and a user_settings read before it renders
@@ -56,7 +56,7 @@ export default function SettingsLoading() {
       </div>
 
       <div className="space-y-6">
-        <Card variant="panel">
+        <div className={CARD_VARIANT_CLASS.panel}>
           <PanelHeaderSkeleton />
           <Skeleton className="h-5 w-40 mb-5" />
           <div className="space-y-3">
@@ -64,9 +64,9 @@ export default function SettingsLoading() {
             <FieldSkeleton />
           </div>
           <Skeleton className="h-11 mt-4 rounded-full" />
-        </Card>
+        </div>
 
-        <Card variant="panel">
+        <div className={CARD_VARIANT_CLASS.panel}>
           <PanelHeaderSkeleton />
           <div className="space-y-1.5 mb-5">
             <Skeleton className="h-3 w-full max-w-xl" />
@@ -76,9 +76,9 @@ export default function SettingsLoading() {
             <ShareRowSkeleton withUrl />
             <ShareRowSkeleton />
           </div>
-        </Card>
+        </div>
 
-        <Card variant="panel">
+        <div className={CARD_VARIANT_CLASS.panel}>
           <PanelHeaderSkeleton />
           <div className="space-y-3">
             <div className="glass-row hover:bg-[var(--glass-card)] flex items-start justify-between gap-4" style={{ padding: 16 }}>
@@ -108,7 +108,7 @@ export default function SettingsLoading() {
               <Skeleton className="h-28 rounded-[var(--radius-md)]" />
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   )

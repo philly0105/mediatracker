@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative, sep } from 'node:path'
+import { join, posix, relative, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const root = join(__dirname, '..', '..')
@@ -98,5 +98,40 @@ describe('authenticated shell bundle boundaries', () => {
   it('removes components/MotionProvider.tsx since no production import remains', () => {
     const motionProviderPath = join(__dirname, '..', 'MotionProvider.tsx')
     expect(existsSync(motionProviderPath)).toBe(false)
+  })
+
+  it('keeps client modules out of the route loading skeletons', () => {
+    // A link prefetches a dynamic route up to its loading skeleton, and each
+    // client component the skeleton renders makes the browser download the
+    // route's whole client bundle with it: a Card in the settings skeleton
+    // put the Supabase auth client on every page that links to /settings.
+    // The walk follows local imports through every server module a skeleton
+    // reaches, since a client module two imports down costs the same. Packages
+    // are not followed: HomeSkeletons imports next/image but only renders it
+    // from the page's fallback, never from loading.tsx.
+    const resolveImport = (from: string, spec: string) => {
+      const base = spec.startsWith('@/') ? spec.slice(2) : posix.join(posix.dirname(from), spec)
+      return [base, `${base}.tsx`, `${base}.ts`, `${base}/index.tsx`, `${base}/index.ts`]
+        .find((path) => existsSync(join(root, path)) && statSync(join(root, path)).isFile())
+    }
+    const loadingFiles = sourceFiles().filter((file) => file.startsWith('app/') && file.endsWith('/loading.tsx'))
+    expect(loadingFiles.length).toBeGreaterThan(0)
+    for (const loading of loadingFiles) {
+      const seen = new Set<string>()
+      const queue = [loading]
+      while (queue.length > 0) {
+        const file = queue.pop()!
+        for (const [, spec] of readSource(file).matchAll(/^import (?!type )[^'"]*['"]([^'"]+)['"]/gm)) {
+          if (!spec.startsWith('@/') && !spec.startsWith('.')) continue
+          const target = resolveImport(file, spec)
+          expect(target, `${file} imports ${spec}, which does not resolve`).toBeDefined()
+          if (seen.has(target!)) continue
+          seen.add(target!)
+          expect(readSource(target!), `${loading} reaches the client module ${target} through ${file}`)
+            .not.toMatch(/^\s*['"]use client['"]/)
+          queue.push(target!)
+        }
+      }
+    }
   })
 })

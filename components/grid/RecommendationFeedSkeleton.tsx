@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/Skeleton'
 import { GridToolbar } from '@/components/grid/GridToolbar'
-import { RECOMMENDATION_ROW_GRID, RecommendationCardSkeleton } from '@/components/grid/RecommendationCard'
+import { RECOMMENDATION_ROW_GRID, RecommendationCardSkeleton } from '@/components/grid/RecommendationCardSkeleton'
 
 /**
  * Everything under the recommendations header while the feed loads: the

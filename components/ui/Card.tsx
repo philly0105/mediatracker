@@ -1,8 +1,7 @@
 'use client'
 import React from 'react'
 import { activatableProps } from './activatable'
-
-type CardVariant = 'surface' | 'panel' | 'slab' | 'row' | 'inset'
+import { CARD_VARIANT_CLASS, type CardVariant } from './cardVariants'
 
 // Attributes are typed over HTMLElement rather than HTMLDivElement so the same
 // handlers can land on whichever element `as` picks.
@@ -19,18 +18,6 @@ interface CardProps extends React.HTMLAttributes<HTMLElement> {
   variant?: CardVariant
   /** Landmark or list semantics without a wrapper element. */
   as?: 'div' | 'section' | 'article' | 'aside' | 'li'
-}
-
-// Panels tighten from 20px to 14px padding under the 760px content
-// breakpoint (spec 4.4), where .glass-panel drops to its 24px radius. The
-// padding is a variable so a rail that bleeds to the rim (CastStrip,
-// MoreLikeThisRail) can cancel exactly as much as the panel adds.
-const VARIANT_CLASS: Record<CardVariant, string> = {
-  surface: 'card-surface',
-  panel: 'glass-panel glass-rim [--panel-pad:14px] min-[760px]:[--panel-pad:var(--space-5)] p-[var(--panel-pad)]',
-  slab: 'glass-slab glass-rim p-7',
-  row: 'glass-row p-3',
-  inset: 'glass-inset p-4',
 }
 
 // The hover treatment is `.card-interactive` in globals.css rather than a
@@ -53,7 +40,7 @@ export function Card({
       onClick={onClick}
       // Spread before `rest` so a caller can still supply its own aria-label.
       {...activatableProps(onClick, rest['aria-label'])}
-      className={[VARIANT_CLASS[variant], onClick && interactive, className].filter(Boolean).join(' ')}
+      className={[CARD_VARIANT_CLASS[variant], onClick && interactive, className].filter(Boolean).join(' ')}
       style={style}
       {...rest}
     >

@@ -1,6 +1,6 @@
-import { Card } from '@/components/ui/Card'
+import { CARD_VARIANT_CLASS } from '@/components/ui/cardVariants'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { ChartsSkeleton } from '@/components/DeferredStatsCharts'
+import { ChartsSkeleton } from '@/components/StatsChartsSkeleton'
 
 // Stats runs two Supabase reads and then aggregates them, so navigating here
 // used to sit on a blank page. Mirrors the real layout: header, the totals
@@ -14,7 +14,7 @@ export default function StatsLoading() {
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
 
-      <Card variant="panel">
+      <div className={CARD_VARIANT_CLASS.panel}>
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 xl:grid-cols-7">
           {[0, 1, 2, 3, 4, 5, 6].map(i => (
             <div key={i} className="space-y-2">
@@ -23,7 +23,7 @@ export default function StatsLoading() {
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       <ChartsSkeleton />
     </div>

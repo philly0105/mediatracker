@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import DeferredStatsCharts, { ChartsSkeleton } from '../DeferredStatsCharts'
+import DeferredStatsCharts from '../DeferredStatsCharts'
+import { ChartsSkeleton } from '../StatsChartsSkeleton'
 import type StatsCharts from '../StatsCharts'
 
 const dynamicMockState = vi.hoisted(() => ({

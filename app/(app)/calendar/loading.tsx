@@ -1,4 +1,4 @@
-import { Card } from '@/components/ui/Card'
+import { CARD_VARIANT_CLASS } from '@/components/ui/cardVariants'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 // The calendar used to fetch client-side and render a skeleton while it waited.
@@ -20,7 +20,7 @@ export default function CalendarLoading() {
 
       <div className="space-y-6">
         {[6, 4].map((rows, i) => (
-          <Card key={i} variant="panel">
+          <div key={i} className={CARD_VARIANT_CLASS.panel}>
             <Skeleton className="mb-4 ml-1 h-6 w-40" />
             <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
               {Array.from({ length: rows }, (_, j) => (
@@ -38,7 +38,7 @@ export default function CalendarLoading() {
                 </div>
               ))}
             </div>
-          </Card>
+          </div>
         ))}
       </div>
     </div>
