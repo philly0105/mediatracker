@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import EditEntryModal from './EditEntryModal'
@@ -37,7 +37,13 @@ const ICON_BTN_DANGER = 'hover:text-[var(--danger)]'
 const ICON_BTN_ROW = 'w-11 h-11'
 const ICON_BTN_POSTER = "w-9 h-9 relative after:absolute after:-inset-1 after:content-['']"
 
-export default function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }: Props) {
+// Memoized: each page of the infinite list re-renders LibraryView twice, once
+// for the new rows and once when their SelectableOverlays register with the
+// multi-select provider. The rows already on screen keep the same props, so
+// they skip both renders instead of costing a long task on a slow phone.
+export default memo(MediaCard)
+
+function MediaCard({ entry, onDeleted, onUpdated, view = 'row' }: Props) {
   const media = entry.media!
   const router = useRouter()
   const { toast } = useToast()
