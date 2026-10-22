@@ -86,6 +86,8 @@ export interface TmdbSearchResult {
   release_year: number | null
   genres?: string[]
   vote_average?: number
+  // Only fetchTmdbRecommendations fills this in (w1280); other sources leave it off.
+  backdrop_url?: string | null
 }
 
 export interface TmdbPersonResult {

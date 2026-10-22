@@ -8,6 +8,7 @@ import {
   computeRewatchCount,
   computeStreaks,
   computeYearlyActivity,
+  computeYearlyHours,
   availableYears,
 } from '@/lib/stats'
 import type { WatchEntry } from '@/types'
@@ -270,5 +271,49 @@ describe('availableYears', () => {
 
   it('returns empty array when no valid dates exist', () => {
     expect(availableYears([], [])).toEqual([])
+  })
+})
+
+describe('computeYearlyHours', () => {
+  it('sums each month of the year with the same runtime rules as the Hours total', () => {
+    const entries = [
+      { watched_at: '2026-01-15', media: { type: 'movie', runtime_mins: 120 } },
+      { watched_at: '2026-01-31', media: { type: 'movie', runtime_mins: 90 } },
+      // A show's row is the whole show; its runtime is one episode's and must not count.
+      { watched_at: '2026-01-20', media: { type: 'show', runtime_mins: 50 } },
+      { watched_at: '2026-10-02', media: { type: 'movie', runtime_mins: null } },
+      { watched_at: '2025-10-02', media: { type: 'movie', runtime_mins: 600 } }, // a different year
+    ] as unknown as WatchEntry[]
+    const episodes = [
+      { watched_at: '2026-01-10T21:00:00+00:00', runtime_mins: 60 },
+      { watched_at: '2026-10-21', runtime_mins: 45 },
+      { watched_at: '2026-10-22', runtime_mins: null },
+      { watched_at: '2027-01-01', runtime_mins: 60 },
+    ]
+
+    const result = computeYearlyHours(entries, episodes, 2026)
+    expect(result.map((r) => r.month)).toEqual([
+      '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06',
+      '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12',
+    ])
+    expect(result[0].hours).toBe(4.5)
+    expect(result[9].hours).toBe(0.75)
+    expect(result.filter((r) => r.hours > 0)).toHaveLength(2)
+  })
+
+  it('adds up to the year\'s share of computeTotalHours', () => {
+    const entries = [
+      { watched_at: '2026-03-01', media: { type: 'movie', runtime_mins: 101 } },
+      { watched_at: '2026-07-04', media: { type: 'movie', runtime_mins: 133 } },
+    ] as unknown as WatchEntry[]
+    const episodes = [{ watched_at: '2026-03-02', runtime_mins: 47 }]
+    const total = computeYearlyHours(entries, episodes, 2026).reduce((sum, r) => sum + r.hours, 0)
+    expect(total).toBeCloseTo(computeTotalHours(entries, episodes))
+  })
+
+  it('returns twelve empty months for a year with nothing in it', () => {
+    const result = computeYearlyHours([], [], 2024)
+    expect(result).toHaveLength(12)
+    expect(result.every((r) => r.hours === 0)).toBe(true)
   })
 })

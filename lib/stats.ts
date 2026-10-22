@@ -229,6 +229,30 @@ export function computeYearlyActivity(
   return result
 }
 
+/**
+ * Hours watched in each month of one calendar year, Jan–Dec, for Home's chart.
+ * Each month is computeTotalHours over that month's rows, so the runtime rules
+ * (movies count, show rows don't, episodes count their show's runtime) and the
+ * float result match the Hours figure on /stats.
+ */
+export function computeYearlyHours(
+  entries: WatchEntry[],
+  episodes: WatchedEpisode[],
+  year: number
+): Array<{ month: string; hours: number }> {
+  const months = Array.from({ length: 12 }, (_, i) => `${year}-${pad(i + 1)}`)
+  const entriesByMonth = new Map(months.map((month) => [month, [] as WatchEntry[]]))
+  const episodesByMonth = new Map(months.map((month) => [month, [] as WatchedEpisode[]]))
+
+  for (const e of entries) entriesByMonth.get(e.watched_at.slice(0, 7))?.push(e)
+  for (const ep of episodes) episodesByMonth.get(ep.watched_at.slice(0, 7))?.push(ep)
+
+  return months.map((month) => ({
+    month,
+    hours: computeTotalHours(entriesByMonth.get(month) ?? [], episodesByMonth.get(month) ?? []),
+  }))
+}
+
 /** Every year with activity, newest first — the options for the year selector. */
 export function availableYears(entries: WatchEntry[], episodes: WatchedEpisode[]): number[] {
   const years = new Set<number>()

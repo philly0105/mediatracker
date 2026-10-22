@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes, pickLogo } from '@/lib/tmdb'
+import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes, pickLogo, fetchTmdbRecommendations } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -325,6 +325,102 @@ describe('fetchTmdbDetails for shows', () => {
     })
     const details = await fetchTmdbDetails(1396, 'show')
     expect(details.runtime_mins).toBe(47)
+  })
+})
+
+describe('fetchTmdbDetails tagline and certification', () => {
+  const respond = (body: object) => mockFetch.mockResolvedValueOnce({ ok: true, json: async () => body })
+  const appends = () => new URL(mockFetch.mock.calls[0][0]).searchParams.get('append_to_response')?.split(',')
+
+  it('appends release_dates for a movie and content_ratings for a show, keeping the others', async () => {
+    respond({ id: 550, title: 'Fight Club', genres: [] })
+    await fetchTmdbDetails(550, 'movie')
+    expect(appends()).toEqual(['credits', 'videos', 'watch/providers', 'external_ids', 'images', 'release_dates'])
+
+    mockFetch.mockReset()
+    respond({ id: 95396, name: 'Severance', genres: [], seasons: [] })
+    await fetchTmdbDetails(95396, 'show')
+    expect(appends()).toEqual(['credits', 'videos', 'watch/providers', 'external_ids', 'images', 'content_ratings'])
+  })
+
+  it('maps a movie tagline and its US theatrical rating', async () => {
+    respond({
+      id: 1233413, title: 'Sinners', genres: [], tagline: 'Dance with the devil.',
+      release_dates: { results: [
+        { iso_3166_1: 'GB', release_dates: [{ certification: '15', type: 3 }] },
+        { iso_3166_1: 'US', release_dates: [
+          { certification: '', type: 1 },
+          { certification: 'NR', type: 4 },
+          { certification: 'R', type: 3 },
+        ] },
+      ] },
+    })
+    const details = await fetchTmdbDetails(1233413, 'movie')
+    expect(details.tagline).toBe('Dance with the devil.')
+    expect(details.certification).toBe('R')
+  })
+
+  it('takes the digital rating for a movie that only had a digital release', async () => {
+    respond({
+      id: 1, title: 'Streaming Original', genres: [],
+      release_dates: { results: [{ iso_3166_1: 'US', release_dates: [{ certification: '', type: 3 }, { certification: 'PG-13', type: 4 }] }] },
+    })
+    expect((await fetchTmdbDetails(1, 'movie')).certification).toBe('PG-13')
+  })
+
+  it('maps a show tagline and its US content rating', async () => {
+    respond({
+      id: 95396, name: 'Severance', genres: [], seasons: [], tagline: 'There’s more to work than life.',
+      content_ratings: { results: [{ iso_3166_1: 'DE', rating: '16' }, { iso_3166_1: 'US', rating: 'TV-MA' }] },
+    })
+    const details = await fetchTmdbDetails(95396, 'show')
+    expect(details.tagline).toBe('There’s more to work than life.')
+    expect(details.certification).toBe('TV-MA')
+  })
+
+  it('returns null for TMDB\'s blank tagline and a title with no US rating', async () => {
+    respond({
+      id: 2, title: 'Foreign Film', genres: [], tagline: '',
+      release_dates: { results: [{ iso_3166_1: 'FR', release_dates: [{ certification: 'U', type: 3 }] }] },
+    })
+    const movie = await fetchTmdbDetails(2, 'movie')
+    expect(movie.tagline).toBeNull()
+    expect(movie.certification).toBeNull()
+
+    respond({ id: 3, name: 'Unrated Show', genres: [], seasons: [], content_ratings: { results: [{ iso_3166_1: 'US', rating: '' }] } })
+    const show = await fetchTmdbDetails(3, 'show')
+    expect(show.tagline).toBeNull()
+    expect(show.certification).toBeNull()
+  })
+
+  it('keeps the tagline but has no rating on the cheap path', async () => {
+    respond({
+      id: 550, title: 'Fight Club', genres: [], tagline: 'Mischief. Mayhem. Soap.',
+      release_dates: { results: [{ iso_3166_1: 'US', release_dates: [{ certification: 'R', type: 3 }] }] },
+    })
+    const details = await fetchTmdbDetails(550, 'movie', false)
+    expect(details.tagline).toBe('Mischief. Mayhem. Soap.')
+    expect(details.certification).toBeNull()
+  })
+})
+
+describe('fetchTmdbRecommendations', () => {
+  it('carries each pick\'s w1280 backdrop, or null without one', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        results: [
+          { id: 225171, name: 'Pluribus', backdrop_path: '/plur.jpg', first_air_date: '2025-11-07', genre_ids: [18] },
+          { id: 136315, name: 'The Bear', backdrop_path: null, first_air_date: '2022-06-23' },
+        ],
+      }),
+    })
+    const results = await fetchTmdbRecommendations(95396, 'show')
+    expect(results[0]).toMatchObject({
+      tmdb_id: 225171, type: 'show', title: 'Pluribus', release_year: 2025,
+      backdrop_url: 'https://image.tmdb.org/t/p/w1280/plur.jpg',
+    })
+    expect(results[1].backdrop_url).toBeNull()
   })
 })
 

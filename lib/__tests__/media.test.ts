@@ -30,6 +30,7 @@ function movieDetails(overrides: Partial<TmdbFullDetails> = {}): TmdbFullDetails
     director: null, cast_members: [], belongs_to_collection: null, vote_average: 8.4,
     backdrop_url: 'https://image.tmdb.org/t/p/w1280/b.jpg',
     logo_url: 'https://image.tmdb.org/t/p/w500/l.png',
+    tagline: null, certification: null,
     ...overrides,
   }
 }

@@ -23,3 +23,16 @@ export function findNextUp(seasons: NextUpSeason[], watchedKeys: Set<string>):
 
   return null
 }
+
+// Watched and total episodes of one season, for the progress ring ("6 of 10
+// episodes watched"). Counted over 1..episode_count with the same keys as
+// findNextUp, so a progress row past the season's current length can't push it
+// over the total.
+export function seasonProgress(season: NextUpSeason, watchedKeys: Set<string>): { watched: number; total: number } {
+  const total = Math.max(season.episode_count, 0)
+  let watched = 0
+  for (let episode = 1; episode <= total; episode++) {
+    if (watchedKeys.has(`${season.id}-${episode}`)) watched++
+  }
+  return { watched, total }
+}

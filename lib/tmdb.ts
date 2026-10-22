@@ -225,6 +225,37 @@ export interface TmdbFullDetails {
   // Only the full payload carries `images`, so this is always null when
   // append is false.
   logo_url: string | null
+  // On the base payload, so the cheap path has it too. Null when TMDB has none.
+  tagline: string | null
+  // The US content rating (R, TV-MA). It comes from release_dates (movies) or
+  // content_ratings (shows), which only the full payload appends, so it is
+  // null when append is false, and for titles never rated in the US.
+  certification: string | null
+}
+
+type TmdbReleaseDate = { certification?: string | null; type?: number | null }
+type TmdbCountryReleaseDates = { iso_3166_1?: string; release_dates?: TmdbReleaseDate[] | null }
+type TmdbContentRating = { iso_3166_1?: string; rating?: string | null }
+
+// TMDB release types in the order their rating is trusted: theatrical, limited
+// theatrical, then digital (a streaming original only has that one). Any other
+// US release that carries a rating comes after them.
+const RELEASE_TYPE_ORDER = [3, 2, 4]
+
+function releaseTypeRank(type: number | null | undefined): number {
+  const rank = RELEASE_TYPE_ORDER.indexOf(type ?? -1)
+  return rank === -1 ? RELEASE_TYPE_ORDER.length : rank
+}
+
+function movieCertification(results: TmdbCountryReleaseDates[] | null | undefined): string | null {
+  const best = ((results ?? []).find((r) => r.iso_3166_1 === 'US')?.release_dates ?? [])
+    .filter((r) => nullIfBlank(r.certification) !== null)
+    .sort((a, b) => releaseTypeRank(a.type) - releaseTypeRank(b.type))[0]
+  return best ? nullIfBlank(best.certification) : null
+}
+
+function showCertification(results: TmdbContentRating[] | null | undefined): string | null {
+  return nullIfBlank((results ?? []).find((r) => r.iso_3166_1 === 'US')?.rating)
 }
 
 // One entry of the `images.logos` array from the details append.
@@ -290,7 +321,9 @@ export async function fetchTmdbDetails(
   // the heavy append_to_response payload (full credits, trailers, providers, external_ids).
   const params: Record<string, string> = {}
   if (append) {
-    params.append_to_response = 'credits,videos,watch/providers,external_ids,images'
+    // TMDB files the content rating under a different append for each type.
+    const ratings = type === 'movie' ? 'release_dates' : 'content_ratings'
+    params.append_to_response = `credits,videos,watch/providers,external_ids,images,${ratings}`
     // `images` is only here for the logo. Without a language filter it carries
     // every language's posters and backdrops too; English plus language-less is
     // all pickLogo will consider.
@@ -302,6 +335,7 @@ export async function fetchTmdbDetails(
 
   // backdrop_path is on the base payload, so the cheap path still gets it.
   const backdrop_url: string | null = d.backdrop_path ? `${BACKDROP}${d.backdrop_path}` : null
+  const tagline = nullIfBlank(d.tagline)
 
   // These fields only exist in the append_to_response payload; stay safe when append=false
   const logo_url = append ? pickLogo(d.images?.logos) : null
@@ -337,6 +371,8 @@ export async function fetchTmdbDetails(
       vote_average: d.vote_average,
       backdrop_url,
       logo_url,
+      tagline,
+      certification: append ? movieCertification(d.release_dates?.results) : null,
     }
   } else {
     return {
@@ -363,6 +399,8 @@ export async function fetchTmdbDetails(
       vote_average: d.vote_average,
       backdrop_url,
       logo_url,
+      tagline,
+      certification: append ? showCertification(d.content_ratings?.results) : null,
     }
   }
 }
@@ -442,6 +480,8 @@ export async function fetchTmdbRecommendations(tmdbId: number, type: MediaType, 
         : null,
       genres: Array.from(new Set((r.genre_ids ?? []).map((id: number) => TMDB_GENRES[id]).filter(Boolean))),
       vote_average: r.vote_average,
+      // For the "Because you watched" card, which shows the pick's backdrop.
+      backdrop_url: r.backdrop_path ? `${BACKDROP}${r.backdrop_path}` : null,
     }))
 }
 
