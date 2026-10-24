@@ -14,10 +14,12 @@ import {
   Layers,
   BarChart3,
   Settings,
+  LogOut,
   MoreHorizontal,
   X,
   type LucideIcon,
 } from 'lucide-react'
+import { signOut } from '@/app/actions/auth'
 import type { Media } from '@/types'
 import { NavItem } from './ui/NavItem'
 import { Avatar } from './ui/Avatar'
@@ -85,11 +87,57 @@ function ShellNavItem({ item, active }: { item: NavEntry; active: boolean }) {
   )
 }
 
+// Sign out acts rather than navigates, and it is a form posting to a Server
+// Action rather than a click handler: proxy.ts gates every request on the
+// Supabase auth cookies, and only the server can put the clearing headers on
+// the response (see app/actions/auth.ts). It also means the one way out of a
+// wedged session still works before the shell has hydrated.
+//
+// NavItem renders `type="button"`, which cannot submit, so the nav-item shape
+// is rebuilt here — the rail's column layout included, since `.nav-item` is
+// unlayered and only an inline style overrides its row rule.
+const SIGN_OUT_STACKED: CSSProperties = {
+  flexDirection: 'column',
+  justifyContent: 'center',
+  gap: 2,
+  height: 'auto',
+  minHeight: 44,
+  padding: '6px 0',
+  fontSize: 'var(--text-2xs)',
+  lineHeight: '14px',
+  letterSpacing: '-0.01em',
+  textAlign: 'center',
+  color: 'var(--danger)',
+}
+
+function SignOutNavItem() {
+  // The destructive colour is inline so it survives `.nav-item:hover`, which
+  // repaints the label primary — the same way `.btn-tone-destructive` keeps
+  // --danger under the pointer and only the fill moves.
+  return (
+    <form action={signOut}>
+      <div className="hidden lg:block">
+        <button type="submit" className="nav-item" style={{ color: 'var(--danger)' }}>
+          <LogOut className="nav-item-icon" strokeWidth={1.8} />
+          <span>Sign out</span>
+        </button>
+      </div>
+      <div className="lg:hidden">
+        <button type="submit" className="nav-item" style={SIGN_OUT_STACKED} title="Sign out">
+          <LogOut className="nav-item-icon" strokeWidth={1.8} />
+          {/* `.nav-item` is nowrap, which the rail's 68px cannot honour. */}
+          <span style={{ maxWidth: '100%', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>Sign out</span>
+        </button>
+      </div>
+    </form>
+  )
+}
+
 // Mobile bars and the More drawer: icon over an 11px label in a 14-radius
 // pill. Active is the same brighter fill and top hairline as a nav item, never
 // a coloured icon.
 const TAB_CLASS =
-  'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-2.5 py-1.5 text-[11px] leading-[14px] transition-colors'
+  'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] px-2.5 py-1.5 text-[length:var(--text-2xs)] leading-[14px] transition-colors'
 
 // Forced colours strips the fill and the hairline that mark an active tab, the
 // way it does for `.nav-item` in globals.css, so the state needs the system
@@ -132,8 +180,8 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
           that stretches to the page, with its contents stuck to the top of the
           viewport. The inner column scrolls on its own when a short viewport
           cannot show all of it, so Settings is always reachable. */}
-      <aside
-        aria-label="Sidebar"
+      <nav
+        aria-label="Main"
         className="glass-panel glass-rim hidden md:block shrink-0 self-stretch w-[var(--rail-width)] lg:w-[var(--sidebar-width)] select-none"
       >
         <div
@@ -168,32 +216,37 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
             <Search size={20} strokeWidth={1.8} />
           </button>
 
-          {/* Navigation Items */}
-          <nav aria-label="Main" className="flex flex-col gap-1 lg:gap-0.5">
+          {/* Navigation Items. The landmark is the panel itself, not this
+              list: an <aside aria-label="Sidebar"> named the element after its
+              own geometry and mapped the app's primary navigation to
+              `complementary`, which also left the wordmark, the search trigger
+              and the footer outside every landmark. */}
+          <div className="flex flex-col gap-1 lg:gap-0.5">
             {SHELL_NAV.map((item) => (
               <ShellNavItem key={item.href} item={item} active={isNavActive(pathname, item.href)} />
             ))}
-          </nav>
+          </div>
 
           {/* Rendered bare: it is a Suspense that resolves to the section or
               to nothing, and a wrapper would stay a flex item (and its gap)
               while it streams in or when the bucket is empty. */}
           {mustWatch}
 
-          {/* Footer: a single Settings destination. The account initials moved
+          {/* Footer: Settings, then the way out. The account initials moved
               to the page header with the greeting. */}
-          <div className="border-t pt-3" style={{ borderColor: 'var(--border-divider)' }}>
+          <div className="flex flex-col gap-1 border-t pt-3 lg:gap-0.5" style={{ borderColor: 'var(--border-divider)' }}>
             <ShellNavItem item={{ name: 'Settings', href: '/settings', icon: Settings }} active={settingsActive} />
+            <SignOutNavItem />
           </div>
         </div>
-      </aside>
+      </nav>
 
       {/* Mobile Top Bar (DorfMovies). The bars blur at 24px rather than the
           panel's 40px: they sit over scrolling content, so they are the one
           place the blur is repainted every frame. A 24px blur of a light
           hero leaves the panel's .46 base a light grey band (labels near
           2.9:1), so both bars take the elevated recipe's .72 base. */}
-      <div className="glass-panel glass-rim md:hidden fixed top-0 left-0 right-0 z-40 rounded-none flex items-center justify-between px-4 py-2.5 [--glass-blur:var(--blur-md)] [--glass-panel:var(--bg-elevated)]">
+      <header className="glass-panel glass-rim md:hidden fixed top-0 left-0 right-0 z-40 rounded-none flex items-center justify-between px-4 py-2.5 [--glass-blur:var(--blur-md)] [--glass-panel:var(--bg-elevated)]">
         <Wordmark />
         <div className="flex items-center gap-2">
           {/* Was a bare icon with no link and no handler: it looked tappable
@@ -210,7 +263,7 @@ export default function Sidebar({ userEmail, mustWatch }: SidebarProps) {
             <Avatar email={userEmail} />
           </Link>
         </div>
-      </div>
+      </header>
 
       {/* Mobile More Drawer */}
       {moreOpen && (
@@ -364,7 +417,7 @@ export function MustWatchList({ items, total }: { items: MustWatchItem[]; total:
             <button
               type="button"
               onClick={() => openItem(item)}
-              className="flex h-11 w-full items-center gap-3 rounded-[var(--radius-md)] pl-[11px] pr-3 text-left text-[13px] font-medium transition-colors hover:bg-[var(--glass-fill-hover)]"
+              className="flex h-11 w-full items-center gap-3 rounded-[var(--radius-md)] pl-[11px] pr-3 text-left text-[length:var(--text-sm)] font-medium transition-colors hover:bg-[var(--glass-fill-hover)]"
               style={{ color: 'var(--text-strong)' }}
             >
               {item.media.poster_url ? (
@@ -393,7 +446,7 @@ export function MustWatchList({ items, total }: { items: MustWatchItem[]; total:
 }
 
 const DRAWER_TILE_CLASS =
-  'flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] p-3 text-[11px] leading-[14px] transition-colors'
+  'flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] p-3 text-[length:var(--text-2xs)] leading-[14px] transition-colors'
 
 /**
  * Split out of the sidebar so it mounts only while the drawer is open — that

@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation'
 import ShareToggle from '@/components/ShareToggle'
 import PasswordChangeForm from '@/components/PasswordChangeForm'
 import ImportExportPanel from '@/components/ImportExportPanel'
-import { KeyRound, Share2, ArrowLeftRight } from 'lucide-react'
+import { KeyRound, Share2, ArrowLeftRight, LogOut } from 'lucide-react'
+import { signOut } from '@/app/actions/auth'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -40,6 +42,17 @@ const CARD_TITLE: CSSProperties = {
   color: 'var(--text-primary)',
 }
 
+// A row inside a panel, as the export and import rows are titled: the panel
+// title at margin 0 over the 13/18 secondary line.
+const ROW_TITLE: CSSProperties = { ...CARD_TITLE, margin: 0 }
+
+const ROW_META: CSSProperties = {
+  margin: '2px 0 0',
+  fontSize: 'var(--text-sm)',
+  lineHeight: '18px',
+  color: 'var(--text-secondary)',
+}
+
 export default async function SettingsPage() {
   const user = await getAuthenticatedUser()
   if (!user) redirect('/login')
@@ -65,8 +78,26 @@ export default async function SettingsPage() {
         {/* Account Section */}
         <Card as="section" variant="panel" aria-labelledby="settings-account">
           <PanelHeader id="settings-account" icon={KeyRound} title="Account" />
-          <h3 style={CARD_TITLE}>Change Password</h3>
+          <h3 style={CARD_TITLE}>Change password</h3>
           <PasswordChangeForm />
+
+          {/* The only way out of a session. A form posting to the Server
+              Action rather than a click handler: proxy.ts gates every request
+              on the Supabase cookies and only the server can clear them (see
+              app/actions/auth.ts). No confirmation step — signing back in
+              undoes it. */}
+          <form action={signOut} className="mt-5">
+            <Card variant="row" className="hover:bg-[var(--glass-card)] flex items-start justify-between gap-4 flex-wrap" style={{ padding: 16 }}>
+              <div className="min-w-0">
+                <h3 style={ROW_TITLE}>Sign out</h3>
+                <p style={ROW_META}>End your session on this device.</p>
+              </div>
+              <Button type="submit" variant="ghost" tone="destructive" size="sm">
+                <LogOut className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
+                <span>Sign out</span>
+              </Button>
+            </Card>
+          </form>
         </Card>
 
         {/* Sharing Section */}
@@ -80,7 +111,7 @@ export default async function SettingsPage() {
           </p>
           <div className="space-y-3">
             <ShareToggle
-              label="Watched History"
+              label="Watch history"
               type="watched"
               token={settings?.watched_share_token ?? null}
               shareUrl={settings?.watched_share_token ? `${appUrl}/share/watched/${settings.watched_share_token}` : null}
@@ -96,7 +127,7 @@ export default async function SettingsPage() {
 
         {/* Import / Export Section */}
         <Card as="section" variant="panel" id="import-export" className="scroll-mt-8" aria-labelledby="settings-import-export">
-          <PanelHeader id="settings-import-export" icon={ArrowLeftRight} title="Import & Export" />
+          <PanelHeader id="settings-import-export" icon={ArrowLeftRight} title="Import and export" />
           <ImportExportPanel />
         </Card>
       </div>
