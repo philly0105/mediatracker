@@ -11,7 +11,38 @@ const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/auth/callback',
 // else has to be able to complete the exchange.
 const SIGNED_OUT_ONLY = ['/login', '/signup', '/forgot-password']
 
+// Root metadata routes. The login page's own HTML links every one of these, so
+// gating them meant a signed-out visitor — and every link-preview crawler,
+// which is always signed out — got a 307 to /login instead: a blank card when
+// the site was shared, no favicon on the login page, and a PWA that could not
+// install. They are generated from static assets at build time and contain no
+// user data, so serving them to anyone is safe. /robots.txt and /sitemap.xml
+// are here for the same reason: a crawler cannot authenticate.
+//
+// Exact pathnames, not a prefix or an extension pattern, for the same reason
+// the matcher below has none (see the ponytail note): anything looser is a hole.
+// `startsWith('/icon')` would admit /icons/secret, and an extension rule would
+// admit the per-title OG images at /show/[id]/opengraph-image-*.png — those
+// render a user's own titles and must stay behind the gate, with /share/**
+// (already in PUBLIC_PATHS) the only public view of a library. A set of whole
+// pathnames can only ever admit exactly these six.
+const PUBLIC_FILES = new Set([
+  '/opengraph-image',
+  '/icon',
+  '/apple-icon',
+  '/manifest.webmanifest',
+  '/robots.txt',
+  '/sitemap.xml',
+])
+
 export async function proxy(request: NextRequest) {
+  // Before the Supabase client, not after: these need no session, and building
+  // one to decide they are public would put a JWKS fetch in front of the
+  // favicon on a cold start.
+  if (PUBLIC_FILES.has(request.nextUrl.pathname)) {
+    return NextResponse.next()
+  }
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return NextResponse.next()
   }
