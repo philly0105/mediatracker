@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchTmdbDetails } from '@/lib/tmdb'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
+import { badRequest, parseMediaType, parseTmdbIdParam } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -8,12 +9,16 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-  const type = searchParams.get('type')
+  // The id used to be taken on trust, so `?id=abc` became `/movie/NaN`, TMDB
+  // 404ed, fetchTmdbDetails threw and the catch below answered 500 — a caller
+  // error reported as ours.
+  const idResult = parseTmdbIdParam(searchParams.get('id'))
+  if (!idResult.ok) return badRequest(idResult.error)
+  const typeResult = parseMediaType(searchParams.get('type'))
+  if (!typeResult.ok) return badRequest(typeResult.error)
 
-  if (!id || !type || (type !== 'movie' && type !== 'show')) {
-    return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
-  }
+  const id = idResult.value
+  const type = typeResult.value
 
   try {
     // This route backs the most-opened surface in the app, and it used to walk
@@ -22,11 +27,11 @@ export async function GET(request: NextRequest) {
     // The TMDB call and the media lookup share no inputs, and the follow check
     // needs the same media.id the other two do, so it is two rounds.
     const [details, { data: media }] = await Promise.all([
-      fetchTmdbDetails(Number(id), type),
+      fetchTmdbDetails(id, type),
       supabase
         .from('media')
         .select('id')
-        .eq('tmdb_id', Number(id))
+        .eq('tmdb_id', id)
         .eq('type', type)
         .maybeSingle(),
     ])
@@ -66,6 +71,10 @@ export async function GET(request: NextRequest) {
       isFollowed,
     })
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 })
+    // The thrown message quotes TMDB's status ("TMDB details failed: 404"),
+    // which told the caller about our upstream and nothing they could act on.
+    // It stays in the server log; the client gets one flat message.
+    console.error('GET /api/tmdb/details failed:', err)
+    return NextResponse.json({ error: 'Could not load title details' }, { status: 500 })
   }
 }

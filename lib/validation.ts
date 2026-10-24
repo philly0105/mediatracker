@@ -53,6 +53,58 @@ export function parseTmdbId(v: unknown): ValidationResult<number> {
   return { ok: false, error: 'TMDB ID must be a positive integer' }
 }
 
+// TMDB ids are assigned sequentially and the largest in circulation are seven
+// digits; the ceiling only exists so a twenty-digit id cannot be echoed back
+// into an upstream URL.
+const MAX_TMDB_ID = 100_000_000
+
+/**
+ * Validates a TMDB ID that arrived as a raw query-string value.
+ *
+ * `Number(raw)` is deliberately not the whole test: `parseInt('abc', 10)` is
+ * NaN, `Math.max(1, NaN)` is still NaN and `String(NaN)` is the literal "NaN",
+ * which is how `?id=abc` used to reach TMDB as `/movie/NaN` — a 404 upstream
+ * that surfaced to the caller as a 500. Whole decimal digits only, so '1e3',
+ * '0x10' and ' 12 ' are rejected rather than silently reinterpreted.
+ */
+export function parseTmdbIdParam(raw: string | null | undefined): ValidationResult<number> {
+  if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
+    return { ok: false, error: 'TMDB ID must be a positive integer' }
+  }
+  const value = Number(raw)
+  if (value < 1) {
+    return { ok: false, error: 'TMDB ID must be a positive integer' }
+  }
+  if (value > MAX_TMDB_ID) {
+    return { ok: false, error: 'TMDB ID is out of range' }
+  }
+  return { ok: true, value }
+}
+
+// TMDB refuses to paginate past 500 on every list endpoint, so asking for more
+// is a guaranteed 422 and there is no reason to forward it.
+export const MAX_TMDB_PAGE = 500
+
+/**
+ * Reads a 1-based page (or batch) number from a query string, clamped to
+ * [1, max]. Promoted from the private parser in app/api/watchlist/route.ts so
+ * the TMDB-backed routes stop hand-rolling `Math.max(1, parseInt(...))`, which
+ * passes NaN straight through.
+ *
+ * A junk value falls back rather than erroring: a page number is a navigation
+ * detail, and a list route that answers page 1 is friendlier than one that
+ * 400s. An id is the opposite — see parseTmdbIdParam.
+ */
+export function parsePageParam(
+  raw: string | null | undefined,
+  fallback = 1,
+  max: number = MAX_TMDB_PAGE
+): number {
+  const n = Number(raw)
+  if (!Number.isInteger(n) || n < 1) return fallback
+  return Math.min(n, max)
+}
+
 /**
  * Validates calendar date string: YYYY-MM-DD matching a real calendar date.
  */

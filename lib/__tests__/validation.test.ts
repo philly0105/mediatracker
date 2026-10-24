@@ -3,10 +3,13 @@ import {
   parseRating,
   parseMediaType,
   parseTmdbId,
+  parseTmdbIdParam,
+  parsePageParam,
   parseDate,
   parsePriority,
   badRequest,
   readJson,
+  MAX_TMDB_PAGE,
 } from '@/lib/validation'
 
 describe('validation', () => {
@@ -164,6 +167,83 @@ describe('validation', () => {
       const resultPrimitive = await readJson(requestPrimitive)
       expect(resultPrimitive.ok).toBe(false)
       expect(resultPrimitive.error).toBe('Invalid or malformed JSON body')
+    })
+  })
+})
+
+describe('query-string number parsing', () => {
+  describe('parseTmdbIdParam', () => {
+    it('accepts a plain positive integer', () => {
+      expect(parseTmdbIdParam('550')).toEqual({ ok: true, value: 550 })
+      expect(parseTmdbIdParam('1')).toEqual({ ok: true, value: 1 })
+    })
+
+    it('rejects the shapes that used to reach TMDB as NaN', () => {
+      // `?id=abc` became /movie/NaN upstream: a 404 the route reported as a 500.
+      expect(parseTmdbIdParam('abc').ok).toBe(false)
+      expect(parseTmdbIdParam('').ok).toBe(false)
+      expect(parseTmdbIdParam(null).ok).toBe(false)
+      expect(parseTmdbIdParam(undefined).ok).toBe(false)
+    })
+
+    it('rejects zero, negatives and fractions', () => {
+      expect(parseTmdbIdParam('0').ok).toBe(false)
+      expect(parseTmdbIdParam('-5').ok).toBe(false)
+      expect(parseTmdbIdParam('2.5').ok).toBe(false)
+    })
+
+    it('rejects numeric forms Number() would silently reinterpret', () => {
+      expect(parseTmdbIdParam('1e3').ok).toBe(false)
+      expect(parseTmdbIdParam('0x10').ok).toBe(false)
+      expect(parseTmdbIdParam(' 12 ').ok).toBe(false)
+      expect(parseTmdbIdParam('12abc').ok).toBe(false)
+    })
+
+    it('rejects an id past the upper bound', () => {
+      const res = parseTmdbIdParam('999999999999')
+      expect(res.ok).toBe(false)
+      expect(res.error).toBe('TMDB ID is out of range')
+    })
+
+    it('agrees with parseTmdbId on what a valid id is', () => {
+      expect(parseTmdbIdParam('550').value).toBe(parseTmdbId(550).value)
+    })
+  })
+
+  describe('parsePageParam', () => {
+    it('reads a valid page', () => {
+      expect(parsePageParam('3')).toBe(3)
+    })
+
+    it('falls back instead of forwarding NaN', () => {
+      // Math.max(1, NaN) is NaN and String(NaN) is "NaN", which TMDB 422s on.
+      expect(parsePageParam('x')).toBe(1)
+      expect(parsePageParam(null)).toBe(1)
+      expect(parsePageParam(undefined)).toBe(1)
+      expect(parsePageParam('')).toBe(1)
+    })
+
+    it('falls back on zero, negatives and fractions', () => {
+      expect(parsePageParam('0')).toBe(1)
+      expect(parsePageParam('-5')).toBe(1)
+      expect(parsePageParam('1.5')).toBe(1)
+    })
+
+    it('clamps to TMDB\'s pagination ceiling by default', () => {
+      expect(parsePageParam('99999')).toBe(MAX_TMDB_PAGE)
+    })
+
+    it('honours a caller-supplied fallback and ceiling', () => {
+      expect(parsePageParam('x', 24)).toBe(24)
+      // /api/tmdb/similar turns one batch into two TMDB pages, so its own
+      // ceiling is half.
+      expect(parsePageParam('400', 1, MAX_TMDB_PAGE / 2)).toBe(250)
+    })
+
+    it('never returns a value that stringifies to NaN', () => {
+      for (const raw of ['x', '', '-1', '0', 'NaN', 'Infinity', '1e999', null, undefined]) {
+        expect(String(parsePageParam(raw))).not.toBe('NaN')
+      }
     })
   })
 })

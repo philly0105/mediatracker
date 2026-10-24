@@ -1,26 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchTmdbRecommendations } from '@/lib/tmdb'
 import { getAuthenticatedUser } from '@/lib/supabase/server'
+import { badRequest, parseMediaType, parsePageParam, parseTmdbIdParam, MAX_TMDB_PAGE } from '@/lib/validation'
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-  const type = searchParams.get('type')
-  const batch = Math.max(1, parseInt(searchParams.get('batch') ?? '1', 10))
+  const idResult = parseTmdbIdParam(searchParams.get('id'))
+  if (!idResult.ok) return badRequest(idResult.error)
+  const typeResult = parseMediaType(searchParams.get('type'))
+  if (!typeResult.ok) return badRequest(typeResult.error)
 
-  if (!id || !type || (type !== 'movie' && type !== 'show')) {
-    return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
-  }
+  const id = idResult.value
+  const type = typeResult.value
+  // One batch is two TMDB pages, so the batch ceiling is half TMDB's. This was
+  // `Math.max(1, parseInt(...))`, and Math.max(1, NaN) is NaN: `?batch=x` sent
+  // `page=NaN` upstream, TMDB 422ed and this route answered `200 []` — a
+  // broken request that looked exactly like "nothing similar".
+  const batch = parsePageParam(searchParams.get('batch'), 1, MAX_TMDB_PAGE / 2)
 
   try {
     const tmdbPage1 = batch * 2 - 1
     const tmdbPage2 = batch * 2
     const [page1, page2] = await Promise.all([
-      fetchTmdbRecommendations(Number(id), type, tmdbPage1),
-      fetchTmdbRecommendations(Number(id), type, tmdbPage2),
+      fetchTmdbRecommendations(id, type, tmdbPage1),
+      fetchTmdbRecommendations(id, type, tmdbPage2),
     ])
     const seen = new Set<number>()
     const all = [...page1, ...page2].filter(r => {
@@ -39,6 +45,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(results)
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 })
+    // Same reasoning as /api/tmdb/details: the upstream status stays in the
+    // server log rather than going out in the response body.
+    console.error('GET /api/tmdb/similar failed:', err)
+    return NextResponse.json({ error: 'Could not load similar titles' }, { status: 500 })
   }
 }
