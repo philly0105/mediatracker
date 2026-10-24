@@ -1,5 +1,14 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import LoginForm from '@/components/LoginForm'
+
+// /login is the only page most visitors ever see, so it is the one that most
+// needs a real tab title; without this it inherited the bare 'DorfMovies'
+// default and was indistinguishable from every other tab.
+export const metadata: Metadata = {
+  title: 'Sign in',
+  description: 'Sign in to your DorfMovies library.',
+}
 
 // A server component purely so it can read SIGNUP_INVITE_CODE: the variable is
 // not NEXT_PUBLIC_, so a client component has no way to know whether signup
