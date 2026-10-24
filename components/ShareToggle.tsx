@@ -1,7 +1,8 @@
 'use client'
-import { useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useToast } from '@/components/ToastProvider'
 
 interface Props {
   label: string
@@ -44,17 +45,70 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
   const [token, setToken] = useState(initialToken)
   const [url, setUrl] = useState(initialUrl)
   const [copied, setCopied] = useState(false)
+  const [busy, setBusy] = useState(false)
+  // A ref, not the state above, is what actually guards re-entry: two clicks
+  // in the same tick would both read a stale `busy`. The state only drives
+  // aria-busy. The switch is not `disabled` while in flight — disabling a
+  // focused button drops focus to the body, and the window is a few hundred
+  // milliseconds.
+  const inFlight = useRef(false)
+
+  const { toast } = useToast()
 
   async function toggle() {
-    const enabled = !token
-    const res = await fetch('/api/settings/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, enabled }),
-    })
-    const data = await res.json()
-    setToken(data.token)
-    setUrl(data.token ? `${window.location.origin}/share/${type}/${data.token}` : null)
+    if (inFlight.current) return
+    const enabling = !token
+
+    // MediaCard documents the house preference for an undo over a confirm, and
+    // that is right where an undo exists. Here it cannot: the API mints a
+    // fresh crypto.randomUUID() on every enable, so turning sharing off and
+    // back on hands out a different link and every link already sent is dead.
+    // An unrecoverable action gets the dialog.
+    if (
+      !enabling &&
+      !window.confirm(
+        `Turn off sharing for ${label}? The link you have already shared will stop working, and turning sharing back on creates a different one.`
+      )
+    ) {
+      return
+    }
+
+    inFlight.current = true
+    setBusy(true)
+    try {
+      const res = await fetch('/api/settings/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, enabled: enabling }),
+      })
+      // The route answers `{ error }` with no token on 401/500, and a platform
+      // 502 answers with HTML that res.json() rejects on. Unchecked, both ran
+      // `setToken(undefined)` and flipped the switch to "off" while the server
+      // went on serving the list at the public URL — the one failure mode the
+      // only privacy control in the app must not have.
+      if (!res.ok) throw new Error(`Share update failed with ${res.status}`)
+      const data = await res.json()
+      const newToken: string | null = typeof data?.token === 'string' ? data.token : null
+      if (enabling && !newToken) throw new Error('Share update returned no token')
+
+      setToken(newToken)
+      setUrl(newToken ? `${window.location.origin}/share/${type}/${newToken}` : null)
+      setCopied(false)
+      toast(
+        newToken
+          ? `${label} is shared. Anyone with the link can see it.`
+          : 'Sharing is off. The old link no longer works.',
+        { tone: 'success' }
+      )
+    } catch (err) {
+      console.error(err)
+      // Nothing is set: the switch keeps showing whatever the server last
+      // confirmed, which is still the truth.
+      toast('Could not update sharing — your link is unchanged.', { tone: 'error' })
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+    }
   }
 
   async function copyUrl() {
@@ -91,6 +145,7 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
           role="switch"
           aria-checked={on}
           aria-label={`Toggle public sharing for ${label}`}
+          aria-busy={busy}
           onClick={toggle}
           className="inline-flex items-center gap-3 min-h-11 px-2 -mr-2 rounded-full cursor-pointer transition-colors hover:bg-[var(--glass-fill-hover)]"
         >
@@ -123,24 +178,40 @@ export default function ShareToggle({ label, type, token: initialToken, shareUrl
         </button>
       </div>
       {url && (
-        <div className="flex gap-2">
-          <Input
-            readOnly
-            value={url}
-            aria-label={`${label} public share URL`}
-            style={{ fontSize: 'var(--text-sm)' }}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={copyUrl}
-            aria-label={`Copy ${label} public share URL`}
-            className="shrink-0"
+        <>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              value={url}
+              aria-label={`${label} public share URL`}
+              style={{ fontSize: 'var(--text-sm)' }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={copyUrl}
+              aria-label={`Copy ${label} public share URL`}
+              className="shrink-0"
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </Button>
+          </div>
+          {/* Both halves of this are things the UI used to leave the reader to
+              discover: that the link needs no account, and that the token is
+              regenerated on every enable, so a round trip through the switch
+              silently invalidates whatever has already been sent out. */}
+          <p
+            style={{
+              margin: 0,
+              fontSize: 'var(--text-sm)',
+              lineHeight: '18px',
+              color: 'var(--text-secondary)',
+            }}
           >
-            {copied ? 'Copied!' : 'Copy'}
-          </Button>
-        </div>
+            Anyone with this link can see this list. Turning sharing off and on again creates a different link.
+          </p>
+        </>
       )}
     </div>
   )
