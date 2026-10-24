@@ -4,16 +4,7 @@ import { Download, Upload, Check, Minus, X, Circle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
-
-interface ImportRow {
-  title: string
-  year: string
-  type: string
-  rating: string
-  date: string
-  review: string
-  status: string
-}
+import { parseCSV, type ImportRow } from '@/lib/csv'
 
 interface RowResult {
   title: string
@@ -22,43 +13,9 @@ interface RowResult {
   error?: string
 }
 
-function parseCSVRow(line: string): string[] {
-  const fields: string[] = []
-  let cur = ''
-  let inQuotes = false
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++ }
-      else inQuotes = !inQuotes
-    } else if (ch === ',' && !inQuotes) {
-      fields.push(cur); cur = ''
-    } else {
-      cur += ch
-    }
-  }
-  fields.push(cur)
-  return fields
-}
-
-function parseCSV(text: string): ImportRow[] {
-  const lines = text.replace(/\r/g, '').trim().split('\n').filter(l => l.trim())
-  if (lines.length < 2) return []
-  const headers = parseCSVRow(lines[0]).map(h => h.trim().toLowerCase())
-  return lines.slice(1).map(line => {
-    const vals = parseCSVRow(line)
-    const get = (key: string) => (vals[headers.indexOf(key)] ?? '').trim()
-    return {
-      title: get('title'),
-      year: get('year'),
-      type: get('type'),
-      rating: get('rating'),
-      date: get('date'),
-      review: get('review'),
-      status: get('status'),
-    }
-  }).filter(r => r.title)
-}
+const NOT_CSV = 'That needs to be a .csv file. Download the template if you need the right shape.'
+const NO_ROWS = 'We read that file but found no rows. It needs a header line and a "title" column — the template shows the shape.'
+const UNREADABLE = "That file couldn't be read. Try choosing it again."
 
 const TEMPLATE = `title,year,type,rating,date,review,status
 The Dark Knight,2008,movie,5,2024-01-15,One of the best films ever made,watched
@@ -98,15 +55,30 @@ export default function ImportExportPanel() {
   const [done, setDone] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [mode, setMode] = useState<'csv' | 'watchlist'>('csv')
+  const [fileError, setFileError] = useState<string | null>(null)
 
+  // Every way out of here now says something. A rejected extension used to
+  // return in silence, which on screen is indistinguishable from a file that
+  // loaded and held nothing; a read failure did not even have a handler. The
+  // extension test is lowercased because a .CSV off a Windows share is still
+  // a CSV, and the file input's own `accept` already matches it either way.
   function loadFile(file: File) {
-    if (!file.name.endsWith('.csv')) return
+    setResults([])
+    setDone(false)
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setRows([])
+      setFileError(NOT_CSV)
+      return
+    }
     const reader = new FileReader()
     reader.onload = e => {
-      const text = e.target?.result as string
-      setRows(parseCSV(text))
-      setResults([])
-      setDone(false)
+      const parsed = parseCSV(String(e.target?.result ?? ''))
+      setRows(parsed)
+      setFileError(parsed.length === 0 ? NO_ROWS : null)
+    }
+    reader.onerror = () => {
+      setRows([])
+      setFileError(UNREADABLE)
     }
     reader.readAsText(file)
   }
@@ -236,6 +208,7 @@ export default function ImportExportPanel() {
             setRows([])
             setResults([])
             setDone(false)
+            setFileError(null)
           }}
           size="sm"
         />
@@ -267,6 +240,15 @@ export default function ImportExportPanel() {
               : <>Drop your CSV here or <span className="text-[var(--text-primary)] underline underline-offset-2">click to browse</span></>}
           </p>
         </label>
+
+        {/* The drop zone's own copy only ever reports success, so a rejected
+            or unreadable file says so here. `alert` rather than `status`: it
+            is the answer to something the user just did. */}
+        {fileError && (
+          <p role="alert" className="text-sm" style={{ margin: 0, color: 'var(--danger)' }}>
+            {fileError}
+          </p>
+        )}
 
         {/* Preview table */}
         {rows.length > 0 && results.length === 0 && (
