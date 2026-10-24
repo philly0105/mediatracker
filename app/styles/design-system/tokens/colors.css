@@ -72,9 +72,13 @@
   --glass-panel: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)), rgba(9, 20, 27, 0.46);
   /* The hero slab sits over the sharp, untinted artwork inside the hero frame,
      not over the tinted ambient layer, so its base is darker than a panel's.
-     Over a white backdrop primary text stays above 4.5:1 only with this
-     recipe (the reference's); the lighter panel recipe drops to about 2.9:1. */
-  --glass-slab: radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 60%), linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)), rgba(6, 15, 21, 0.66);
+     The base was 0.66, which held 4.5:1 across most of the slab but not where
+     it matters: the radial highlight peaks at the top-left, which is where the
+     eyebrow, logo and tagline sit, and over white artwork that corner measured
+     primary 4.20, strong 3.47, secondary 3.23 — all below AA. At 0.78 the same
+     corner is 6.06 / 4.85 / 4.45, and the rest of the slab is 5.4:1 or better.
+     Over dark artwork, which is most of it, the two look near-identical. */
+  --glass-slab: radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 60%), linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)), rgba(6, 15, 21, 0.78);
   --glass-hero: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)), rgba(9, 20, 27, 0.34);
   --glass-modal: var(--bg-elevated);
   --glass-input: rgba(0, 0, 0, 0.24);
