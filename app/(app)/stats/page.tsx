@@ -56,7 +56,7 @@ export default async function StatsPage({
   // Both reads are paged: every figure on this page is an aggregate over the
   // whole history, so a silent 1000-row truncation would not look like an
   // error, it would look like smaller numbers.
-  const [{ rows: entries }, { rows: epProgress }] = await Promise.all([
+  const [entryRead, episodeRead] = await Promise.all([
     fetchAllRows((from, to) =>
       supabase
         .from('watch_entries')
@@ -75,6 +75,21 @@ export default async function StatsPage({
         .range(from, to)
     ),
   ])
+
+  // fetchAllRows reports a failure instead of throwing, and hands back
+  // whatever pages it got before it stopped. Reading only `rows` dropped that
+  // on the floor: an error on page one left this page telling someone with 600
+  // logged titles that they had tracked nothing, and an error on page two
+  // rendered totals, hours, streaks and genres that were quietly wrong.
+  // stats/error.tsx exists for this and could never fire.
+  const readError = entryRead.error ?? episodeRead.error
+  if (readError) throw new Error(`Stats could not be read: ${readError}`)
+
+  const { rows: entries } = entryRead
+  const { rows: epProgress } = episodeRead
+  // Past fetchAllRows' ceiling the figures below are sums over part of a
+  // history, and a partial sum looks exactly like a smaller one, so say so.
+  const truncated = entryRead.truncated || episodeRead.truncated
 
   const all = entries as unknown as import('@/types').WatchEntry[]
   const movies = all.filter(e => e.media?.type === 'movie')
@@ -131,6 +146,19 @@ export default async function StatsPage({
         title="Stats"
         sub="How much you've watched, and what you keep coming back to."
       />
+      {truncated && (
+        <p
+          role="status"
+          style={{
+            margin: 0,
+            fontSize: 'var(--text-base)',
+            lineHeight: '20px',
+            color: 'var(--text-muted)',
+          }}
+        >
+          Your history is longer than this page can add up, so these figures cover part of it rather than all of it.
+        </p>
+      )}
       {hasData ? (
         <>
           {/* One panel of bare tiles, as the reference's "so far" grid: the

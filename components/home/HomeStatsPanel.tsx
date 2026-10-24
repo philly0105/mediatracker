@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Star } from 'lucide-react'
+import { AlertCircle, Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StatTile } from '@/components/ui/StatTile'
 import { fetchAllRows } from '@/lib/fetchAllRows'
@@ -9,7 +10,14 @@ import type { WatchEntry } from '@/types'
 import { Skeleton } from '@/components/ui/Skeleton'
 import DeferredHoursChart from './DeferredHoursChart'
 
-export type YearStats = { entries: WatchEntry[]; episodes: WatchedEpisode[] }
+export type YearStats = {
+  entries: WatchEntry[]
+  episodes: WatchedEpisode[]
+  /** A read came back with an error, so the figures below are not the year. */
+  failed: boolean
+  /** The year ran past fetchAllRows' ceiling, so they are only part of it. */
+  truncated: boolean
+}
 
 type EpisodeRuntimeRow = {
   watched_at: string
@@ -26,12 +34,21 @@ function joinedOne<T>(value: T | T[] | null | undefined): T | null {
 /**
  * This year's watch entries and watched episodes, the two reads behind the
  * "so far" tiles and the hours chart. Paged like /stats so a big year is not
- * silently cut at PostgREST's row cap. Never rejects: a failed read is an
- * empty year, and the panel shows zeros rather than taking Home down.
+ * silently cut at PostgREST's row cap.
+ *
+ * Still never rejects. Home's panels are deliberately failure-isolated — the
+ * dashboard starts this read and the recommendation read before it awaits
+ * anything, and the sibling "Because you watched" catches to null — so a
+ * Supabase hiccup here must not take the whole page down the way throwing to
+ * the route boundary would.
+ *
+ * But a failure is no longer reported as an empty year either. "0 titles
+ * logged" is a claim about the user's year, and a read that never came back
+ * cannot make it; `failed` carries that to the panel, which says so instead.
  */
 export async function loadYearStats(supabase: SupabaseClient, userId: string, year: number): Promise<YearStats> {
   const since = `${year}-01-01`
-  const [{ rows: entries }, { rows: progress }] = await Promise.all([
+  const [entryRead, episodeRead] = await Promise.all([
     fetchAllRows((from, to) =>
       supabase
         .from('watch_entries')
@@ -55,12 +72,17 @@ export async function loadYearStats(supabase: SupabaseClient, userId: string, ye
 
   // Each episode's runtime is its show's per-episode runtime_mins, threaded
   // through seasons -> media, exactly as /stats computes it.
-  const episodes: WatchedEpisode[] = (progress as unknown as EpisodeRuntimeRow[]).map((row) => {
+  const episodes: WatchedEpisode[] = (episodeRead.rows as unknown as EpisodeRuntimeRow[]).map((row) => {
     const media = joinedOne(joinedOne(row.seasons)?.media)
     return { watched_at: row.watched_at, runtime_mins: media?.runtime_mins ?? null }
   })
 
-  return { entries: entries as unknown as WatchEntry[], episodes }
+  return {
+    entries: entryRead.rows as unknown as WatchEntry[],
+    episodes,
+    failed: Boolean(entryRead.error ?? episodeRead.error),
+    truncated: entryRead.truncated || episodeRead.truncated,
+  }
 }
 
 type Props = {
@@ -79,9 +101,40 @@ type Props = {
  * stats query streams in behind the hero rather than delaying it.
  */
 export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now }: Props) {
-  const { entries, episodes } = await stats
+  const { entries, episodes, failed, truncated } = await stats
   const year = now.getFullYear()
   const currentIndex = now.getMonth()
+  const through = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+
+  const header = (
+    <SectionHeader
+      id="stats-title"
+      title={`${year} so far`}
+      sub={`January 1 – ${through}`}
+      action={{ label: 'All stats', href: '/stats' }}
+    />
+  )
+
+  // A failed read used to render as a year of zeros, which is a statement
+  // about the user rather than about the query. Throwing is the wrong answer
+  // here — unlike /stats this is one panel among several, and its siblings
+  // each degrade on their own — so the panel keeps its slot and says what
+  // happened. The compact empty state is a flat row, safe inside a panel that
+  // already blurs.
+  if (failed) {
+    return (
+      <Card variant="panel" as="section" aria-labelledby="stats-title" style={{ flex: '1.7 1 520px', minWidth: 0 }}>
+        {header}
+        <EmptyState
+          size="compact"
+          tone="error"
+          icon={AlertCircle}
+          title="This year's numbers didn't load"
+          hint="The rest of the dashboard is unaffected. Reload to try again, or open All stats."
+        />
+      </Card>
+    )
+  }
 
   const rated = entries.filter((entry) => entry.rating != null)
   const averageRating = rated.length > 0
@@ -94,16 +147,20 @@ export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now
   const elapsed = months.slice(0, currentIndex + 1)
   const average = elapsed.reduce((sum, row) => sum + row.hours, 0) / elapsed.length
   const currentLabel = now.toLocaleDateString('en-US', { month: 'short' })
-  const through = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
   return (
     <Card variant="panel" as="section" aria-labelledby="stats-title" style={{ flex: '1.7 1 520px', minWidth: 0 }}>
-      <SectionHeader
-        id="stats-title"
-        title={`${year} so far`}
-        sub={`January 1 – ${through}`}
-        action={{ label: 'All stats', href: '/stats' }}
-      />
+      {header}
+      {truncated && (
+        // Partial aggregates are indistinguishable from small ones, so the
+        // ceiling is named rather than quietly applied.
+        <p
+          role="status"
+          style={{ margin: '0 0 12px', paddingLeft: 4, fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)' }}
+        >
+          Your year is longer than this panel can add up — these cover part of it.
+        </p>
+      )}
       <div className="flex flex-wrap" style={{ gap: '24px 32px', padding: '0 4px' }}>
         <div
           style={{
