@@ -82,7 +82,7 @@ describe('MediaInfoModal rewatch flow', () => {
 
     renderModal(onMarkAsWatched)
 
-    const button = await screen.findByText('Mark as Watched')
+    const button = await screen.findByText('Mark as watched')
     await act(async () => {
       fireEvent.click(button)
     })
@@ -112,7 +112,7 @@ describe('MediaInfoModal rewatch flow', () => {
 
     renderModal(onMarkAsWatched)
 
-    const button = await screen.findByText('Mark as Watched')
+    const button = await screen.findByText('Mark as watched')
     await act(async () => {
       fireEvent.click(button)
     })
@@ -154,7 +154,7 @@ describe('MediaInfoModal rewatch flow', () => {
     mockDetails({ isWatched: false })
     renderModal(vi.fn().mockResolvedValue({ id: 'entry-1', rating: null }))
 
-    const button = await screen.findByText('Mark as Watched')
+    const button = await screen.findByText('Mark as watched')
     await act(async () => {
       fireEvent.click(button)
     })
@@ -196,7 +196,7 @@ describe('MediaInfoModal rewatch flow', () => {
       })
     renderModal(vi.fn().mockResolvedValue(undefined))
 
-    const button = await screen.findByText('Mark as Watched')
+    const button = await screen.findByText('Mark as watched')
     await act(async () => {
       fireEvent.click(button)
     })
@@ -224,7 +224,7 @@ describe('MediaInfoModal rewatch flow', () => {
       })
     renderModal(vi.fn().mockResolvedValue(undefined))
 
-    const button = await screen.findByText('Mark as Watched')
+    const button = await screen.findByText('Mark as watched')
     await act(async () => {
       fireEvent.click(button)
     })

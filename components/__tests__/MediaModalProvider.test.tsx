@@ -224,7 +224,7 @@ describe('MediaModalProvider', () => {
     const host = renderHost()
 
     await act(async () => { host.open(heat, { priority: 'must_watch', onChanged }) })
-    await act(async () => { fireEvent.click(await screen.findByText('Add to Watchlist')) })
+    await act(async () => { fireEvent.click(await screen.findByText('Add to watchlist')) })
 
     const post = mockFetch.mock.calls.find(
       (c) => c[0] === '/api/watchlist' && (c[1] as { method: string }).method === 'POST',
@@ -238,7 +238,7 @@ describe('MediaModalProvider', () => {
     const host = renderHost()
 
     await act(async () => { host.open(heat) })
-    await act(async () => { fireEvent.click(await screen.findByText('Add to Watchlist')) })
+    await act(async () => { fireEvent.click(await screen.findByText('Add to watchlist')) })
 
     const post = mockFetch.mock.calls.find(
       (c) => c[0] === '/api/watchlist' && (c[1] as { method: string }).method === 'POST',
@@ -252,7 +252,7 @@ describe('MediaModalProvider', () => {
     const host = renderHost()
 
     await act(async () => { host.open(heat, { onAddToWatchlist, onChanged }) })
-    await act(async () => { fireEvent.click(await screen.findByText('Add to Watchlist')) })
+    await act(async () => { fireEvent.click(await screen.findByText('Add to watchlist')) })
 
     expect(onAddToWatchlist).toHaveBeenCalled()
     // The override owns the side effect; onChanged belongs to the default path.

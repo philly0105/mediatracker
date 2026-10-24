@@ -8,7 +8,7 @@ import { FilterPills } from '@/components/FilterPills'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
 import { useOptionalMultiSelect } from '@/components/MultiSelectProvider'
-import { CheckCircle2, Bookmark, EyeOff, Loader2, Star, Tv, CheckSquare } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Bookmark, EyeOff, Loader2, Star, Tv, CheckSquare } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -62,6 +62,14 @@ function StreamingContent() {
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  // A failed load used to be indistinguishable from an empty catalogue: the
+  // catch emptied `results` and the page said "No titles found for this
+  // service / Pick another service above", which is false and sends the user
+  // round all seven services collecting the same message.
+  const [error, setError] = useState(false)
+  // Bumping this re-runs the load effect, which is what "Try again" needs —
+  // the provider, type, page and sort are all unchanged by a retry.
+  const [retry, setRetry] = useState(0)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
@@ -107,8 +115,13 @@ function StreamingContent() {
           sort: sortBy,
         })
         const res = await fetch(`/api/streaming?${params}`)
+        // A 500 (the missing-API-key path among them) still parses as JSON, so
+        // without this check `data.results` is undefined and the failure reads
+        // as an empty service.
+        if (!res.ok) throw new Error(`Streaming request failed (${res.status})`)
         const data = await res.json()
         if (cancelled) return
+        setError(false)
         const nextResults = (data.results ?? []) as TmdbSearchResult[]
         setResults((prev) => {
           if (page === 1) return nextResults
@@ -116,8 +129,15 @@ function StreamingContent() {
           return [...prev, ...nextResults.filter((item) => !seen.has(item.tmdb_id))]
         })
         setTotalPages(data.total_pages ?? 0)
-      } catch {
-        if (!cancelled && page === 1) setResults([])
+      } catch (err) {
+        console.error(err)
+        if (cancelled) return
+        // A failed page 2 leaves page 1 on screen; only a failed first page
+        // has nothing to show.
+        if (page === 1) {
+          setResults([])
+          setError(true)
+        }
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -129,7 +149,7 @@ function StreamingContent() {
     return () => {
       cancelled = true
     }
-  }, [provider, type, page, sortBy])
+  }, [provider, type, page, sortBy, retry])
 
   useEffect(() => {
     if (loading || loadingMore || page >= totalPages) return
@@ -198,8 +218,21 @@ function StreamingContent() {
     setPage(1)
   }
 
+  // The grid swaps under the toolbar with nothing said: the skeletons and the
+  // spinner are all aria-hidden, so a service with two titles and one with two
+  // hundred sound identical.
+  const resultSummary = loading
+    ? 'Loading what is streaming.'
+    : error
+      ? 'Could not load what is streaming.'
+      : `${visibleResults.length} ${visibleResults.length === 1 ? 'title' : 'titles'} showing.`
+
   return (
     <div className="space-y-6 pb-12">
+      <p role="status" aria-live="polite" className="sr-only">
+        {resultSummary}
+      </p>
+
       <PageHeader
         eyebrow="Available now"
         title="Streaming"
@@ -280,6 +313,15 @@ function StreamingContent() {
             <Skeleton key={i} className="aspect-[2/3] rounded-[var(--radius-xl)]" />
           ))}
         </PosterGrid>
+      ) : error ? (
+        <EmptyState
+          tone="error"
+          icon={AlertCircle}
+          title="Couldn't load what's streaming"
+          hint="We couldn't reach the streaming catalogue just now. This is usually temporary."
+          actionLabel="Try again"
+          onAction={() => setRetry((n) => n + 1)}
+        />
       ) : visibleResults.length === 0 ? (
         <EmptyState
           icon={Tv}

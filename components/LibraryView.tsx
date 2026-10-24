@@ -452,8 +452,22 @@ export default function LibraryView({
     decadeFilter !== 'All' && { key: 'decade', label: `${decadeFilter}s` },
   ].filter((chip): chip is { key: string; label: string } => chip !== false)
 
+  // Changing a chip, the type control, the search box or the sort select
+  // re-renders the grid in silence: every skeleton and spinner below is
+  // aria-hidden, so a filter matching 0 titles and one matching 200 sound
+  // identical. This line is the only announcement either makes.
+  const resultSummary = loading
+    ? 'Loading your library.'
+    : loadError && entries.length === 0
+      ? 'Could not load your library.'
+      : `${filteredEntries.length} ${filteredEntries.length === 1 ? 'title' : 'titles'} showing.`
+
   return (
     <div className="space-y-6">
+      <p role="status" aria-live="polite" className="sr-only">
+        {resultSummary}
+      </p>
+
       {/* The filter bank is nine controls wide, so it gets its own glass
           toolbar beneath the title instead of competing with it for the
           header line. It is one of the page's few blurred surfaces. */}
@@ -680,7 +694,7 @@ export default function LibraryView({
               icon={SearchX}
               title={
                 searchQuery.trim()
-                  ? `No logged titles match "${searchQuery}"`
+                  ? `No logged titles match “${searchQuery}”`
                   : 'No logged titles match the active filters'
               }
               hint="Widen the filters, or clear them to see everything you have logged."

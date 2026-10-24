@@ -412,7 +412,7 @@ export default function StatsCharts({ data }: { data: StatsData }) {
       </div>
 
       <Card as="section" variant="panel" aria-labelledby="stats-top-rated">
-        <SectionHeader id="stats-top-rated" title="Your Highest Rated" />
+        <SectionHeader id="stats-top-rated" title="Your highest rated" />
         <div className="space-y-2.5 min-h-[140px]">
           {data.topRated.map((entry) => (
             <div key={`${entry.type}-${entry.title}`} className="flex items-center justify-between gap-4" style={LIST_TEXT}>

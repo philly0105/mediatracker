@@ -55,7 +55,10 @@ export default function RecommendationsPage() {
   const multiSelect = useOptionalMultiSelect()
   const [items, setItems] = useState<Recommendation[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // A flag, not a message: `err.message` on a network failure is the browser's
+  // own string ("Failed to fetch"), which was being rendered verbatim as the
+  // hint. The real message goes to the console, where it is useful.
+  const [error, setError] = useState(false)
   const [fallback, setFallback] = useState(false)
   const [actioningId, setActioningId] = useState<number | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
@@ -90,7 +93,7 @@ export default function RecommendationsPage() {
       } else {
         setLoading(true)
       }
-      setError(null)
+      setError(false)
       const nextCycle = refresh ? seedCycleRef.current + 1 : 0
       const params = new URLSearchParams()
       if (refresh) {
@@ -112,7 +115,8 @@ export default function RecommendationsPage() {
       // that no longer exists.
       closeMedia()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load recommendations')
+      console.error(err)
+      setError(true)
     } finally {
       if (refresh) {
         setRefreshing(false)
@@ -325,13 +329,25 @@ export default function RecommendationsPage() {
     return () => observer.disconnect()
   }, [loadMoreRecommendations])
 
+  // Every skeleton and spinner on this page is aria-hidden, so a filter that
+  // matched nothing and one that matched forty sound identical.
+  const resultSummary = loading
+    ? 'Loading your recommendations.'
+    : error
+      ? 'Could not load your recommendations.'
+      : `${filteredItems.length} ${filteredItems.length === 1 ? 'recommendation' : 'recommendations'} showing.`
+
   return (
     <div className="space-y-6 pb-12">
+      <p role="status" aria-live="polite" className="sr-only">
+        {resultSummary}
+      </p>
+
       <PageHeader
         eyebrow="Picked for you"
         title="Recommendations"
         sub={fallback
-          ? 'We compiled this week\'s overall trending items to get you started!'
+          ? "You haven't logged anything yet, so these are this week's most popular titles. Log a few and this page starts matching your taste."
           : 'Personalized recommendations based on similar titles from your watch history.'}
         action={
           <Button
@@ -361,8 +377,8 @@ export default function RecommendationsPage() {
             tone="error"
             icon={AlertCircle}
             title="Something went wrong"
-            hint={error}
-            actionLabel="Try Again"
+            hint="We couldn't score your recommendations just now. This is usually temporary."
+            actionLabel="Try again"
             onAction={() => loadRecommendations()}
           />
         </div>

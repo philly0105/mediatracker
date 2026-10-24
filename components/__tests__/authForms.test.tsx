@@ -80,7 +80,7 @@ describe('LoginForm', () => {
 
     fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'a@b.com' } })
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'hunter2!!' } })
-    await act(async () => { fireEvent.submit(screen.getByText('Sign In').closest('form')!) })
+    await act(async () => { fireEvent.submit(screen.getByText('Sign in').closest('form')!) })
 
     expect(screen.getByText('Invalid login credentials')).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()

@@ -53,7 +53,10 @@ export default function EmptyHero({ recent, preload = false }: Props) {
           style={{ flex: 'none', maxWidth: '100%' }}
         >
           <span style={{ fontSize: 'var(--text-sm)', lineHeight: '18px', fontWeight: semibold, color: 'var(--text-muted)' }}>
-            {recent ? `Last watched · ${recent.title}` : 'Nothing in progress'}
+            {/* A brand-new account has no "last watched" to name, and
+                leading the whole first-run experience with an absence
+                ("Nothing in progress") is the wrong first line. */}
+            {recent ? `Last watched · ${recent.title}` : 'Welcome to DorfMovies'}
           </span>
           <h2
             id="hero-title"

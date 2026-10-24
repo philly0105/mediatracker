@@ -101,7 +101,7 @@ describe('DashboardUpcomingWidget', () => {
 
   it('says so quietly when there is nothing coming', () => {
     renderWidget([])
-    expect(screen.getByText('No upcoming releases found.')).toBeInTheDocument()
+    expect(screen.getByText('Nothing on the calendar')).toBeInTheDocument()
   })
 
   describe('countdowns', () => {

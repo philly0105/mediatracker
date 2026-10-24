@@ -145,7 +145,7 @@ async function showBucket(label: string) {
 async function loadPage() {
   renderPage()
   await act(async () => { await Promise.resolve() })
-  await screen.findByRole('heading', { name: 'Must Watch', level: 2 })
+  await screen.findByRole('heading', { name: 'Must watch', level: 2 })
 }
 
 describe('watchlist grouped load (F-32)', () => {
@@ -182,13 +182,13 @@ describe('watchlist grouped load (F-32)', () => {
     expect(gets.some((c) => url(c[0]).includes('facets=1'))).toBe(false)
 
     // Every bucket arrived with the one request: switching tabs fetches nothing.
-    await showBucket('Want to Watch')
+    await showBucket('Want to watch')
     expect(screen.getByText('Wanted One', CAPTION)).toBeTruthy()
     await showBucket('Someday')
     expect(screen.getByText('Someday One', CAPTION)).toBeTruthy()
     expect(mockFetch.mock.calls.filter((c) => !c[1] || c[1].method === 'GET').length).toBe(1)
     // The counts ride on the segments.
-    expect(screen.getByRole('radio', { name: 'Must Watch · 20' })).toBeTruthy()
+    expect(screen.getByRole('radio', { name: 'Must watch · 20' })).toBeTruthy()
     // Genres came from the grouped payload, so the dropdown is populated.
     expect(screen.getByRole('option', { name: 'Drama' })).toBeTruthy()
   })
@@ -196,7 +196,7 @@ describe('watchlist grouped load (F-32)', () => {
   it('previews a bucket and expands it on demand instead of infinite-scrolling', async () => {
     await loadPage()
 
-    // 20 rows in Must Watch, but only a page of them is on screen.
+    // 20 rows in Must watch, but only a page of them is on screen.
     expect(screen.getByText('Must 0', CAPTION)).toBeTruthy()
     expect(screen.queryByText('Must 12', CAPTION)).toBeNull()
 
@@ -210,16 +210,16 @@ describe('watchlist grouped load (F-32)', () => {
 
   it('does not offer an expander for a bucket that fits in one page', async () => {
     await loadPage()
-    await showBucket('Want to Watch')
+    await showBucket('Want to watch')
 
-    const wantHeading = screen.getByRole('heading', { name: 'Want to Watch', level: 2 })
+    const wantHeading = screen.getByRole('heading', { name: 'Want to watch', level: 2 })
     const section = wantHeading.closest('section')!
     expect(within(section).getByText('Wanted One', CAPTION)).toBeTruthy()
     expect(within(section).queryByRole('button', { name: /Show all/ })).toBeNull()
   })
 
-  // Adding from a title's details defaults to Want to Watch, so a fresh
-  // watchlist often has nothing in Must Watch; the page must not open on an
+  // Adding from a title's details defaults to Want to watch, so a fresh
+  // watchlist often has nothing in Must watch; the page must not open on an
   // empty tab with everything behind the one beside it.
   it('opens on the first bucket with something in it', async () => {
     store = {
@@ -230,19 +230,50 @@ describe('watchlist grouped load (F-32)', () => {
     renderPage()
     await act(async () => { await Promise.resolve() })
 
-    await screen.findByRole('heading', { name: 'Want to Watch', level: 2 })
-    expect(screen.getByRole('radio', { name: 'Want to Watch · 1' }).getAttribute('aria-checked')).toBe('true')
+    await screen.findByRole('heading', { name: 'Want to watch', level: 2 })
+    expect(screen.getByRole('radio', { name: 'Want to watch · 1' }).getAttribute('aria-checked')).toBe('true')
     expect(screen.getByText('Wanted One', CAPTION)).toBeTruthy()
-    expect(screen.queryByText(/Nothing in Must Watch yet/)).toBeNull()
+    expect(screen.queryByText(/Nothing in Must watch yet/)).toBeNull()
   })
 
-  it('still opens on Must Watch when every bucket is empty', async () => {
+  // A brand-new account used to get the full seven-control toolbar over one
+  // compact "set a title's priority from its details" — circular advice for
+  // someone with no titles anywhere, and nothing to click.
+  it('replaces the toolbar with one way out when every bucket is empty', async () => {
     store = { must_watch: [], want_to_watch: [], someday: [] }
     renderPage()
     await act(async () => { await Promise.resolve() })
 
-    await screen.findByRole('heading', { name: 'Must Watch', level: 2 })
-    expect(screen.getByText('Nothing in Must Watch yet')).toBeTruthy()
+    expect(await screen.findByText('Your watchlist is empty')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'Search for a film or show and add it here. Sort what you add into Must watch, Want to watch and Someday.'
+      )
+    ).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Search to add one/ })).toBeTruthy()
+
+    // None of the seven controls is on screen: every one of them acts on
+    // titles, and there are none.
+    expect(screen.queryByRole('radio', { name: /^Must watch/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Pick for me' })).toBeNull()
+    expect(screen.queryByLabelText('Search your watchlist')).toBeNull()
+    expect(screen.queryByText(/Nothing in Must watch yet/)).toBeNull()
+  })
+
+  // The per-bucket empty state still has a job: the other buckets have rows.
+  it('keeps the compact per-bucket empty state when another bucket has rows', async () => {
+    store = {
+      must_watch: [],
+      want_to_watch: [item('w1', 'Wanted One', 'want_to_watch')],
+      someday: [],
+    }
+    renderPage()
+    await act(async () => { await Promise.resolve() })
+
+    await screen.findByRole('heading', { name: 'Want to watch', level: 2 })
+    await showBucket('Must watch')
+    expect(screen.getByText('Nothing in Must watch yet')).toBeTruthy()
+    expect(screen.queryByText('Your watchlist is empty')).toBeNull()
   })
 })
 
@@ -272,23 +303,23 @@ describe('watchlist undo restores position (F-32)', () => {
   // Undo used to re-append, dropping the card at the bottom of the bucket.
   it('puts a removed row back where it was, not at the end', async () => {
     await loadPage()
-    expect(sectionTitles('Must Watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(sectionTitles('Must watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
 
     await act(async () => { fireEvent.click(screen.getAllByLabelText('Remove')[1]) })
-    expect(sectionTitles('Must Watch')).toEqual(['Alpha', 'Charlie'])
+    expect(sectionTitles('Must watch')).toEqual(['Alpha', 'Charlie'])
 
     await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Undo' })) })
-    expect(sectionTitles('Must Watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(sectionTitles('Must watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
   })
 
   it('puts a moved row back where it was, not at the end', async () => {
     await loadPage()
 
     await act(async () => { fireEvent.click(screen.getAllByLabelText('Move to Someday')[0]) })
-    expect(sectionTitles('Must Watch')).toEqual(['Bravo', 'Charlie'])
+    expect(sectionTitles('Must watch')).toEqual(['Bravo', 'Charlie'])
 
     await act(async () => { fireEvent.click(await screen.findByRole('button', { name: 'Undo' })) })
-    expect(sectionTitles('Must Watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(sectionTitles('Must watch')).toEqual(['Alpha', 'Bravo', 'Charlie'])
   })
 })
 

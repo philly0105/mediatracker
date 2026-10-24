@@ -2,10 +2,12 @@
 import dynamic from 'next/dynamic'
 
 import { useCallback, useState, useEffect, useRef, Suspense } from 'react'
-import { Flame, Sparkles, Inbox, Loader2, Trash2, Dices, Search, SearchX, ChevronDown, CheckSquare } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Loader2, Trash2, Dices, Search, SearchX, ChevronDown, CheckSquare, Bookmark } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaActions, readCreatedEntry } from '@/lib/useMediaActions'
+import { PRIORITY_LABELS } from '@/lib/priorityConfig'
+import { openSearchOverlay } from '@/lib/searchOverlayBus'
 import { useUrlFilters } from '@/lib/useUrlFilters'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import SelectableOverlay from '@/components/SelectableOverlay'
@@ -26,11 +28,6 @@ import { useDeferredAction } from '@/lib/useDeferredAction'
 
 const TonightPickModal = dynamic(() => import('@/components/TonightPickModal'))
 
-const PRIORITY_LABELS = {
-  must_watch: 'Must Watch',
-  want_to_watch: 'Want to Watch',
-  someday: 'Someday',
-}
 const PRIORITY_ORDER: WatchlistPriority[] = ['must_watch', 'want_to_watch', 'someday']
 
 // The segmented type filter, replacing the "All Types / Movies Only / TV Shows
@@ -145,7 +142,7 @@ function WatchlistContent() {
   // One request for the whole page. This used to be four — three independent
   // section fetches plus a separate facets call — each with its own pagination
   // state and its own infinite-scroll sentinel, which is what made a 200-item
-  // Must Watch bucket hide the other two behind it (F-32).
+  // Must watch bucket hide the other two behind it (F-32).
   useEffect(() => {
     let active = true
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -168,8 +165,8 @@ function WatchlistContent() {
         )
 
         // Open on the first bucket with something in it, once. Adding from a
-        // title's details defaults to Want to Watch, so a user with nothing in
-        // Must Watch would otherwise land on an empty tab with their whole
+        // title's details defaults to Want to watch, so a user with nothing in
+        // Must watch would otherwise land on an empty tab with their whole
         // watchlist behind the one beside it.
         if (!openingTabPicked.current) {
           openingTabPicked.current = true
@@ -420,7 +417,7 @@ function WatchlistContent() {
     if (openItemIdRef.current === itemId) closeMedia()
   }
 
-  // "Add to Watchlist" is a no-op here — it is already on one. Everything else
+  // "Add to watchlist" is a no-op here — it is already on one. Everything else
   // is bespoke: removal deletes by watchlist row id, and marking watched has to
   // delete the row as well as log the watch.
   function openDetails(item: WatchlistItem) {
@@ -436,8 +433,28 @@ function WatchlistContent() {
     })
   }
 
+  // Nothing anywhere, as opposed to nothing in *this* bucket or nothing
+  // matching a filter. A new account used to get the full seven-control
+  // toolbar over one compact "set a title's priority from its details" —
+  // advice that cannot be followed by someone with no titles to set.
+  const watchlistEmpty =
+    !loading && !hasActiveFilters && PRIORITY_ORDER.every((p) => groups[p].total === 0)
+
+  // The grid swaps under the toolbar with nothing said: the skeletons and the
+  // spinner are all aria-hidden, so a filter that matched nothing and one that
+  // matched two hundred titles sound identical. This is the only announcement.
+  const resultSummary = loading
+    ? 'Loading your watchlist.'
+    : watchlistEmpty
+      ? 'Your watchlist is empty.'
+      : `${groups[activePriority].total} ${groups[activePriority].total === 1 ? 'title' : 'titles'} in ${PRIORITY_LABELS[activePriority]}.`
+
   return (
     <div className="space-y-6 pb-12">
+      <p role="status" aria-live="polite" className="sr-only">
+        {resultSummary}
+      </p>
+
       {/* Seven controls are too wide to sit beside the title, so they get a
           toolbar panel under it rather than the header's action slot. */}
       <div>
@@ -447,106 +464,120 @@ function WatchlistContent() {
           sub="Prioritize movies and shows you want to watch next."
         />
 
-        <GridToolbar>
-          <div className="flex flex-wrap items-center gap-3">
-            <SegmentedControl
-              label="Priority"
-              options={PRIORITY_ORDER.map((p) => ({
-                id: p,
-                label: PRIORITY_LABELS[p],
-                // The count used to sit in a chip beside each heading; it rides
-                // on the segment now, and waits for the load so three zeros
-                // never flash first.
-                count: loading ? undefined : groups[p].total,
-              }))}
-              value={activePriority}
-              onChange={setActivePriority}
-              // A phone is a few pixels short of three counted labels at the
-              // control's own size, and a wrapped segment is worse than a
-              // tighter one, so under `sm` the segments drop to the small
-              // recipe. Should that still fall short, the track scrolls, not
-              // the page.
-              className="max-w-full overflow-x-auto scrollbar-none [&>button]:whitespace-nowrap [&>button]:px-2 [&>button]:text-xs sm:[&>button]:px-4 sm:[&>button]:text-sm"
-            />
-            <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
-              <Button onClick={() => setShowPick(true)}>
-                <Dices className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
-                <span>Pick for me</span>
-              </Button>
-              {multiSelect && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={multiSelect.toggleSelectMode}
-                  // Accent while selecting: the pill is a current-state control then.
-                  style={multiSelect.isSelectMode ? { color: 'var(--accent)' } : undefined}
-                >
-                  <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
-                  <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+        {!watchlistEmpty && (
+          <GridToolbar>
+            <div className="flex flex-wrap items-center gap-3">
+              <SegmentedControl
+                label="Priority"
+                options={PRIORITY_ORDER.map((p) => ({
+                  id: p,
+                  label: PRIORITY_LABELS[p],
+                  // The count used to sit in a chip beside each heading; it rides
+                  // on the segment now, and waits for the load so three zeros
+                  // never flash first.
+                  count: loading ? undefined : groups[p].total,
+                }))}
+                value={activePriority}
+                onChange={setActivePriority}
+                // A phone is a few pixels short of three counted labels at the
+                // control's own size, and a wrapped segment is worse than a
+                // tighter one, so under `sm` the segments drop to the small
+                // recipe. Should that still fall short, the track scrolls, not
+                // the page.
+                className="max-w-full overflow-x-auto scrollbar-none [&>button]:whitespace-nowrap [&>button]:px-2 [&>button]:text-xs sm:[&>button]:px-4 sm:[&>button]:text-sm"
+              />
+              <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+                <Button onClick={() => setShowPick(true)}>
+                  <Dices className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Pick for me</span>
                 </Button>
+                {multiSelect && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={multiSelect.toggleSelectMode}
+                    // Accent while selecting: the pill is a current-state control then.
+                    style={multiSelect.isSelectMode ? { color: 'var(--accent)' } : undefined}
+                  >
+                    <CheckSquare className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                    <span>{multiSelect.isSelectMode ? 'Done' : 'Select'}</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="min-w-[200px] flex-1">
+                <Input
+                  icon={<Search />}
+                  aria-label="Search your watchlist"
+                  placeholder="Search your watchlist…"
+                  value={searchQuery}
+                  onChange={(e) => setFilter('q', e.target.value)}
+                />
+              </div>
+              <SegmentedControl
+                label="Filter by type"
+                options={TYPE_OPTIONS}
+                value={typeFilter}
+                onChange={(t) => setFilter('type', t)}
+              />
+
+              <Select
+                label="Filter by genre"
+                value={genreFilter}
+                onChange={(e) => setFilter('genre', e.target.value)}
+                className="min-w-[140px]"
+              >
+                <option value="All" className="bg-[var(--bg-void)]">All genres</option>
+                {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
+              </Select>
+
+              <Select
+                label="Sort order"
+                value={sortOrder}
+                onChange={(e) => setFilter('sort', e.target.value)}
+                className="min-w-[140px]"
+              >
+                <option value="added" className="bg-[var(--bg-void)]">Recently added</option>
+                <option value="oldest" className="bg-[var(--bg-void)]">Oldest first</option>
+                <option value="title" className="bg-[var(--bg-void)]">Title A–Z</option>
+                <option value="year" className="bg-[var(--bg-void)]">Release year</option>
+              </Select>
+
+              {hasActiveFilters && (
+                <ClearFilters onClear={() => resetFilters(['q', 'type', 'genre'])} />
               )}
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-[200px] flex-1">
-              <Input
-                icon={<Search />}
-                aria-label="Search your watchlist"
-                placeholder="Search your watchlist..."
-                value={searchQuery}
-                onChange={(e) => setFilter('q', e.target.value)}
-              />
-            </div>
-            <SegmentedControl
-              label="Filter by type"
-              options={TYPE_OPTIONS}
-              value={typeFilter}
-              onChange={(t) => setFilter('type', t)}
-            />
-
-            <Select
-              label="Filter by genre"
-              value={genreFilter}
-              onChange={(e) => setFilter('genre', e.target.value)}
-              className="min-w-[140px]"
-            >
-              <option value="All" className="bg-[var(--bg-void)]">All Genres</option>
-              {availableGenres.map(g => <option key={g} value={g} className="bg-[var(--bg-void)]">{g}</option>)}
-            </Select>
-
-            <Select
-              label="Sort order"
-              value={sortOrder}
-              onChange={(e) => setFilter('sort', e.target.value)}
-              className="min-w-[140px]"
-            >
-              <option value="added" className="bg-[var(--bg-void)]">Recently Added</option>
-              <option value="oldest" className="bg-[var(--bg-void)]">Oldest First</option>
-              <option value="title" className="bg-[var(--bg-void)]">Title A–Z</option>
-              <option value="year" className="bg-[var(--bg-void)]">Release Year</option>
-            </Select>
-
-            {hasActiveFilters && (
-              <ClearFilters onClear={() => resetFilters(['q', 'type', 'genre'])} />
-            )}
-          </div>
-        </GridToolbar>
+          </GridToolbar>
+        )}
       </div>
 
-      {/* One bucket at a time. Every bucket is still loaded and kept, so a
-          move lands in its new tab without a refetch and Undo puts it back. */}
-      <WatchlistSection
-        priority={activePriority}
-        group={groups[activePriority]}
-        loading={loading}
-        filtered={hasActiveFilters}
-        actioningId={actioningId}
-        onExpand={() => loadMore(activePriority)}
-        onOpen={openDetails}
-        onUpdatePriority={handleUpdatePriority}
-        onRemove={handleRemove}
-      />
+      {watchlistEmpty ? (
+        // No toolbar above this one: filtering, sorting and picking for me are
+        // all actions on titles, and there are none. One way out instead.
+        <EmptyState
+          icon={Bookmark}
+          title="Your watchlist is empty"
+          hint="Search for a film or show and add it here. Sort what you add into Must watch, Want to watch and Someday."
+          actionLabel="Search to add one"
+          onAction={openSearchOverlay}
+        />
+      ) : (
+        /* One bucket at a time. Every bucket is still loaded and kept, so a
+           move lands in its new tab without a refetch and Undo puts it back. */
+        <WatchlistSection
+          priority={activePriority}
+          group={groups[activePriority]}
+          loading={loading}
+          filtered={hasActiveFilters}
+          actioningId={actioningId}
+          onExpand={() => loadMore(activePriority)}
+          onOpen={openDetails}
+          onUpdatePriority={handleUpdatePriority}
+          onRemove={handleRemove}
+        />
+      )}
 
       {/* "Pick for me" modal */}
       {showPick && (
@@ -663,12 +694,12 @@ function WatchlistSection({
                         ) : (
                           <>
                             {priority !== 'must_watch' && (
-                              <PosterAction label="Move to Must Watch" onClick={() => onUpdatePriority(item.id, 'must_watch')}>
+                              <PosterAction label="Move to Must watch" onClick={() => onUpdatePriority(item.id, 'must_watch')}>
                                 <Flame className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                               </PosterAction>
                             )}
                             {priority !== 'want_to_watch' && (
-                              <PosterAction label="Move to Want to Watch" onClick={() => onUpdatePriority(item.id, 'want_to_watch')}>
+                              <PosterAction label="Move to Want to watch" onClick={() => onUpdatePriority(item.id, 'want_to_watch')}>
                                 <Sparkles className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                               </PosterAction>
                             )}

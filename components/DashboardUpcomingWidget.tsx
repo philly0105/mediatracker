@@ -2,7 +2,7 @@
 import Image from 'next/image'
 import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bookmark, Film, Tv } from 'lucide-react'
+import { Bookmark, CalendarOff, Film, Tv } from 'lucide-react'
 import type { TmdbSearchResult } from '@/types'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import { useMediaActions } from '@/lib/useMediaActions'
@@ -10,6 +10,7 @@ import { useToast } from '@/components/ToastProvider'
 import { mediaKey } from '@/lib/mediaKey'
 import type { UpcomingRelease } from '@/lib/tmdb'
 import { DateStack } from '@/components/ui/DateStack'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { formatCountdown } from '@/components/home/format'
 import { parseTimeKey, timeKey } from '@/components/home/greeting'
@@ -107,9 +108,14 @@ export default function DashboardUpcomingWidget({ releases, watchlistKeys = [], 
       />
 
       {upcoming.length === 0 ? (
-        <p style={{ margin: 0, padding: '8px 4px', fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-muted)' }}>
-          No upcoming releases found.
-        </p>
+        // "Found" was misleading: this is also what renders when TMDB_API_KEY
+        // is unset, in which case nothing was looked for.
+        <EmptyState
+          size="compact"
+          icon={CalendarOff}
+          title="Nothing on the calendar"
+          hint="No wide releases in the next three months. Check back in a week or two."
+        />
       ) : (
         <ul className="flex flex-col" style={{ gap: 14, margin: 0, padding: 0, listStyle: 'none' }}>
           {upcoming.map((item, index) => {

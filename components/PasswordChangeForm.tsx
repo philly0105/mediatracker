@@ -97,7 +97,7 @@ export default function PasswordChangeForm() {
 
       <div className="space-y-3">
         <div>
-          <label htmlFor={`${fieldId}-new`} style={LABEL}>New Password</label>
+          <label htmlFor={`${fieldId}-new`} style={LABEL}>New password</label>
           <Input
             id={`${fieldId}-new`}
             type="password"
@@ -109,7 +109,7 @@ export default function PasswordChangeForm() {
           />
         </div>
         <div>
-          <label htmlFor={`${fieldId}-confirm`} style={LABEL}>Confirm Password</label>
+          <label htmlFor={`${fieldId}-confirm`} style={LABEL}>Confirm password</label>
           <Input
             id={`${fieldId}-confirm`}
             type="password"
@@ -130,7 +130,7 @@ export default function PasswordChangeForm() {
         {loading
           ? <Loader2 className="w-[18px] h-[18px] animate-spin" strokeWidth={1.8} aria-hidden="true" />
           : <KeyRound className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />}
-        <span>Update Password</span>
+        <span>Update password</span>
       </Button>
     </form>
   )

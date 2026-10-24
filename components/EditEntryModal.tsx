@@ -122,6 +122,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
           // The inset-card fill with the danger text: the rust tint it wore is
           // retired, and red on the sheet's own fill is what the tokens have.
           <p
+            role="alert"
             style={{
               margin: 0,
               padding: '8px 10px',
@@ -142,7 +143,7 @@ export default function EditEntryModal({ entry, onClose, onSaved }: Props) {
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={loading} style={{ flex: 1 }}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" /> : 'Save Changes'}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.8} aria-hidden="true" /> : 'Save changes'}
           </Button>
         </div>
 

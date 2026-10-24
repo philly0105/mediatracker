@@ -760,7 +760,7 @@ describe('LibraryView', () => {
       // Open edit modal on card and save
       fireEvent.click(screen.getByTitle('Edit entry'))
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
       })
 
       // The mutation fetch must have been issued (post-mutation current-type read)
@@ -1010,7 +1010,7 @@ describe('LibraryView', () => {
       // Open edit modal and save
       fireEvent.click(screen.getByTitle('Edit entry'))
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
       })
 
       // The mutation fetch fired and failed with 500, but pre-existing row remains in UI

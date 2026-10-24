@@ -42,7 +42,7 @@ export default function LoginForm({ signupEnabled }: { signupEnabled: boolean })
         />
       </div>
 
-      <AuthSubmit disabled={loading}>{loading ? 'Signing in…' : 'Sign In'}</AuthSubmit>
+      <AuthSubmit disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</AuthSubmit>
 
       {/* The links are 44px targets, so the row pulls back in to keep the
           text where a 13px line would sit. */}

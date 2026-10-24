@@ -19,7 +19,7 @@ import {
 import Link from 'next/link'
 import type { TmdbSearchResult, WatchlistPriority } from '@/types'
 import type { TmdbCastCredit, TmdbWatchProviders } from '@/lib/tmdb'
-import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
+import { PRIORITY_CONFIG, PRIORITY_LABELS } from '@/lib/priorityConfig'
 import SimilarModal from './SimilarModal'
 import AmbientBackdrop from './AmbientBackdrop'
 import { TitleHero } from '@/components/title/TitleHero'
@@ -32,12 +32,6 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ToastProvider'
 import { useModal } from '@/lib/useModal'
 import { isAlreadyWatchedError } from '@/lib/useMediaActions'
-
-const PRIORITY_LABELS: Record<WatchlistPriority, string> = {
-  must_watch: 'Must Watch',
-  want_to_watch: 'Want to Watch',
-  someday: 'Someday',
-}
 
 const PRIORITY_OPTIONS: WatchlistPriority[] = ['must_watch', 'want_to_watch', 'someday']
 
@@ -512,7 +506,7 @@ export default function MediaInfoModal({
             headingId={titleId}
             status={
               // Only once there's a watch entry to date and rate against. The
-              // ring is the one-shot pulse after "Mark as Watched".
+              // ring is the one-shot pulse after "Mark as watched".
               details?.isWatched && details.watch_entry ? (
                 <div
                   ref={ratingRowRef}
@@ -560,7 +554,7 @@ export default function MediaInfoModal({
             }
           />
 
-          {/* Watchlist Priority Switcher: the toolbar chip recipe FilterPills
+          {/* Watchlist priority switcher: the toolbar chip recipe FilterPills
               uses, with the spinner standing in for the icon while one saves.
               The chip's icon takes the accent on the pressed one, where
               FilterPills adds a dot: the fill alone is a 6% step. A bare .btn
@@ -569,8 +563,8 @@ export default function MediaInfoModal({
               pressed one opts out of the forced palette (a Canvas backplate
               would hide its label), so its accent icon goes HighlightText. */}
           {currentPriority && (
-            <section aria-label="Watchlist Priority">
-              <SectionHeader title="Watchlist Priority" />
+            <section aria-label="Watchlist priority">
+              <SectionHeader title="Watchlist priority" />
               <div className="flex flex-wrap gap-2">
                 {PRIORITY_OPTIONS.map((value) => {
                   const Icon = PRIORITY_CONFIG[value].icon
@@ -675,7 +669,7 @@ export default function MediaInfoModal({
                 ) : (
                   <Trash2 className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
                 )}
-                <span>Remove from Watchlist</span>
+                <span>Remove from watchlist</span>
               </Button>
             ) : (
               <Button
@@ -699,7 +693,7 @@ export default function MediaInfoModal({
               ) : (
                 <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               )}
-              <span>Add to Watchlist</span>
+              <span>Add to watchlist</span>
             </Button>
           )}
 
@@ -734,7 +728,7 @@ export default function MediaInfoModal({
               ) : (
                 <Check className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               )}
-              <span>Mark as Watched</span>
+              <span>Mark as watched</span>
             </Button>
           )}
 

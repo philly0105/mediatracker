@@ -45,16 +45,19 @@ export default async function SharedWatchedPage({ params }: { params: Promise<{ 
       <div className="glass-panel glass-rim mb-6 p-6 md:p-7">
         <PageHeader
           className="mb-0"
-          eyebrow="Shared list"
+          eyebrow="Shared with you"
           title="Watched"
-          sub={entries.length === 1 ? '1 title' : `${entries.length} titles`}
+          // The RPC does not return an owner name, so the framing has to say
+          // what the page is: a stranger following a pasted link saw only
+          // "Watched · 47 titles" with nothing to say whose, or of what.
+          sub={`A friend's watch history · ${entries.length} ${entries.length === 1 ? 'title' : 'titles'}`}
           action={<SharePosterFan posterUrls={entries.slice(0, 3).map((entry) => entry.media.poster_url)} />}
         />
       </div>
       {entries.length === 0 ? (
         <EmptyState
           icon={Clapperboard}
-          title="Nothing here yet."
+          title="Nothing here yet"
           hint="This list is shared, but the owner has not logged anything to it."
         />
       ) : (

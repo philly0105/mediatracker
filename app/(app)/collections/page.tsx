@@ -62,13 +62,13 @@ export default async function CollectionsPage() {
         sub="Explore movie franchises and series."
       />
 
-      {/* Your Franchises */}
+      {/* Your franchises */}
       <section aria-labelledby="your-franchises-title">
         <SectionHeader
           id="your-franchises-title"
           title={
             <span className="inline-flex items-center gap-2.5">
-              Your Franchises
+              Your franchises
               {activeCollections.length > 0 && (
                 <Badge className="tabular">{activeCollections.length}</Badge>
               )}
@@ -99,9 +99,9 @@ export default async function CollectionsPage() {
         )}
       </section>
 
-      {/* Popular Franchises */}
+      {/* Popular franchises */}
       <section aria-labelledby="popular-franchises-title">
-        <SectionHeader id="popular-franchises-title" title="Popular Franchises" />
+        <SectionHeader id="popular-franchises-title" title="Popular franchises" />
         <PopularCollectionsFeed />
       </section>
     </div>

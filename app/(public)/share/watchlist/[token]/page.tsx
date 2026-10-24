@@ -8,9 +8,8 @@ import { ShareFooter } from '@/components/ShareFooter'
 import { SharePosterCard, SharePosterFan } from '../../SharePosterCard'
 import AmbientBackdrop from '@/components/AmbientBackdrop'
 import { Bookmark } from 'lucide-react'
+import { PRIORITY_LABELS } from '@/lib/priorityConfig'
 import type { SharedWatchlistRow, Media, WatchlistPriority } from '@/types'
-
-const PRIORITY_LABELS = { must_watch: 'Must Watch', want_to_watch: 'Want to Watch', someday: 'Someday' }
 
 // A share link's whole job is to be pasted somewhere. Without this it previewed
 // in iMessage and Slack as the generic app description.
@@ -47,16 +46,19 @@ export default async function SharedWatchlistPage({ params }: { params: Promise<
       <div className="glass-panel glass-rim mb-6 p-6 md:p-7">
         <PageHeader
           className="mb-0"
-          eyebrow="Shared list"
+          eyebrow="Shared with you"
           title="Watchlist"
-          sub={items.length === 1 ? '1 title' : `${items.length} titles`}
+          // The RPC does not return an owner name, so the framing has to say
+          // what the page is: a stranger following a pasted link saw only
+          // "Watchlist · 47 titles" with nothing to say whose, or of what.
+          sub={`A friend's watchlist · ${items.length} ${items.length === 1 ? 'title' : 'titles'}`}
           action={<SharePosterFan posterUrls={items.slice(0, 3).map((item) => item.media.poster_url)} />}
         />
       </div>
       {items.length === 0 ? (
         <EmptyState
           icon={Bookmark}
-          title="Nothing here yet."
+          title="Nothing here yet"
           hint="This watchlist is shared, but the owner has not added anything to it."
         />
       ) : (

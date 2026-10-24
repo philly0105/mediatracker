@@ -11,8 +11,10 @@ export function ShareFooter() {
       className="mt-12 flex flex-col items-center pt-6 text-center"
       style={{ borderTop: '1px solid var(--border-divider)' }}
     >
-      <p style={{ margin: 0, fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)' }}>
-        Shared from
+      <p
+        style={{ margin: 0, maxWidth: '44ch', fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)' }}
+      >
+        Shared from DorfMovies — a private tracker for films and shows you’ve watched.
       </p>
       <Link
         href="/"

@@ -8,7 +8,7 @@ import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaModal } from '@/components/MediaModalProvider'
 import { useModal } from '@/lib/useModal'
 import { pickTonight } from '@/lib/tonightPick'
-import { PRIORITY_CONFIG } from '@/lib/priorityConfig'
+import { PRIORITY_CONFIG, PRIORITY_LABELS } from '@/lib/priorityConfig'
 import { FilterPills } from '@/components/FilterPills'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -89,7 +89,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
   }, [pool, budget])
 
   // Everything in the pool is already on the watchlist, so the modal's
-  // "Add to Watchlist" is deliberately a no-op rather than the provider default.
+  // "Add to watchlist" is deliberately a no-op rather than the provider default.
   function showPickDetails() {
     if (!pick?.media) return
     openMedia(mediaToResult(pick.media), { onAddToWatchlist: async () => {} })
@@ -168,11 +168,11 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
                 )}
 
                 <div className="min-w-0 flex-1 space-y-2">
-                  {/* Must Watch carries the accent; the other two are the
+                  {/* Must watch carries the accent; the other two are the
                       neutral chip. The retired rust and amber tints are gone. */}
                   <Badge tone={pick.priority === 'must_watch' ? 'accent' : 'neutral'}>
                     {PriorityIcon && <PriorityIcon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />}
-                    {pick.priority === 'must_watch' ? 'Must Watch' : pick.priority === 'want_to_watch' ? 'Want to Watch' : 'Someday'}
+                    {PRIORITY_LABELS[pick.priority]}
                   </Badge>
 
                   <h3
@@ -214,7 +214,7 @@ export default function TonightPickModal({ typeFilter, genreFilter, onClose }: P
           ) : (
             <EmptyState
               size="compact"
-              title="Nothing on your watchlist matches."
+              title="Nothing on your watchlist matches"
               hint={budget !== 'any' ? 'Try a longer time budget.' : undefined}
             />
           )}

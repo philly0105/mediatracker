@@ -40,16 +40,55 @@ export async function readCreatedEntry(
   return { id: entry.id, rating: typeof entry.rating === 'number' ? entry.rating : null }
 }
 
+// Nine call sites put `MediaActionError.message` straight into a toast, so
+// whatever comes out of here is user-facing copy. The API writes real copy for
+// the cases it expects (the 409 below is offered as a "log a rewatch?"), but a
+// transport status is not copy: a bookmark clicked on an expired session used
+// to toast the bare word `Unauthorized`, and a 500 `Request failed (500)` —
+// neither of which tells anyone what to do next.
+const STATUS_MESSAGES: Record<number, string> = {
+  401: 'Your session has expired. Reload the page and sign in again.',
+  403: 'You do not have access to that.',
+  429: 'Too many requests. Give it a minute and try again.',
+}
+
+/** A fault on our side, or a body we could not read. */
+export const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Try again in a moment.'
+
+/** A fetch that never reached a server: offline, DNS, a dropped connection. */
+export const NETWORK_ERROR_MESSAGE =
+  'Could not reach the server. Check your connection and try again.'
+
 // Best-effort read of the error body. An error response is not guaranteed to be
 // JSON; a parse failure must not mask the real status, so swallow it here.
 async function readError(res: Response): Promise<string> {
+  const mapped = STATUS_MESSAGES[res.status]
+  if (mapped) return mapped
+  // A 5xx body is a stack trace or an HTML error page as often as it is copy.
+  if (res.status >= 500) return SERVER_ERROR_MESSAGE
   let body: { error?: unknown } | null = null
   try {
     body = await res.json()
   } catch {
-    // fall through to the status-based fallback below
+    // fall through to the generic message below
   }
-  return typeof body?.error === 'string' ? body.error : `Request failed (${res.status})`
+  // The remaining 4xx are the ones the API phrases for people ("Already in your
+  // watch history"), so they are passed through as written.
+  return typeof body?.error === 'string' ? body.error : SERVER_ERROR_MESSAGE
+}
+
+// Every action goes through here so the network-failure path is written once.
+// `status: 0` marks "never reached a server", which no real response carries —
+// isAlreadyWatchedError and the other status checks stay exact.
+async function request(url: string, init: RequestInit): Promise<Response> {
+  let res: Response
+  try {
+    res = await fetch(url, init)
+  } catch {
+    throw new MediaActionError(NETWORK_ERROR_MESSAGE, 0)
+  }
+  if (!res.ok) throw new MediaActionError(await readError(res), res.status)
+  return res
 }
 
 export function useMediaActions(opts: { priority?: WatchlistPriority; onDone?: () => void } = {}) {
@@ -66,14 +105,11 @@ export function useMediaActions(opts: { priority?: WatchlistPriority; onDone?: (
     type: MediaType,
     overridePriority?: WatchlistPriority
   ) {
-    const res = await fetch('/api/watchlist', {
+    const res = await request('/api/watchlist', {
       method: 'POST',
       headers,
       body: JSON.stringify({ tmdb_id, type, priority: overridePriority ?? priority }),
     })
-    if (!res.ok) {
-      throw new MediaActionError(await readError(res), res.status)
-    }
     if (onDone) onDone()
     return res
   }
@@ -81,7 +117,7 @@ export function useMediaActions(opts: { priority?: WatchlistPriority; onDone?: (
   // `watchOpts`, not `opts`: the hook's own options object is already named that
   // in the enclosing scope, and shadowing it here reads like a bug.
   async function markWatched(tmdb_id: number, type: MediaType, watchOpts: { rewatch?: boolean } = {}) {
-    const res = await fetch('/api/watch', {
+    const res = await request('/api/watch', {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -91,22 +127,16 @@ export function useMediaActions(opts: { priority?: WatchlistPriority; onDone?: (
         rewatch: watchOpts.rewatch ?? false,
       }),
     })
-    if (!res.ok) {
-      throw new MediaActionError(await readError(res), res.status)
-    }
     if (onDone) onDone()
     return res
   }
 
   async function removeFromWatchlist(tmdb_id: number, type: MediaType) {
-    const res = await fetch('/api/watchlist', {
+    const res = await request('/api/watchlist', {
       method: 'DELETE',
       headers,
       body: JSON.stringify({ tmdb_id, type }),
     })
-    if (!res.ok) {
-      throw new MediaActionError(await readError(res), res.status)
-    }
     if (onDone) onDone()
     return res
   }

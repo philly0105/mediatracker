@@ -2,8 +2,9 @@
 import Image from 'next/image'
 import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
+import { Layers, Loader2 } from 'lucide-react'
 import type { TmdbCollectionSummary } from '@/types'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 const CACHE_KEY = 'popular-collections-cache'
@@ -98,10 +99,16 @@ export default function PopularCollectionsFeed() {
   }
 
   if (collections.length === 0) {
+    // Reached both when TMDB is down and when TMDB_API_KEY is unset, so this
+    // is a failure to load rather than a genuinely empty list — "found" said
+    // the opposite.
     return (
-      <p style={{ margin: 0, paddingLeft: 4, fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-muted)' }}>
-        No popular franchises found.
-      </p>
+      <EmptyState
+        size="compact"
+        icon={Layers}
+        title="Couldn't load popular franchises"
+        hint="This list comes from TMDB and will be back shortly."
+      />
     )
   }
 

@@ -12,6 +12,17 @@ export interface PriorityConfigItem {
   icon: LucideIcon
 }
 
+// The one spelling of each bucket. This used to be declared four times over
+// — the watchlist page, the details modal, the public share page and an
+// inline ternary in the pick modal, all Title Case — while the sidebar and the
+// dashboard spelled the same bucket in sentence case, so the dashboard said
+// "On Must watch" and the watchlist one click away said "Must Watch".
+export const PRIORITY_LABELS: Record<WatchlistPriority, string> = {
+  must_watch: 'Must watch',
+  want_to_watch: 'Want to watch',
+  someday: 'Someday',
+}
+
 export const PRIORITY_CONFIG: Record<WatchlistPriority, PriorityConfigItem> = {
   must_watch: {
     color: 'text-[var(--rust-300)] border-[var(--rust-tint-border)] bg-[var(--rust-tint-bg)]',

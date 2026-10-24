@@ -151,7 +151,7 @@ export default function SimilarModal({ tmdbId, type, onClose, onNavigateAway, co
               ))}
             </div>
           ) : items.length === 0 ? (
-            <EmptyState size="compact" title="No similar titles found." />
+            <EmptyState size="compact" title="No similar titles found" />
           ) : (
             // PosterCards in a grid: nothing in here blurs; the sheet already does.
             <div className={GRID}>

@@ -1,6 +1,6 @@
 'use client'
 import Image from 'next/image'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import type { TmdbSearchResult } from '@/types'
 import { ArrowLeft, User, AlertCircle, SearchX, CheckCircle2, Bookmark } from 'lucide-react'
@@ -33,33 +33,40 @@ export default function PersonPage() {
 
   const [profileUrl, setProfileUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // A flag, not a message: `err.message` on a network failure is the browser's
+  // own string ("Failed to fetch"), which was being rendered verbatim as the
+  // hint. The real message goes to the console, where it is useful.
+  const [error, setError] = useState(false)
 
   const { openMedia } = useMediaModal()
   // The app already knows which of these credits are in the library; not saying
   // so made the page feel disconnected from the rest of the product.
   const { watchedIds, watchlistIds, setWatchedIds, setWatchlistIds } = useLibraryIds()
 
-  useEffect(() => {
+  const fetchPersonData = useCallback(async () => {
     if (!name) return
-    async function fetchPersonData() {
-      try {
-        setLoading(true)
-        const res = await fetch(`/api/person?name=${encodeURIComponent(name)}`)
-        if (!res.ok) throw new Error('Failed to load person details')
-        const data = await res.json()
-        setTopMovies(data.topMovies || [])
-        setRecentMovies(data.recentMovies || [])
-        setAllMovies(data.allMovies || [])
-        setProfileUrl(data.profile_url || null)
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load person details')
-      } finally {
-        setLoading(false)
-      }
+    try {
+      setLoading(true)
+      setError(false)
+      const res = await fetch(`/api/person?name=${encodeURIComponent(name)}`)
+      if (!res.ok) throw new Error(`Failed to load person details (${res.status})`)
+      const data = await res.json()
+      setTopMovies(data.topMovies || [])
+      setRecentMovies(data.recentMovies || [])
+      setAllMovies(data.allMovies || [])
+      setProfileUrl(data.profile_url || null)
+    } catch (err: unknown) {
+      console.error(err)
+      setError(true)
+    } finally {
+      setLoading(false)
     }
-    fetchPersonData()
   }, [name])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPersonData()
+  }, [fetchPersonData])
 
   if (!name) return null
 
@@ -69,12 +76,17 @@ export default function PersonPage() {
         <SectionHeader title={title} style={{ marginBottom: 0 }} />
         {showSeeAllButton && items.length > 0 && (
           <Button variant="secondary" size="sm" onClick={() => setViewMode('all')}>
-            See All {allMovies.length} Credits
+            See all {allMovies.length} credits
           </Button>
         )}
       </div>
       {items.length === 0 ? (
-        <EmptyState size="compact" icon={SearchX} title="No items found" />
+        <EmptyState
+          size="compact"
+          icon={SearchX}
+          title="No credits to show"
+          hint="TMDB has no film or TV credits listed for this person."
+        />
       ) : (
         <div className={GRID}>
           {items.map((item) => {
@@ -149,11 +161,12 @@ export default function PersonPage() {
           </div>
         )}
         <div className="min-w-0 flex-1">
+          {/* The same responsive pair every other h1 wears (PageHeader): a
+              hardcoded 28px ran a long name to three lines at 390px. */}
           <h1
+            className="text-[length:var(--text-2xl)] leading-[30px] md:text-[length:var(--text-3xl)] md:leading-[34px]"
             style={{
               margin: 0,
-              fontSize: 'var(--text-3xl)',
-              lineHeight: '34px',
               fontWeight: 'var(--weight-heading)' as React.CSSProperties['fontWeight'],
               letterSpacing: 'var(--tracking-tight)',
               color: 'var(--text-primary)',
@@ -162,7 +175,7 @@ export default function PersonPage() {
             {name}
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 'var(--text-base)', lineHeight: '20px', color: 'var(--text-muted)' }}>
-            {viewMode === 'highlights' ? 'Top Rated and Most Recent Credits' : `All ${allMovies.length} Credits`}
+            {viewMode === 'highlights' ? 'Top rated and most recent credits' : `All ${allMovies.length} credits`}
           </p>
         </div>
       </Card>
@@ -177,15 +190,22 @@ export default function PersonPage() {
           </div>
         </div>
       ) : error ? (
-        <EmptyState tone="error" icon={AlertCircle} title="Something went wrong" hint={error} />
+        <EmptyState
+          tone="error"
+          icon={AlertCircle}
+          title="Couldn't load this filmography"
+          hint="We couldn't reach the film database just now. This is usually temporary."
+          actionLabel="Try again"
+          onAction={fetchPersonData}
+        />
       ) : viewMode === 'highlights' ? (
         <div className="space-y-10">
-          {renderMovieGrid(topMovies, 'Top Rated', true)}
-          {renderMovieGrid(recentMovies, 'Most Recent', false)}
+          {renderMovieGrid(topMovies, 'Top rated', true)}
+          {renderMovieGrid(recentMovies, 'Most recent', false)}
         </div>
       ) : (
         <div className="space-y-10">
-          {renderMovieGrid(allMovies, 'All Credits', false)}
+          {renderMovieGrid(allMovies, 'All credits', false)}
         </div>
       )}
     </div>

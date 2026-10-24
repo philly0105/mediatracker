@@ -64,7 +64,7 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
     vi.restoreAllMocks()
   })
 
-  it('gives an unwatched movie exactly one solid button, and it is Mark as Watched', async () => {
+  it('gives an unwatched movie exactly one solid button, and it is Mark as watched', async () => {
     mockDetails({ ...movie })
     render(
       <ToastProvider>
@@ -72,9 +72,9 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
       </ToastProvider>,
     )
 
-    await screen.findByText('Mark as Watched')
+    await screen.findByText('Mark as watched')
     // Before F-36 every one of these was Button's default `primary`.
-    expect(solidButtons()).toEqual(['Mark as Watched'])
+    expect(solidButtons()).toEqual(['Mark as watched'])
   })
 
   it('leaves nothing solid once the film has been watched', async () => {
@@ -91,7 +91,7 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
     expect(screen.getByText('Log rewatch').closest('button')).toHaveClass('btn-tone-success')
   })
 
-  it('styles Remove from Watchlist as destructive rather than primary', async () => {
+  it('styles Remove from watchlist as destructive rather than primary', async () => {
     mockDetails({ ...movie, isWatchlisted: true })
     render(
       <ToastProvider>
@@ -105,7 +105,7 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
       </ToastProvider>,
     )
 
-    const remove = (await screen.findByText('Remove from Watchlist')).closest('button')!
+    const remove = (await screen.findByText('Remove from watchlist')).closest('button')!
     // It used to be solid pine that only turned red on hover, via
     // `hover:!bg-rose-600` beating the component's own hover through !important.
     expect(remove).toHaveClass('btn-ghost')
@@ -113,7 +113,7 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
     expect(remove).not.toHaveClass('btn-primary')
   })
 
-  it('promotes Track Episodes over Mark as Watched for a trackable show', async () => {
+  it('promotes Track Episodes over Mark as watched for a trackable show', async () => {
     mockDetails({ ...show, media_id: 'media-1' })
     render(
       <ToastProvider>
@@ -123,7 +123,7 @@ describe('MediaInfoModal footer hierarchy (F-36)', () => {
 
     await screen.findByText('Track Episodes')
     expect(solidButtons()).toEqual(['Track Episodes'])
-    expect(screen.getByText('Mark as Watched').closest('button')).toHaveClass('btn-ghost')
+    expect(screen.getByText('Mark as watched').closest('button')).toHaveClass('btn-ghost')
   })
 
   it('never falls back to !important hover overrides', async () => {
