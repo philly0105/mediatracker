@@ -128,6 +128,22 @@ function apiUrl(path: string, params: Record<string, string> = {}) {
   return `${BASE}${path}?${qs}`
 }
 
+// TMDB authenticates with `api_key` in the query string, so every request URL
+// in this file is a credential. Vercel's runtime logs are retained, searchable
+// and routinely pasted into tickets, so nothing that might carry one reaches
+// console unscrubbed — including thrown errors, because fetch failures quote
+// the request URL in their message on some runtimes (and undici buries it in
+// `cause`, which console.error expands).
+function redactKey(value: unknown): string {
+  const text =
+    value instanceof Error
+      ? [value.stack ?? `${value.name}: ${value.message}`, value.cause ? `caused by: ${String(value.cause)}` : '']
+          .filter(Boolean)
+          .join('\n')
+      : String(value)
+  return text.replace(/([?&]api_key=)[^&\s'"]*/gi, '$1[redacted]')
+}
+
 async function fetchTmdb(url: string, revalidateSeconds: number, timeoutMs = 8000): Promise<Response> {
   try {
     const signal = AbortSignal.timeout(timeoutMs)
@@ -755,12 +771,14 @@ export async function fetchUpcomingReleases(options?: UpcomingOptions): Promise<
     try {
       const res = await fetch(url, { signal: controller.signal, next: { revalidate: CACHE_12H } })
       if (!res.ok) {
-        console.error(`Error fetching upcoming releases: TMDB responded ${res.status} for ${url}`)
+        // The pathname alone says which endpoint failed; the query string is
+        // where the api_key lives, so it never goes into the log line.
+        console.error(`Error fetching upcoming releases: TMDB responded ${res.status} for ${new URL(url).pathname}`)
         return { results: [] }
       }
       return await res.json()
     } catch (err) {
-      console.error('Error fetching upcoming releases:', err)
+      console.error('Error fetching upcoming releases:', redactKey(err))
       return { results: [] }
     } finally {
       clearTimeout(timeout)
@@ -861,7 +879,7 @@ export async function fetchUpcomingReleases(options?: UpcomingOptions): Promise<
     return [...movies, ...shows, ...followedReleases]
       .sort((a, b) => a.full_release_date.localeCompare(b.full_release_date))
   } catch (err) {
-    console.error('Error fetching upcoming releases:', err)
+    console.error('Error fetching upcoming releases:', redactKey(err))
     return []
   }
 }

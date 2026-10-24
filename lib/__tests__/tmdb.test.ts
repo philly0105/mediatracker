@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes, pickLogo, fetchTmdbRecommendations } from '@/lib/tmdb'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { searchTmdb, searchTmdbPeople, fetchTmdbDetails, getCollectionDetails, getPopularCollections, discoverStreaming, showRuntimeMins, mapSeasonEpisodes, fetchTmdbSeasonEpisodes, pickLogo, fetchTmdbRecommendations, fetchUpcomingReleases } from '@/lib/tmdb'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -667,5 +667,67 @@ describe('fetchTmdbSeasonEpisodes', () => {
   it('throws when TMDB rejects the request', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 })
     await expect(fetchTmdbSeasonEpisodes(1396, 99)).rejects.toThrow('TMDB season failed: 404')
+  })
+})
+
+// Vercel's runtime logs are retained, searchable and routinely pasted into
+// tickets, and TMDB's credential rides in the query string of every request
+// URL this module builds — so a log line that quotes a URL is a credential
+// leak. fetchUpcomingReleases is the one place that logged one.
+describe('fetchUpcomingReleases log hygiene', () => {
+  const KEY = 'super-secret-tmdb-key'
+
+  beforeEach(() => { vi.stubEnv('TMDB_API_KEY', KEY) })
+  afterEach(() => { vi.unstubAllEnvs() })
+
+  function loggedText(spy: ReturnType<typeof vi.spyOn>) {
+    return spy.mock.calls.map((args: unknown[]) => args.map(String).join(' ')).join('\n')
+  }
+
+  it('names the failing endpoint without the api_key when TMDB rejects a page', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockFetch.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) })
+
+    await fetchUpcomingReleases()
+
+    // The fetches really did carry the key, so the assertion below is not
+    // passing by accident on a module that never saw it.
+    expect(String(mockFetch.mock.calls[0][0])).toContain(KEY)
+    const logged = loggedText(spy)
+    expect(spy).toHaveBeenCalled()
+    expect(logged).not.toContain(KEY)
+    expect(logged).not.toContain('api_key')
+    // Still says which endpoint failed, which is the reason the line exists.
+    expect(logged).toContain('/3/discover/movie')
+    expect(logged).toContain('429')
+  })
+
+  it('redacts the api_key out of a thrown fetch error', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // undici quotes the request URL in the failure on some runtimes, which is
+    // how the key would reach the log through the catch rather than the !ok.
+    mockFetch.mockRejectedValue(
+      new TypeError(`request to https://api.themoviedb.org/3/discover/movie?api_key=${KEY}&page=1 failed`)
+    )
+
+    await fetchUpcomingReleases()
+
+    const logged = loggedText(spy)
+    expect(spy).toHaveBeenCalled()
+    expect(logged).not.toContain(KEY)
+    expect(logged).toContain('api_key=[redacted]')
+  })
+
+  it('redacts a key hidden in an error cause', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockFetch.mockRejectedValue(
+      Object.assign(new TypeError('fetch failed'), {
+        cause: new Error(`connect ECONNREFUSED for /3/discover/tv?api_key=${KEY}`),
+      })
+    )
+
+    await fetchUpcomingReleases()
+
+    expect(loggedText(spy)).not.toContain(KEY)
   })
 })
