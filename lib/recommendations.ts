@@ -1,4 +1,5 @@
 import type { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/fetchAllRows'
 import { discoverByGenre, fetchTmdbRecommendations, fetchTmdbTrending } from '@/lib/tmdb'
 import type { MediaType, TmdbSearchResult } from '@/types'
 
@@ -71,17 +72,58 @@ export async function fetchSeeds(
   return []
 }
 
-// Everything already watched or watchlisted, which a recommendation must not repeat.
+// PostgREST returns an embedded resource as an object or a single-element
+// array depending on the relationship, so accept both, as every other join in
+// the app does.
+type JoinedTmdbId = { media: { tmdb_id: number } | { tmdb_id: number }[] | null }
+
+function tmdbIds(rows: JoinedTmdbId[]): number[] {
+  return rows.flatMap((row) => {
+    const media = Array.isArray(row.media) ? row.media[0] : row.media
+    return typeof media?.tmdb_id === 'number' ? [media.tmdb_id] : []
+  })
+}
+
+/**
+ * Everything already watched or watchlisted, which a recommendation must not
+ * repeat.
+ *
+ * Both reads are paged. This is an exclusion set, so PostgREST's silent
+ * 1000-row cap does not shorten the answer here, it makes it wrong: past a
+ * thousand entries the user was recommended films they had already seen, while
+ * /api/library/ids — which is paged — painted a ✓ on the very same cards. The
+ * `.order('id')` is the unique tiebreak fetchAllRows requires; without one the
+ * windows duplicate and skip.
+ *
+ * A failed read throws for the same reason. An incomplete exclusion set and a
+ * truncated one are the same wrong answer, and /api/recommendations reports a
+ * 500 to a page that has an error card for it, while Home's card already
+ * catches to null.
+ */
 async function fetchLibraryTmdbIds(supabase: ServerSupabase, userId: string): Promise<Set<number>> {
-  const [{ data: watchedList }, { data: watchlistList }] = await Promise.all([
-    supabase.from('watch_entries').select('media!inner(tmdb_id)').eq('user_id', userId),
-    supabase.from('watchlist_items').select('media!inner(tmdb_id)').eq('user_id', userId),
+  const [watched, watchlist] = await Promise.all([
+    fetchAllRows<JoinedTmdbId>((from, to) =>
+      supabase
+        .from('watch_entries')
+        .select('media!inner(tmdb_id)')
+        .eq('user_id', userId)
+        .order('id')
+        .range(from, to)
+    ),
+    fetchAllRows<JoinedTmdbId>((from, to) =>
+      supabase
+        .from('watchlist_items')
+        .select('media!inner(tmdb_id)')
+        .eq('user_id', userId)
+        .order('id')
+        .range(from, to)
+    ),
   ])
 
-  type JoinedMediaTmdbId = { media: { tmdb_id: number } }
-  const watchedIds = ((watchedList ?? []) as unknown as JoinedMediaTmdbId[]).map((w) => w.media.tmdb_id)
-  const watchlistIds = ((watchlistList ?? []) as unknown as JoinedMediaTmdbId[]).map((w) => w.media.tmdb_id)
-  return new Set([...watchedIds, ...watchlistIds])
+  const error = watched.error ?? watchlist.error
+  if (error) throw new Error(`Could not read the library to exclude it: ${error}`)
+
+  return new Set([...tmdbIds(watched.rows), ...tmdbIds(watchlist.rows)])
 }
 
 // TMDB's recommendations for each seed, merged: a title recommended by several

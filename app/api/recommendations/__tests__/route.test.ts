@@ -32,6 +32,9 @@ function fakeSupabase({ watched = [] as number[], watchlist = [] as number[], lo
         order: () => builder,
         gte: () => { tier = 'loved'; return builder },
         not: () => { tier = 'rated'; return builder },
+        // The two id reads are paged through fetchAllRows; these fixtures are
+        // all well under one page, so the window never matters here.
+        range: () => builder,
         then: (resolve: (value: { data: unknown[] }) => void) => {
           if (table === 'watchlist_items') return resolve({ data: watchlist.map((tmdb_id) => ({ media: { tmdb_id } })) })
           if (select === 'media!inner(tmdb_id)') return resolve({ data: watched.map((tmdb_id) => ({ media: { tmdb_id } })) })

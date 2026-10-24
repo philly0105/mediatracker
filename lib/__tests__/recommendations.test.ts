@@ -11,11 +11,26 @@ vi.mock('@/lib/tmdb', () => ({
 
 // Answers the watched / watchlisted id reads and the seed tiers (told apart by
 // the filter each tier adds), like the route's own tests.
-function fakeSupabase({ watched = [] as number[], watchlist = [] as number[], loved = [] as SeedRow[], recent = [] as SeedRow[] }) {
+//
+// The two id reads honour .range() the way PostgREST does, capped at the same
+// 1000 rows it caps a response at. A fake that served every row regardless
+// could not tell a paged read from an unpaged one, which is the whole point of
+// the exclusion-set test below.
+const POSTGREST_MAX_ROWS = 1000
+
+function fakeSupabase({
+  watched = [] as number[],
+  watchlist = [] as number[],
+  loved = [] as SeedRow[],
+  recent = [] as SeedRow[],
+  readError = null as string | null,
+}) {
   return {
     from: (table: string) => {
       let select = ''
       let tier: 'loved' | 'rated' | 'recent' = 'recent'
+      let first = 0
+      let last = POSTGREST_MAX_ROWS - 1
       const builder = {
         select: (s: string) => { select = s; return builder },
         eq: () => builder,
@@ -23,9 +38,18 @@ function fakeSupabase({ watched = [] as number[], watchlist = [] as number[], lo
         order: () => builder,
         gte: () => { tier = 'loved'; return builder },
         not: () => { tier = 'rated'; return builder },
-        then: (resolve: (value: { data: unknown[] }) => void) => {
-          if (table === 'watchlist_items') return resolve({ data: watchlist.map((tmdb_id) => ({ media: { tmdb_id } })) })
-          if (select === 'media!inner(tmdb_id)') return resolve({ data: watched.map((tmdb_id) => ({ media: { tmdb_id } })) })
+        range: (from: number, to: number) => {
+          first = from
+          last = Math.min(to, from + POSTGREST_MAX_ROWS - 1)
+          return builder
+        },
+        then: (resolve: (value: { data: unknown[] | null; error?: { message: string } }) => void) => {
+          const window = (ids: number[]) =>
+            ids.slice(first, last + 1).map((tmdb_id) => ({ media: { tmdb_id } }))
+          const isIdRead = table === 'watchlist_items' || select === 'media!inner(tmdb_id)'
+          if (isIdRead && readError) return resolve({ data: null, error: { message: readError } })
+          if (table === 'watchlist_items') return resolve({ data: window(watchlist) })
+          if (select === 'media!inner(tmdb_id)') return resolve({ data: window(watched) })
           resolve({ data: tier === 'loved' ? loved : tier === 'rated' ? [] : recent })
         },
       }
@@ -85,6 +109,33 @@ describe('getTopRecommendation', () => {
     const supabase = fakeSupabase({ watchlist: [225171], loved: [seed(95396, 5, 'Severance')] })
     vi.mocked(fetchTmdbRecommendations).mockResolvedValue([rec(225171, 'Pluribus')])
     expect(await getTopRecommendation(supabase, 'user-1')).toBeNull()
+  })
+
+  it('excludes a watched title past PostgREST\'s 1000-row cap', async () => {
+    // The exclusion set is the one read where a silent truncation is a wrong
+    // answer rather than a short list: unpaged, everything from the 1001st
+    // entry on was invisible here and got recommended back to the user, with
+    // a ✓ already painted on it by /api/library/ids.
+    const watched = Array.from({ length: 1001 }, (_, i) => 1000 + i)
+    const supabase = fakeSupabase({ watched, loved: [seed(95396, 5, 'Severance')] })
+    vi.mocked(fetchTmdbRecommendations).mockResolvedValue([rec(2000, 'Already watched'), rec(42, 'Genuinely new')])
+
+    expect(await getTopRecommendation(supabase, 'user-1')).toMatchObject({ tmdb_id: 42 })
+  })
+
+  it('pages the watchlist read too', async () => {
+    const watchlist = Array.from({ length: 1200 }, (_, i) => 5000 + i)
+    const supabase = fakeSupabase({ watchlist, loved: [seed(95396, 5, 'Severance')] })
+    vi.mocked(fetchTmdbRecommendations).mockResolvedValue([rec(6199, 'Already shortlisted'), rec(42, 'Genuinely new')])
+
+    expect(await getTopRecommendation(supabase, 'user-1')).toMatchObject({ tmdb_id: 42 })
+  })
+
+  it('refuses to answer when the library read fails', async () => {
+    // Half an exclusion set recommends films the user has already seen, which
+    // is worse than the page's error card.
+    const supabase = fakeSupabase({ readError: 'connection reset', loved: [seed(95396, 5, 'Severance')] })
+    await expect(getTopRecommendation(supabase, 'user-1')).rejects.toThrow('connection reset')
   })
 
   it('survives a seed whose TMDB request fails', async () => {
