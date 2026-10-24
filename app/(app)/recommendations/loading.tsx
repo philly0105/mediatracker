@@ -7,17 +7,20 @@ import { RecommendationFeedSkeleton } from '@/components/grid/RecommendationFeed
 // it loads.
 export default function RecommendationsLoading() {
   return (
-    <div className="space-y-6 pb-12">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-3">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-8 w-52" />
-          <Skeleton className="h-4 w-80 max-w-full" />
+    <div role="status" aria-busy="true" className="space-y-6 pb-12">
+      <span className="sr-only">Loading your recommendations…</span>
+      <div aria-hidden="true" className="space-y-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-3">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-8 w-52" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+          <Skeleton className="h-11 w-28 rounded-[var(--radius-pill)]" />
         </div>
-        <Skeleton className="h-11 w-28 rounded-[var(--radius-pill)]" />
-      </div>
 
-      <RecommendationFeedSkeleton />
+        <RecommendationFeedSkeleton />
+      </div>
     </div>
   )
 }

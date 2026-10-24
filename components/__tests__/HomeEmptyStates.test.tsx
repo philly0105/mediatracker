@@ -21,7 +21,7 @@ describe('EmptyHero', () => {
     const { container } = render(<EmptyHero recent={null} />)
 
     expect(screen.getByRole('heading', { name: 'Pick something to watch' })).toBeInTheDocument()
-    expect(screen.getByText('Nothing in progress')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to DorfMovies')).toBeInTheDocument()
     expect(container.querySelector('img')).toBeNull()
   })
 })
@@ -32,6 +32,6 @@ describe('Home loading state', () => {
 
     const status = screen.getByRole('status')
     expect(status).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByText('Loading your dashboard...')).toHaveClass('sr-only')
+    expect(screen.getByText('Loading your dashboard…')).toHaveClass('sr-only')
   })
 })

@@ -4,7 +4,7 @@ import { HeroSectionSkeleton, PanelSkeleton } from '@/components/home/HomeSkelet
 export default function DashboardLoading() {
   return (
     <div role="status" aria-busy="true" className="space-y-6">
-      <span className="sr-only">Loading your dashboard...</span>
+      <span className="sr-only">Loading your dashboard…</span>
       <div aria-hidden="true" className="space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between" style={{ padding: '4px 0 0 4px' }}>

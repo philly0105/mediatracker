@@ -61,28 +61,3 @@ export function PosterGridSkeleton({
     </div>
   )
 }
-
-/** A stack of horizontal rows — lists, seasons, calendar entries — each on the
- *  row fill they will become. The row's hover lift is for clickable rows, and
- *  a placeholder is not one. */
-export function RowListSkeleton({ count = 6 }: { count?: number }) {
-  return (
-    <div className="space-y-8">
-      <div className="space-y-3">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-8 w-56" />
-      </div>
-      <div className="space-y-3">
-        {Array.from({ length: count }, (_, i) => (
-          <div key={i} className="glass-row hover:bg-[var(--glass-card)] flex gap-4 p-3">
-            <Skeleton className="w-16 h-24 shrink-0 rounded-[var(--radius-md)]" />
-            <div className="flex-1 space-y-3 py-1">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-3 w-1/4" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
