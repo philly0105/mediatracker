@@ -206,6 +206,81 @@ describe('EpisodeTracker unaired episodes', () => {
   })
 })
 
+describe('EpisodeTracker season-wide mark before the air dates arrive', () => {
+  beforeEach(() => { onProgressChange.mockReset() })
+
+  it('holds the button back until the episode metadata has settled', () => {
+    // The unaired guard reads episodeMap, which fills from /api/episodes/meta
+    // after mount. While it is empty the guard passes everything, so on a slow
+    // connection one click marked episodes airing next month.
+    const { rerender } = render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={[]}
+        episodes={[]}
+        episodesSettled={false}
+        onProgressChange={onProgressChange}
+      />
+    )
+
+    const button = screen.getByRole('button', { name: 'Mark whole season watched' })
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(onProgressChange).not.toHaveBeenCalled()
+
+    rerender(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={[]}
+        episodes={[episode(1, 'Pilot', '2008-01-20')]}
+        episodesSettled
+        onProgressChange={onProgressChange}
+      />
+    )
+    expect(screen.getByRole('button', { name: 'Mark whole season watched' })).toBeEnabled()
+  })
+
+  it('leaves unmarking available, since it never consults an air date', () => {
+    render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={watched(1, 2, 3, 4, 5)}
+        episodes={[]}
+        episodesSettled={false}
+        onProgressChange={onProgressChange}
+      />
+    )
+    const button = screen.getByRole('button', { name: 'Unmark whole season' })
+    expect(button).toBeEnabled()
+    fireEvent.click(button)
+    expect(onProgressChange).toHaveBeenCalledWith('s1', [1, 2, 3, 4, 5], false)
+  })
+})
+
+describe('EpisodeTracker after a season is shortened', () => {
+  beforeEach(() => { onProgressChange.mockReset() })
+
+  // TMDB revised this one down from 6 episodes to 4; the progress rows for 5
+  // and 6 are still stored.
+  const shortened: Season = { id: 's1', media_id: 'm1', season_number: 1, episode_count: 4 }
+
+  it('counts only the episodes the season still has', () => {
+    render(
+      <EpisodeTracker seasons={[shortened]} progress={watched(1, 2, 3, 4, 5, 6)} onProgressChange={onProgressChange} />
+    )
+    expect(screen.getByText('4/4')).toBeInTheDocument()
+    expect(screen.queryByText('6/4')).not.toBeInTheDocument()
+  })
+
+  it('does not count a stale row as progress toward a season it is not in', () => {
+    render(
+      <EpisodeTracker seasons={[shortened]} progress={watched(5, 6)} onProgressChange={onProgressChange} />
+    )
+    expect(screen.getByText('0/4')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mark whole season watched' })).toBeInTheDocument()
+  })
+})
+
 describe('EpisodeTracker default open season', () => {
   afterEach(() => { vi.useRealTimers() })
 

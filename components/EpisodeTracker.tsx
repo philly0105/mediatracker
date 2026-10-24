@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import type { Season, Episode, EpisodeProgress } from '@/types'
 import { Check } from 'lucide-react'
 import { formatAirDate, isUnaired } from '@/lib/formatDate'
-import { findNextUp } from '@/lib/nextUp'
+import { findNextUp, seasonProgress } from '@/lib/nextUp'
 import { Button } from '@/components/ui/Button'
 import { MediaRow } from '@/components/ui/MediaRow'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
@@ -16,6 +16,12 @@ interface Props {
   /** Titles and air dates, when they have been fetched. Absent is normal — the
    *  rows fall back to numbers, which is all they could ever render before. */
   episodes?: Episode[]
+  /** Whether `episodes` is still on its way. The season-wide mark checks air
+   *  dates to skip episodes that have not aired, and an empty map makes that
+   *  check pass everything, so on a slow connection one click could claim
+   *  episodes airing next month. Defaults to true for callers that already
+   *  have their metadata when they render. */
+  episodesSettled?: boolean
   onProgressChange: (seasonId: string, episode: number | number[], watched: boolean) => void
 }
 
@@ -43,7 +49,7 @@ function cascadeLabel(
     : `Unmark S${seasonNumber} E${ep}–E${episodeCount}${suffix}`
 }
 
-export default function EpisodeTracker({ seasons, progress, episodes, onProgressChange }: Props) {
+export default function EpisodeTracker({ seasons, progress, episodes, episodesSettled = true, onProgressChange }: Props) {
   const [open, setOpen] = useState<string | null>(() => {
     const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
     return findNextUp(seasons, watchedKeys)?.season_id ?? seasons[0]?.id ?? null
@@ -101,7 +107,10 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
   // toward the header fraction or whether a season reads as complete.
   // A season with no metadata at all still counts everything, as before.
   function seasonCounts(s: Season) {
-    const watchedCount = progress.filter(p => p.season_id === s.id).length
+    // seasonProgress counts over 1..episode_count rather than counting stored
+    // rows: a season TMDB has revised down from 26 episodes to 24 still has
+    // the two dropped rows in episode_progress, and the header read "26/24".
+    const { watched: watchedCount } = seasonProgress(s, watchedSet)
     const unairedCount = Array.from({ length: s.episode_count }, (_, i) => i + 1)
       .filter(e => isUnaired(episodeMap.get(`${s.id}-${e}`)?.air_date ?? null)).length
     const airedCount = unairedCount > 0 ? s.episode_count - unairedCount : s.episode_count
@@ -114,6 +123,10 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
   if (!season) return null
 
   const { watchedCount, airedCount, allWatched } = seasonCounts(season)
+  // Until the air dates land, handleSeasonToggle's unaired guard has nothing
+  // to check against and silently passes everything. Unmarking never consults
+  // air dates, so only the marking direction waits.
+  const markBlocked = !allWatched && !episodesSettled
 
   return (
     <div className="space-y-4">
@@ -157,7 +170,13 @@ export default function EpisodeTracker({ seasons, progress, episodes, onProgress
             {watchedCount}/{airedCount}
           </span>
         </div>
-        <Button variant="secondary" size="sm" onClick={() => handleSeasonToggle(season, allWatched)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={markBlocked}
+          title={markBlocked ? 'Checking which episodes have aired...' : undefined}
+          onClick={() => handleSeasonToggle(season, allWatched)}
+        >
           {allWatched ? 'Unmark whole season' : 'Mark whole season watched'}
         </Button>
       </div>

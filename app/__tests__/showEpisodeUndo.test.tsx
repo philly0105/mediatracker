@@ -150,6 +150,63 @@ describe('episode tracker cascade undo and client interactions', () => {
     expect(screen.getByText('Could not update episode progress.')).toBeInTheDocument()
   })
 
+  // Marking used to have no failure path at all: a non-ok response fell
+  // through the `if (res.ok)` and a rejection became an unhandled one, because
+  // EpisodeTracker calls this as a floating promise. Someone binging a season
+  // clicked E1 through E10, saw nothing happen, and saved nothing.
+  const unwatchedShow: ShowDetails = { ...initialDetails, progress: [] }
+
+  function markFails(failure: { ok: false; status: number } | 'reject') {
+    mockFetch.mockImplementation(async (url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = String(url)
+      if (urlStr.includes('/api/episodes/meta')) return { ok: true, json: async () => ({ episodes: [] }) }
+      if (urlStr.includes('/api/episodes') && init?.method === 'POST') {
+        if (failure === 'reject') throw new TypeError('Failed to fetch')
+        return { ...failure, json: async () => ({ error: 'nope' }) }
+      }
+      return { ok: true, json: async () => ({ ok: true }) }
+    })
+  }
+
+  it('says so when the server refuses to save an episode', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    renderShowDetailClient(unwatchedShow)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    markFails({ ok: false, status: 500 })
+    await act(async () => { fireEvent.click(screen.getByText('E1')) })
+
+    expect(screen.getByText('Could not update episode progress.')).toBeInTheDocument()
+    // Nothing was ever applied locally, so there is nothing to roll back.
+    expect(screen.getByText('0/5')).toBeInTheDocument()
+  })
+
+  it('says so when the request never reaches the server', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    renderShowDetailClient(unwatchedShow)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    markFails('reject')
+    await act(async () => { fireEvent.click(screen.getByText('E2')) })
+
+    expect(screen.getByText('Could not update episode progress.')).toBeInTheDocument()
+    expect(screen.getByText('0/5')).toBeInTheDocument()
+  })
+
+  it('counts the hero against the season as it is now, not as it was', async () => {
+    // TMDB revised this season down from 5 episodes to 3; the rows for 4 and 5
+    // are still stored, and the hero used to read "5/3 episodes".
+    const shortened: ShowDetails = {
+      ...initialDetails,
+      seasons: [{ id: SEASON_ID, media_id: 'm1', season_number: 1, episode_count: 3 }],
+    }
+    renderShowDetailClient(shortened)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    expect(screen.getByText(/3\/3 episodes/)).toBeInTheDocument()
+    expect(screen.queryByText(/5\/3 episodes/)).not.toBeInTheDocument()
+  })
+
   it('marks show as watched and refreshes entry with only=entry', async () => {
     renderShowDetailClient()
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })

@@ -51,6 +51,10 @@ export default function ShowDetailClient({
   const seasons = initialDetails.seasons
   const [progress, setProgress] = useState<EpisodeProgress[]>(initialDetails.progress)
   const [episodes, setEpisodes] = useState<Episode[]>([])
+  // Settled, not successful: once the fetch is done the tracker knows the air
+  // dates are as good as they will get, and can stop holding back the
+  // season-wide mark that guards on them.
+  const [episodesSettled, setEpisodesSettled] = useState(false)
   const [entry, setEntry] = useState<WatchEntry | null>(initialDetails.entry)
   const [rating, setRating] = useState<number | null>(initialDetails.entry?.rating ?? null)
   const [markingWatched, setMarkingWatched] = useState(false)
@@ -76,6 +80,7 @@ export default function ShowDetailClient({
       .then((res) => (res.ok ? res.json() : { episodes: [] }))
       .then((data) => { if (!cancelled) setEpisodes(data.episodes ?? []) })
       .catch((err) => console.error(err))
+      .finally(() => { if (!cancelled) setEpisodesSettled(true) })
     return () => { cancelled = true }
   }, [mediaId])
 
@@ -153,12 +158,22 @@ export default function ShowDetailClient({
     if (episodesToUpdate.length === 0) return
 
     if (watched) {
-      const res = await fetch('/api/episodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ season_id: seasonId, episodes: episodesToUpdate }),
-      })
-      if (res.ok) {
+      // Both failures used to be silent: a non-ok response (401 on an expired
+      // session, 500, or 400 from a stale episode_count) fell through the
+      // `if`, and a network rejection became an unhandled rejection, because
+      // this is called as a floating promise from EpisodeTracker. Someone
+      // binging a season clicked E1 through E10, saw nothing change, assumed
+      // lag, and saved nothing. Reported the same way the delete below is.
+      //
+      // Nothing to roll back here — the rows are only added once the server
+      // has confirmed them.
+      try {
+        const res = await fetch('/api/episodes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ season_id: seasonId, episodes: episodesToUpdate }),
+        })
+        if (!res.ok) throw new Error('Failed to save episodes')
         const { progress: rows } = await res.json()
         const newRows = Array.isArray(rows) ? rows : (rows ? [rows] : [])
         setProgress(prev => {
@@ -171,6 +186,9 @@ export default function ShowDetailClient({
           }
           return next
         })
+      } catch (err) {
+        console.error(err)
+        toast('Could not update episode progress.', { tone: 'error' })
       }
     } else {
       // Un-checking cascades: clicking E1 of a finished season removes every
@@ -232,15 +250,19 @@ export default function ShowDetailClient({
     )
   }
 
+  const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
   const total = seasons.reduce((sum, s) => sum + s.episode_count, 0)
-  const watched = progress.length
+  // Counted through seasonProgress rather than progress.length: when TMDB
+  // revises a season down — 26 episodes to 24 — the rows for the two that went
+  // away are still stored, and counting raw rows read "26/24" in the hero and
+  // overran the bar. seasonProgress only ever counts 1..episode_count.
+  const watched = seasons.reduce((sum, s) => sum + seasonProgress(s, watchedKeys).watched, 0)
   // "3h 42m to go" only makes sense once there is a runtime to multiply against
   // and at least one episode still unwatched.
   const minutesLeft = total > watched && media.runtime_mins != null
     ? (total - watched) * media.runtime_mins
     : null
 
-  const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
   const nextUp = findNextUp(seasons, watchedKeys)
   const nextUpMeta = nextUp
     ? episodes.find(e => e.season_id === nextUp.season_id && e.episode_number === nextUp.episode_number)
@@ -388,6 +410,7 @@ export default function ShowDetailClient({
             seasons={seasons}
             progress={progress}
             episodes={episodes}
+            episodesSettled={episodesSettled}
             onProgressChange={handleProgressChange}
           />
         </Card>
