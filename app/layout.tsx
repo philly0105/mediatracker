@@ -31,6 +31,13 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
   },
+  // A private, invite-only tracker: nothing in it belongs in an index. A
+  // robots.txt Disallow only stops the crawl — a URL discovered elsewhere can
+  // still be listed from that alone — so the directive goes on the page. The
+  // two /share pages set their own `robots`; metadata merge replaces a nested
+  // object at the deepest segment that defines one, so theirs wins (with the
+  // same values) and stays self-documenting next to their token comment.
+  robots: { index: false, follow: false },
 }
 
 export const viewport: Viewport = {
@@ -54,6 +61,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           body rule outranks any Tailwind utility set here, so keeping both was
           only ever a way for the two to disagree. */}
       <body className={`${inter.className} min-h-screen relative antialiased`}>
+        {/* First in the tab order, hidden until focused. Without it a keyboard
+            user crosses the wordmark, the search trigger, nine nav items and
+            up to five "Must watch" rows before reaching the page. The target
+            is each group layout's <main id="main" tabIndex={-1}> — the
+            tabindex is what lets focus actually land there, rather than the
+            link only scrolling. `.skip-link` in globals.css does the rest. */}
+        <a href="#main" className="skip-link sr-only focus:not-sr-only">
+          Skip to content
+        </a>
+
         {/* The one fixed layer behind the app: the featured title's backdrop
             blurred under a tint, or the tint alone when nothing has registered
             one. Pages register their art through <AmbientBackdrop>; see

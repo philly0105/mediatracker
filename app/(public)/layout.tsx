@@ -7,7 +7,9 @@
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative z-10 flex min-h-screen flex-col">
-      <main className="w-full flex-1 px-4 py-6 md:p-[var(--shell-pad)]">
+      {/* id and tabindex: the skip link in app/layout.tsx targets this, and
+          without the tabindex focus stays on the link after the jump. */}
+      <main id="main" tabIndex={-1} className="w-full flex-1 px-4 py-6 md:p-[var(--shell-pad)]">
         <div className="mx-auto w-full max-w-[var(--content-max)]">
           {children}
         </div>

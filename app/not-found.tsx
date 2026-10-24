@@ -1,16 +1,26 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import { Compass } from 'lucide-react'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 
+// Without this every 404 fell back to the bare "DorfMovies" default, so a
+// mistyped URL was indistinguishable from the dashboard in history and tabs.
+export const metadata: Metadata = { title: 'Page not found' }
+
 // The SectionError composition on a glass panel: icon in a glass circle,
-// title, secondary line, one primary action. It renders in two places —
-// inside the signed-in shell when a page calls notFound(), and bare in the
-// root layout for a URL that matches no route — so the frame clears the
-// mobile shell's bars (5rem over, 6rem under) rather than taking the viewport.
+// title, secondary line, one primary action. The frame clears the mobile
+// shell's bars (5rem over, 6rem under) rather than taking the whole viewport.
+//
+// <main>, not a <div>. This file serves two paths — a URL matching no route,
+// which Next builds as the root layout plus this page alone, and a page
+// calling notFound(), which the root segment's fallback boundary catches and
+// renders in place of everything under that same root layout. Either way the
+// group layout is gone, and with it the app's only <main>: the 404 had no
+// landmark and no navigation at all.
 export default function NotFound() {
   return (
-    <div className="flex min-h-[calc(100dvh-11rem)] items-center justify-center p-4">
+    <main id="main" tabIndex={-1} className="flex min-h-[calc(100dvh-11rem)] items-center justify-center p-4">
       <div className="glass-panel glass-rim w-full max-w-md p-8 text-center">
         <span
           aria-hidden="true"
@@ -61,6 +71,6 @@ export default function NotFound() {
           Back to dashboard
         </Link>
       </div>
-    </div>
+    </main>
   )
 }

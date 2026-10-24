@@ -12,6 +12,7 @@ import { DateStack } from '@/components/ui/DateStack'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { SegmentedControl, type SegmentedControlOption } from '@/components/ui/SegmentedControl'
 import { activatableProps } from '@/components/ui/activatable'
+import { formatAirDate } from '@/lib/formatDate'
 import { useMediaModal } from '@/components/MediaModalProvider'
 
 interface UpcomingRelease {
@@ -106,7 +107,7 @@ export default function CalendarClient({ releases }: Props) {
     <div className="pb-12">
       <PageHeader
         eyebrow="Next three months"
-        title="Upcoming Releases"
+        title="Upcoming releases"
         sub="Premieres and release dates for the movies and shows you follow."
         selectable
         action={<div className="hidden lg:block">{filterControl}</div>}
@@ -138,12 +139,21 @@ export default function CalendarClient({ releases }: Props) {
                     const open = () => openMedia(media, { priority: 'must_watch' })
                     const day = parseDay(item.full_release_date)
                     const TypeIcon = item.type === 'show' ? Tv : Film
+                    // One string for the badge and the name below, so the two
+                    // cannot drift apart (WCAG's label-in-name).
+                    const episodeLabel = item.followed ? item.episode_label ?? 'Next Episode' : null
                     // The row is a button named by aria-label, so nothing
-                    // inside it is announced: the type icon and the bookmark
-                    // state have to travel in the name.
+                    // inside it is announced: the date stack, the weekday, the
+                    // countdown, the type icon, the episode badge and the
+                    // bookmark state all have to travel in the name. Without
+                    // the date this read as "Dune: Part Three, movie, button"
+                    // — on a calendar, with no date anywhere.
                     const name = [
                       item.title,
                       item.type === 'show' ? 'TV show' : 'movie',
+                      `${day.toLocaleDateString('en-US', { weekday: 'long' })}, ${formatAirDate(item.full_release_date) ?? item.full_release_date}`,
+                      countdownLabel(item.full_release_date, today),
+                      ...(episodeLabel ? [episodeLabel] : []),
                       ...(item.onWatchlist ? ['on your watchlist'] : []),
                     ].join(', ')
                     return (
@@ -156,6 +166,12 @@ export default function CalendarClient({ releases }: Props) {
                           <div
                             onClick={open}
                             {...activatableProps(open, name)}
+                            // The countdown inside the name is clock-derived,
+                            // so a client in another timezone can render a
+                            // different one than the server did. The flag
+                            // covers this element's own attributes only; the
+                            // visible copy carries its own (see below).
+                            suppressHydrationWarning
                             className="glass-row flex cursor-pointer items-center gap-3 p-3"
                           >
                             <DateStack date={item.full_release_date} />
@@ -194,10 +210,10 @@ export default function CalendarClient({ releases }: Props) {
                                 >
                                   {item.title}
                                 </p>
-                                {item.followed && (
+                                {episodeLabel && (
                                   <Badge tone="accent" style={{ flex: 'none' }}>
                                     <Bell size={12} strokeWidth={1.8} aria-hidden="true" />
-                                    {item.episode_label ?? 'Next Episode'}
+                                    {episodeLabel}
                                   </Badge>
                                 )}
                               </div>

@@ -1,5 +1,6 @@
 'use client'
 import Image from 'next/image'
+import { useId } from 'react'
 import { Check, Loader2, Plus, Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -35,18 +36,35 @@ const POSTER_H = 120
  * overview and the two secondary pills. A row rather than a PosterCard because
  * the "Because you watched" line and the overview are the point of the page.
  * Rows carry no blur, so a grid of them stays inside the glass budget.
+ *
+ * The root is NOT the opener. It used to be a clickable Card, which gave the
+ * wrapping div role="button" — children-presentational in ARIA 1.2, so the
+ * heading, the year and rating, the "Because you watched" line and the whole
+ * overview were dropped from the accessibility tree and the card announced as
+ * just "<title>, button", with the two real buttons nested inside it. This is
+ * MediaRow's stretched opener instead: one absolutely-positioned button named
+ * by the visible title, with the actions as its siblings.
  */
 export function RecommendationCard({ item, actioning, onOpen, onAddToWatchlist, onMarkWatched }: RecommendationCardProps) {
   const rating = item.vote_average !== undefined && item.vote_average > 0 ? item.vote_average.toFixed(1) : null
+  const titleId = useId()
 
   return (
     <Card
       variant="row"
-      onClick={onOpen}
-      aria-label={item.title}
-      className={`motion-item-in group h-full select-none ${ROW_BASE}`}
+      // No onClick: that is what keeps activatableProps from putting role and
+      // tabIndex back on the root. The opener below carries the keyboard
+      // focus, so the row takes its hover fill from that focus as well.
+      className={`motion-item-in group relative h-full select-none has-[.rec-card-open:focus-visible]:bg-[var(--glass-card-hover)] ${ROW_BASE}`}
       style={{ display: 'flex', gap: 14, padding: 12 }}
     >
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-labelledby={titleId}
+        className="rec-card-open absolute inset-0 cursor-pointer rounded-[inherit]"
+      />
+
       {item.poster_url ? (
         // The title beside it names the row, so the art is decorative.
         <Image
@@ -70,7 +88,7 @@ export function RecommendationCard({ item, actioning, onOpen, onAddToWatchlist, 
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="min-w-0 line-clamp-1 text-[length:var(--text-md)] font-semibold leading-5 text-[var(--text-primary)] transition-colors duration-200 group-hover:text-[var(--accent)]">
+          <h2 id={titleId} className="min-w-0 line-clamp-1 text-[length:var(--text-md)] font-semibold leading-5 text-[var(--text-primary)] transition-colors duration-200 group-hover:text-[var(--accent)]">
             {item.title}
           </h2>
           <Badge>{item.type === 'show' ? 'TV' : 'Movie'}</Badge>
@@ -98,15 +116,15 @@ export function RecommendationCard({ item, actioning, onOpen, onAddToWatchlist, 
           {item.overview || 'No description available.'}
         </p>
 
-        <div className="mt-auto flex flex-wrap gap-2 pt-3">
+        {/* Above the stretched opener, which is the card's first child and
+            would otherwise paint over both pills. Below SelectableOverlay's
+            z-10 select-mode shield, as MediaRow's actions are. */}
+        <div className="relative z-[1] mt-auto flex flex-wrap gap-2 pt-3">
           <Button
             variant="secondary"
             size="sm"
             disabled={actioning}
-            onClick={(e) => {
-              e.stopPropagation()
-              onAddToWatchlist()
-            }}
+            onClick={onAddToWatchlist}
             style={{ flex: '1 1 auto' }}
           >
             {actioning ? (
@@ -120,10 +138,7 @@ export function RecommendationCard({ item, actioning, onOpen, onAddToWatchlist, 
             variant="secondary"
             size="sm"
             disabled={actioning}
-            onClick={(e) => {
-              e.stopPropagation()
-              onMarkWatched()
-            }}
+            onClick={onMarkWatched}
             style={{ flex: '1 1 auto' }}
           >
             {actioning ? (

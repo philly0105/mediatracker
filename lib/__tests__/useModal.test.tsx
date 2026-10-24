@@ -45,6 +45,42 @@ function LateMountingModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// SearchOverlay's result rows end in two action buttons that are tabIndex={-1}
+// inside an aria-hidden wrapper — decoration for the pointer, invisible to
+// Tab. They used to match the focusable selector, so one of them was the
+// ring's last element and the real last control was never the one the trap
+// watched for.
+function ModalWithUnreachableTail({ onClose }: { onClose: () => void }) {
+  const { containerRef } = useModal(onClose)
+  return (
+    <div ref={containerRef} role="dialog" aria-label="tail">
+      <button>tail first</button>
+      <button>tail last</button>
+      <div aria-hidden="true">
+        <button tabIndex={-1}>tail decoy</button>
+      </div>
+    </div>
+  )
+}
+
+describe('useModal with an unreachable control after the last real one', () => {
+  it('wraps Tab from the last tabbable control instead of letting focus escape', () => {
+    render(<ModalWithUnreachableTail onClose={vi.fn()} />)
+    screen.getByText('tail last').focus()
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(screen.getByText('tail first')).toHaveFocus()
+  })
+
+  it('never parks focus on the aria-hidden decoy when wrapping backwards', () => {
+    render(<ModalWithUnreachableTail onClose={vi.fn()} />)
+    screen.getByText('tail first').focus()
+
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(screen.getByText('tail last')).toHaveFocus()
+  })
+})
+
 describe('useModal with a panel that mounts after the first render', () => {
   it('still moves focus into the modal', () => {
     render(<LateMountingModal onClose={vi.fn()} />)

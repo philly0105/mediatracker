@@ -88,6 +88,20 @@
   --color-white: var(--zinc-100);
 }
 
+/* Under md the shell's bars are fixed — 64px of top bar, ~58px of bottom nav
+   plus the home inset — so an anchor jump or a sequential-focus scroll parks
+   its target underneath one of them. /import redirects to
+   /settings#import-export, whose heading only carries scroll-mt-8 (32px)
+   against that 64px bar. From md up the bars are gone and the shell's own
+   padding is the frame, so the reserve is scoped to the phone layout rather
+   than set and then reset. */
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: 4.5rem;
+    scroll-padding-bottom: 4.5rem;
+  }
+}
+
 /* The canvas lives here rather than on a `bg-[var(--…)]` utility in layout.tsx:
    this rule is unlayered and would win over any Tailwind utility anyway, so
    putting the real value here is the honest place for it. */
@@ -282,6 +296,18 @@ body {
   box-shadow: var(--shadow-md);
   transition: box-shadow var(--dur-base) var(--ease-out-expo),
               transform var(--dur-base) var(--ease-out-expo);
+}
+
+/* The tier-1 panels swap to the opaque fallback under reduced transparency
+   (see the @layer block above). .card-surface wears the same panel tint, so
+   without this a translucent card sat beside an opaque panel on Home and the
+   pair stopped reading as one family. It has no blur to remove, just the
+   background. The rule is unlayered because the declaration it overrides is:
+   a copy inside @layer components would lose to it. */
+@media (prefers-reduced-transparency: reduce) {
+  .card-surface {
+    background: var(--glass-fallback);
+  }
 }
 
 .card-interactive {
@@ -688,6 +714,52 @@ body {
    focus-visible outline then draws instead. */
 :where([role="dialog"]):focus-visible {
   outline: none;
+}
+
+/* Same for the skip link's landing. <main> carries tabindex -1 only so focus
+   can follow the jump; a ring round the entire content column says nothing
+   the link has not already said, and it would draw on every page. */
+:where(main[tabindex="-1"]):focus-visible {
+  outline: none;
+}
+
+/* The skip link. `sr-only` keeps it offscreen but focusable — display:none
+   would take it out of the tab order and there would be nothing to skip with.
+   These rules are unlayered so they beat the `focus:not-sr-only` utility's
+   `position: static`, which would otherwise drop the link into the flow and
+   shove the page down as it appears. Fixed and above the mobile bars (z-40),
+   the mobile sheet (z-50) and the toasts, or it would open behind the very
+   chrome it exists to skip. The global :focus-visible ring draws its
+   outline. */
+.skip-link:focus {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  /* `focus:not-sr-only` already undoes these; repeated here so the link
+     cannot end up positioned but still clipped to a 1px box if that utility
+     is ever dropped from the class list. */
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: nowrap;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  /* The opaque surface, not --bg-elevated: the link lands over whatever the
+     page is showing, and a 0.72-alpha chip over a poster is not readable. */
+  background: var(--bg-deep);
+  box-shadow: var(--glass-btn-edge), var(--shadow-md);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  line-height: 20px;
+  text-decoration: none;
 }
 
 @keyframes toast-enter {

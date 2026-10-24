@@ -65,8 +65,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
           {/* Under md the mobile bars are fixed, so the page clears them with
               its own top and bottom padding; from md up the wrapper's padding
-              is the frame. */}
-          <main className={`w-full min-w-0 flex-1 px-4 md:px-0 ${user ? 'pt-20 pb-24 md:py-0' : 'py-6 md:py-0'}`}>
+              is the frame.
+
+              The id is the skip link's target in app/layout.tsx. tabIndex -1
+              goes with it: a bare #main jumps the scroll but leaves focus on
+              the link, so the next Tab walks straight back into the nav the
+              user just skipped. It takes no focus ring — globals.css excludes
+              a programmatic -1 target the way it excludes the modal sheet. */}
+          <main id="main" tabIndex={-1} className={`w-full min-w-0 flex-1 px-4 md:px-0 ${user ? 'pt-20 pb-24 md:py-0' : 'py-6 md:py-0'}`}>
             {/* One shared measure for every route. Without it the bento
                 grid and library run the full width of an ultrawide display. */}
             <div className="mx-auto w-full max-w-[var(--content-max)]">

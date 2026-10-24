@@ -9,14 +9,21 @@ import type { RefObject } from 'react'
 const stack: string[] = []
 let cachedBodyOverflow: string | null = null
 
+// Every entry excludes tabindex="-1", not just the generic one. A control the
+// author took out of the tab order is not part of the ring, and treating it as
+// if it were is how focus used to escape: SearchOverlay's result rows end in
+// two tabindex="-1" action buttons inside an aria-hidden wrapper, so one of
+// those was the ring's last element. Tab off the real last control was never
+// intercepted, and Shift+Tab from the input focused an aria-hidden button —
+// "aria-hidden element must not be focusable" in axe.
 const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
+  'a[href]:not([tabindex="-1"])',
+  'button:not([disabled]):not([tabindex="-1"])',
+  'input:not([disabled]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
   '[tabindex]:not([tabindex="-1"])',
-  '[contenteditable="true"]',
+  '[contenteditable="true"]:not([tabindex="-1"])',
 ].join(',')
 
 export function isAnyModalOpen(): boolean {
@@ -24,7 +31,18 @@ export function isAnyModalOpen(): boolean {
 }
 
 function getFocusable(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+  // Hidden and inert nodes are not reachable either, and moving focus into an
+  // aria-hidden subtree is itself a violation. The box check covers the rest
+  // (a collapsed section, a display:none branch) but it needs a layout engine:
+  // jsdom reports zero rects for every node, which would empty the ring and
+  // disarm the trap under test, so it is only trusted when the panel itself
+  // measures.
+  const measurable = container.getClientRects().length > 0
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) =>
+      !el.closest('[aria-hidden="true"],[inert]') &&
+      (!measurable || el.getClientRects().length > 0)
+  )
 }
 
 export function useModal(onClose: () => void): { containerRef: RefObject<HTMLDivElement | null> } {
@@ -77,13 +95,24 @@ export function useModal(onClose: () => void): { containerRef: RefObject<HTMLDiv
       const last = focusable[focusable.length - 1]
       if (!first || !last) return
 
+      // Position in the ring rather than identity against its ends. `active
+      // === last` only wrapped when the DOM's last match happened to be the
+      // last tabbable node; one filtered-out control after it and the real end
+      // of the ring went uncaught. An index keeps the trap closed whatever a
+      // consumer renders next.
+      //
+      // An index of -1 is the panel itself (useModal focuses it with tabindex
+      // -1) or something outside the modal. Backwards that belongs at the end
+      // of the ring; forwards it is left to the browser, whose next stop from
+      // the panel is already the first control inside it.
       const active = document.activeElement
+      const index = focusable.indexOf(active as HTMLElement)
       if (event.shiftKey) {
-        if (active === first || !scope.contains(active)) {
+        if (index <= 0) {
           event.preventDefault()
           last.focus()
         }
-      } else if (active === last || !scope.contains(active)) {
+      } else if (index === focusable.length - 1 || !scope.contains(active)) {
         event.preventDefault()
         first.focus()
       }

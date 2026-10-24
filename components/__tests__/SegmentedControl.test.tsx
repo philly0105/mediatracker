@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { act, render, fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
@@ -135,6 +136,78 @@ describe('SegmentedControl', () => {
     expect(tally.className).toContain('tabular')
     // No count, no override: the name is still the label alone.
     expect(screen.getByRole('radio', { name: 'Someday' })).not.toHaveAttribute('aria-label')
+  })
+
+  // The group announces as a radio group, so it owes the keyboard what one
+  // does: a single tab stop, and the arrows moving selection and focus
+  // together. Before this it was N tab stops and the arrows did nothing, which
+  // is exactly the dead end a screen reader's forms mode puts the user in.
+  describe('keyboard', () => {
+    function Controlled({ initial = 'movie' }: { initial?: string }) {
+      const [value, setValue] = useState(initial)
+      const seasons = [1, 2, 3].map(n => ({ id: `s${n}`, label: `Season ${n}` }))
+      return <SegmentedControl options={initial.startsWith('s') ? seasons : options} value={value} onChange={setValue} label="Type" />
+    }
+
+    it('is a single tab stop, on the selected segment', () => {
+      render(<Controlled />)
+      expect(screen.getByRole('radio', { name: 'Movies' })).toHaveAttribute('tabindex', '0')
+      expect(screen.getByRole('radio', { name: 'TV Shows' })).toHaveAttribute('tabindex', '-1')
+    })
+
+    it('moves selection and focus together, and wraps at both ends', () => {
+      render(<Controlled />)
+      const movies = screen.getByRole('radio', { name: 'Movies' })
+      act(() => movies.focus())
+
+      fireEvent.keyDown(movies, { key: 'ArrowRight' })
+      const shows = screen.getByRole('radio', { name: 'TV Shows' })
+      expect(shows).toHaveAttribute('aria-checked', 'true')
+      expect(shows).toHaveFocus()
+
+      // Past the end, back to the start.
+      fireEvent.keyDown(shows, { key: 'ArrowRight' })
+      expect(screen.getByRole('radio', { name: 'Movies' })).toHaveAttribute('aria-checked', 'true')
+      expect(screen.getByRole('radio', { name: 'Movies' })).toHaveFocus()
+
+      // And backwards off the start, round to the end.
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'Movies' }), { key: 'ArrowLeft' })
+      expect(screen.getByRole('radio', { name: 'TV Shows' })).toHaveAttribute('aria-checked', 'true')
+    })
+
+    it('takes Up and Down as well, since nothing here scrolls vertically', () => {
+      render(<Controlled />)
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'Movies' }), { key: 'ArrowDown' })
+      expect(screen.getByRole('radio', { name: 'TV Shows' })).toHaveAttribute('aria-checked', 'true')
+
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'TV Shows' }), { key: 'ArrowUp' })
+      expect(screen.getByRole('radio', { name: 'Movies' })).toHaveAttribute('aria-checked', 'true')
+    })
+
+    it('jumps to either end with Home and End', () => {
+      render(<Controlled initial="s2" />)
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'Season 2' }), { key: 'End' })
+      expect(screen.getByRole('radio', { name: 'Season 3' })).toHaveAttribute('aria-checked', 'true')
+
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'Season 3' }), { key: 'Home' })
+      expect(screen.getByRole('radio', { name: 'Season 1' })).toHaveAttribute('aria-checked', 'true')
+    })
+
+    it('leaves every other key to the browser', () => {
+      const onChange = vi.fn()
+      render(<SegmentedControl options={options} value="movie" onChange={onChange} />)
+      fireEvent.keyDown(screen.getByRole('radio', { name: 'Movies' }), { key: 'Tab' })
+      expect(onChange).not.toHaveBeenCalled()
+    })
+  })
+
+  it('keeps one type weight across both states, so selecting never re-measures the track', () => {
+    render(<SegmentedControl options={options} value="movie" onChange={vi.fn()} />)
+
+    for (const segment of screen.getAllByRole('radio')) {
+      expect(segment.className).toContain('font-semibold')
+      expect(segment.className).not.toContain('font-medium')
+    }
   })
 
   it('triggers onChange with the selected option id', () => {

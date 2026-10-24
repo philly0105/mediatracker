@@ -41,7 +41,9 @@ export default function GlobalError({
           WebkitFontSmoothing: 'antialiased',
         }}
       >
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        {/* <main>, not a <div>: this file replaces the whole document, so
+            there is no layout left to supply a landmark. */}
+        <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div
             style={{
               width: '100%',
@@ -91,7 +93,7 @@ export default function GlobalError({
               Try again
             </button>
           </div>
-        </div>
+        </main>
       </body>
     </html>
   )

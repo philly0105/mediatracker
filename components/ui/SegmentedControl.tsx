@@ -1,6 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useRef } from 'react'
+import type { KeyboardEvent } from 'react'
 
 export interface SegmentedControlOption<T extends string> {
   id: T
@@ -43,6 +44,17 @@ export function revealInScroller(el: HTMLElement) {
 // Highlight pair, as the nav's current item does. It opts out of the forced
 // palette there, or the Canvas backplate hides its label, so the muted count
 // inside is set to HighlightText by hand.
+//
+// Both states carry the same weight. They used to be semibold and medium, so
+// selecting a segment re-measured its label and the whole track changed width,
+// sliding its neighbours — worst on the episode-season switcher, which lives
+// inside a sideways scroller. The fill and the colour already say which one is
+// on.
+//
+// The group announces as a radio group, so it has to behave like one: one tab
+// stop (roving tabindex) and the arrows moving through it. Without that, a
+// screen reader switched to forms mode on entering the group and the arrows
+// it tells the user to press did nothing, while Tab stopped on all N segments.
 export function SegmentedControl<T extends string>({
   options,
   value,
@@ -69,6 +81,34 @@ export function SegmentedControl<T extends string>({
     if (radio) revealInScroller(radio)
   }, [value])
 
+  // The selected segment is the group's single tab stop. A `value` matching no
+  // option would otherwise leave every segment at -1 and the control
+  // unreachable from the keyboard, so the first one holds the stop instead.
+  const selectedIndex = options.findIndex((option) => option.id === value)
+  const tabStopIndex = selectedIndex === -1 ? 0 : selectedIndex
+
+  // Selection follows focus, which is the radio-group pattern: the arrows pick
+  // a segment rather than merely visiting it. The segments render in `options`
+  // order, so the index addresses the button directly.
+  function selectAt(index: number) {
+    const next = (index + options.length) % options.length
+    onChange(options[next].id)
+    groupRef.current?.querySelectorAll<HTMLElement>('[role="radio"]')[next]?.focus()
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    // Both axes: a horizontal track is still a radio group, and nothing here
+    // scrolls vertically, so Up/Down would otherwise just move the page.
+    const step = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1
+      : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1
+      : 0
+    if (!step && event.key !== 'Home' && event.key !== 'End') return
+    event.preventDefault()
+    if (event.key === 'Home') selectAt(0)
+    else if (event.key === 'End') selectAt(options.length - 1)
+    else selectAt(index + step)
+  }
+
   return (
     <div
       ref={groupRef}
@@ -77,7 +117,7 @@ export function SegmentedControl<T extends string>({
       onFocus={(e) => { if (e.target.matches(':focus-visible')) revealInScroller(e.target) }}
       className={`glass-inset inline-flex items-center gap-0.5 p-1 relative select-none ${className}`}
     >
-      {options.map((option) => {
+      {options.map((option, index) => {
         const isSelected = value === option.id
         const Icon = option.icon
 
@@ -87,13 +127,15 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={isSelected}
+            tabIndex={index === tabStopIndex ? 0 : -1}
             // The visible tally is decoration; the name carries it instead.
             aria-label={option.count != null ? `${option.label} · ${option.count}` : undefined}
             onClick={() => onChange(option.id)}
-            className={`relative flex shrink-0 items-center justify-center gap-1.5 h-9 whitespace-nowrap rounded-[var(--radius-thumb)] transition-colors duration-200 ${sizeClasses} ${
+            onKeyDown={(event) => handleKeyDown(event, index)}
+            className={`relative flex shrink-0 items-center justify-center gap-1.5 h-9 whitespace-nowrap rounded-[var(--radius-thumb)] font-semibold transition-colors duration-200 ${sizeClasses} ${
               isSelected
-                ? 'font-semibold text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
-                : 'font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)]'
+                ? 'text-[var(--text-primary)] bg-[var(--btn-ghost-bg)] shadow-[var(--glass-btn-edge)] forced-colors:forced-color-adjust-none forced-colors:bg-[color:Highlight] forced-colors:text-[color:HighlightText]'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-fill-hover)]'
             }`}
           >
             {Icon && <Icon className="w-4 h-4" strokeWidth={1.8} />}

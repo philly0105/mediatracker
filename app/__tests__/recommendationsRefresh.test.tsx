@@ -110,7 +110,7 @@ describe('RecommendationsPage refresh', () => {
     mockFetch.mockClear()
     mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results: [rec(2, 'Sicario')] }) })
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
     })
     expect(recUrls()).toEqual(['/api/recommendations'])
   })
