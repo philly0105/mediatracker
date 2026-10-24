@@ -11,7 +11,7 @@ import { SectionError } from '@/components/ui/SectionError'
 // the nav and the mobile bars down with the page.
 export default function DashboardError(props: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry: () => void
 }) {
-  return <SectionError {...props} title="Your dashboard didn't load" message="Something failed while building your dashboard. Try again — your data is safe." />
+  return <SectionError error={props.error} onRetry={props.unstable_retry} title="Your dashboard didn't load" message="Something failed while building your dashboard. Try again — your data is safe." />
 }

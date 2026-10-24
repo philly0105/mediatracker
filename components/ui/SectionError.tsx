@@ -13,12 +13,23 @@ import { Button } from '@/components/ui/Button'
  */
 export function SectionError({
   error,
-  reset,
+  onRetry,
   title = 'Something went wrong',
   message = "That didn't load. It's usually temporary — try again, and if it keeps happening, reload the app.",
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  /**
+   * What "Try again" runs. Every error.tsx passes Next's `unstable_retry`,
+   * NOT its `reset`: per the error.js reference, reset only clears the error
+   * state and re-renders the boundary's children *without re-fetching*, so
+   * for a Server Component read that threw it hands back the same failure and
+   * the button does nothing. Every boundary here wraps a server read.
+   *
+   * It stays a plain callback rather than taking `unstable_retry` by name
+   * because LibraryView renders this directly, outside any boundary, and
+   * passes its own refetch.
+   */
+  onRetry: () => void
   title?: string
   message?: string
 }) {
@@ -73,7 +84,7 @@ export function SectionError({
             Reference: {error.digest}
           </p>
         )}
-        <Button onClick={reset} style={{ marginTop: 24 }}>
+        <Button onClick={onRetry} style={{ marginTop: 24 }}>
           <RotateCw className="w-[18px] h-[18px]" strokeWidth={1.8} aria-hidden="true" />
           <span>Try again</span>
         </Button>

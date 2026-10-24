@@ -10,11 +10,11 @@ import { SectionError } from '@/components/ui/SectionError'
 // boundary replaced, so without it the page has no landmark at all.
 export default function ErrorPage(props: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry: () => void
 }) {
   return (
     <main id="main" tabIndex={-1} className="flex min-h-dvh items-center justify-center">
-      <SectionError {...props} />
+      <SectionError error={props.error} onRetry={props.unstable_retry} />
     </main>
   )
 }

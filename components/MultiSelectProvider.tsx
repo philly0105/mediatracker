@@ -249,7 +249,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             size="sm"
           >
             {loadingAction === 'watchlist' ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" /> : <Plus className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
-            <span className="hidden sm:inline">Add to Watchlist</span>
+            <span className="hidden sm:inline">Add to watchlist</span>
             <span className="sm:hidden">Watchlist</span>
           </Button>
 
@@ -260,7 +260,7 @@ export function MultiSelectProvider({ children }: { children: ReactNode }) {
             size="sm"
           >
             {loadingAction === 'watched' ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.8} aria-hidden="true" /> : <Check className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
-            <span className="hidden sm:inline">Mark as Watched</span>
+            <span className="hidden sm:inline">Mark as watched</span>
             <span className="sm:hidden">Watched</span>
           </Button>
 

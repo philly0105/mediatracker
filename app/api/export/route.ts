@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { fetchAllRows } from '@/lib/fetchAllRows'
+// The same writer the importer's parser is tested against. It used to be a
+// second copy here, which is how a reader and a writer drift apart without
+// either looking wrong on its own.
+import { csvField } from '@/lib/csv'
 import type { WatchEntry, WatchlistItem } from '@/types'
-
-function csvField(value: string): string {
-  // Leading =, +, -, @, TAB and CR are treated as formula starts by Excel/Sheets/Numbers.
-  // Prefix with a tab so the cell renders safely as plain text.
-  const escaped = /^[=+\-@\t\r]/.test(value) ? `\t${value}` : value
-  if (/[",\n\r]/.test(escaped) || escaped !== value) {
-    return `"${escaped.replace(/"/g, '""')}"`
-  }
-  return escaped
-}
 
 export async function GET() {
   const supabase = await createClient()

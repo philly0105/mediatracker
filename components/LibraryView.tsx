@@ -618,7 +618,7 @@ export default function LibraryView({
       {loadError && entries.length === 0 ? (
         <SectionError
           error={loadError}
-          reset={() => {
+          onRetry={() => {
             setLoadError(null)
             handleRefresh()
           }}
@@ -637,9 +637,12 @@ export default function LibraryView({
         ) : (
           <div className={ROW_GRID}>
             {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} className="glass-row hover:bg-[var(--glass-card)] flex gap-4 p-3">
-                <Skeleton className="w-16 h-24 shrink-0 rounded-[var(--radius-md)]" />
-                <div className="flex-1 space-y-3 py-1">
+              // Geometry copied from MediaRow, which is what replaces these:
+              // the old 12px padding, 16px gap and 64x96 thumb against its
+              // 8px/8px/60x90 moved every row when the real list arrived.
+              <div key={i} className="glass-row glass-rim hover:bg-[var(--glass-card)] relative flex items-center gap-2 p-2 md:gap-4 md:py-2.5 md:pl-2.5 md:pr-3">
+                <Skeleton className="h-[90px] w-[60px] shrink-0 rounded-[var(--radius-thumb)]" />
+                <div className="flex-1 space-y-3">
                   <Skeleton className="h-4 w-1/2" />
                   <Skeleton className="h-3 w-1/4" />
                   <Skeleton className="h-3 w-1/3" />

@@ -131,7 +131,7 @@ describe('MultiSelectProvider batch actions', () => {
     vi.stubGlobal('fetch', fetchMock)
     selectTwo()
 
-    await act(async () => { fireEvent.click(screen.getByText('Add to Watchlist')) })
+    await act(async () => { fireEvent.click(screen.getByText('Add to watchlist')) })
 
     const posts = fetchMock.mock.calls.filter(([url]) => url === '/api/watchlist')
     expect(posts).toHaveLength(2)
@@ -147,7 +147,7 @@ describe('MultiSelectProvider batch actions', () => {
     }))
     selectTwo()
 
-    await act(async () => { fireEvent.click(screen.getByText('Add to Watchlist')) })
+    await act(async () => { fireEvent.click(screen.getByText('Add to watchlist')) })
 
     expect(await screen.findByText(/1 failed/)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByTestId('selected')).toHaveTextContent('0'))
@@ -157,7 +157,7 @@ describe('MultiSelectProvider batch actions', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 500 })))
     selectTwo()
 
-    await act(async () => { fireEvent.click(screen.getByText('Add to Watchlist')) })
+    await act(async () => { fireEvent.click(screen.getByText('Add to watchlist')) })
 
     expect(await screen.findByText(/Could not add those items/)).toBeInTheDocument()
     expect(screen.getByTestId('selected')).toHaveTextContent('2')
@@ -172,7 +172,7 @@ describe('MultiSelectProvider batch actions', () => {
     mount(<Rig items={three} />)
     fireEvent.click(screen.getByText('pick Heat'))
 
-    await act(async () => { fireEvent.click(screen.getByText('Mark as Watched')) })
+    await act(async () => { fireEvent.click(screen.getByText('Mark as watched')) })
 
     const methods = fetchMock.mock.calls.map(([url, init]) => `${init?.method} ${url}`)
     expect(methods).toEqual(['POST /api/watch', 'DELETE /api/watchlist'])

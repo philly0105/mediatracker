@@ -20,10 +20,10 @@ import { AlertCircle } from 'lucide-react'
  */
 export default function GlobalError({
   error,
-  reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry: () => void
 }) {
   useEffect(() => {
     console.error(error)
@@ -82,7 +82,7 @@ export default function GlobalError({
             )}
             <button
               type="button"
-              onClick={reset}
+              onClick={unstable_retry}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 marginTop: 24, minHeight: 44, padding: '0 18px', fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em',
