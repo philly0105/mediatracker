@@ -27,13 +27,15 @@ jobs:
 
       - run: npm run lint
 
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
 
       - run: npm run test:run
 
-      # The build reads the public Supabase vars at module scope, so it needs
-      # placeholders to get past import time. Nothing here reaches a network:
-      # every route under app/(app) is dynamic and renders on demand.
+      # The build actually succeeds with none of these set — verified. They are
+      # here because NEXT_PUBLIC_* values are inlined into the client bundle at
+      # build time, so building with placeholders exercises the same path a real
+      # deploy takes, and catches a module-scope read of one if it is ever added.
+      # Nothing reaches a network: every route under app/(app) is dynamic.
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
