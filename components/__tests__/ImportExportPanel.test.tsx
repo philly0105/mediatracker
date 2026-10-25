@@ -45,6 +45,14 @@ describe('ImportExportPanel file handling', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('found no rows')
   })
 
+  it('names the line of an unclosed quote and offers nothing to import', async () => {
+    const { container } = render(<ImportExportPanel />)
+    choose(container, 'hand-made.csv', 'title,review\nSinners,"Loved it\nWeapons,fine')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Line 2 opens a quoted field that never closes')
+    expect(screen.queryByText(/rows loaded/)).not.toBeInTheDocument()
+  })
+
   it('says so when the file cannot be read at all', async () => {
     // onerror had no handler, so a read failure did nothing whatsoever.
     class FailingFileReader {

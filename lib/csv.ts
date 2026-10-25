@@ -21,9 +21,9 @@ export interface ImportRow {
 }
 
 /**
- * One cell of the export. `app/api/export/route.ts` has its own copy of this;
- * the duplicate lives here so the round-trip test can drive the real writer
- * against this reader, and the two must move together.
+ * One cell of the export, and the only copy of the writer: the export route
+ * imports it from here, and the round-trip test drives it against the reader
+ * below, so the two cannot drift.
  */
 export function csvField(value: string): string {
   // Leading =, +, -, @, TAB and CR are treated as formula starts by Excel/Sheets/Numbers.
@@ -36,7 +36,27 @@ export function csvField(value: string): string {
 }
 
 /**
+ * A quoted field opened and never closed. Thrown rather than read past: once
+ * newlines inside quotes are content, an unclosed quote would swallow every
+ * record after it into one field, losing those rows — and if it sits in a
+ * title, the merged text goes to TMDB's search, which matches something for
+ * almost any string. `line` is 1-based, where the quote opened.
+ */
+export class UnterminatedQuoteError extends Error {
+  constructor(readonly line: number) {
+    super(`Unterminated quoted field starting on line ${line}`)
+    this.name = 'UnterminatedQuoteError'
+  }
+}
+
+/**
  * The document as records of raw fields, quotes honoured across line breaks.
+ *
+ * A quote opens a quoted field only at the start of that field — after
+ * nothing but spaces, the way people type `a, "b, c"` by hand. Anywhere else
+ * it is a literal character, as RFC 4180 has it, so a review reading
+ * `He was 6'2" tall` stays one field instead of opening a quote that runs to
+ * the end of the file.
  *
  * Only `\r\n` is collapsed to `\n`. Stripping every `\r` — which is what the
  * line-splitting reader did — also deletes a lone `\r` that the writer saw fit
@@ -48,29 +68,42 @@ export function parseCsvRecords(text: string): string[][] {
   let record: string[] = []
   let field = ''
   let inQuotes = false
+  // Whether this field has already had its quoted section. A second quote
+  // after it closes (`"a"b"`) is literal, not the start of another one.
+  let fieldWasQuoted = false
+  let line = 1
+  let quoteLine = 1
 
   for (let i = 0; i < input.length; i++) {
     const ch = input[i]
+    if (ch === '\n') line++
     if (inQuotes) {
       // A doubled quote is one literal quote; a lone one ends the quoted run.
       // Everything else, newlines included, is content.
       if (ch === '"' && input[i + 1] === '"') { field += '"'; i++ }
       else if (ch === '"') inQuotes = false
       else field += ch
-    } else if (ch === '"') {
+    } else if (ch === '"' && !fieldWasQuoted && field.trim() === '') {
       inQuotes = true
+      fieldWasQuoted = true
+      quoteLine = line
+      field = ''
     } else if (ch === ',') {
       record.push(field)
       field = ''
+      fieldWasQuoted = false
     } else if (ch === '\n') {
       record.push(field)
       records.push(record)
       record = []
       field = ''
+      fieldWasQuoted = false
     } else {
       field += ch
     }
   }
+
+  if (inQuotes) throw new UnterminatedQuoteError(quoteLine)
 
   // The final record carries no closing newline. A file that does end in one
   // leaves a single empty field here — that is the end of the file, not a row.

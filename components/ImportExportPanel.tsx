@@ -4,7 +4,7 @@ import { Download, Upload, Check, Minus, X, Circle } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
-import { parseCSV, type ImportRow } from '@/lib/csv'
+import { parseCSV, UnterminatedQuoteError, type ImportRow } from '@/lib/csv'
 
 interface RowResult {
   title: string
@@ -72,7 +72,20 @@ export default function ImportExportPanel() {
     }
     const reader = new FileReader()
     reader.onload = e => {
-      const parsed = parseCSV(String(e.target?.result ?? ''))
+      let parsed: ImportRow[]
+      try {
+        parsed = parseCSV(String(e.target?.result ?? ''))
+      } catch (err) {
+        // Nothing from a file with an unclosed quote is trustworthy past that
+        // line, so none of it is offered for import — the line number is what
+        // makes the message something the user can act on.
+        if (!(err instanceof UnterminatedQuoteError)) throw err
+        setRows([])
+        setFileError(
+          `Line ${err.line} opens a quoted field that never closes, so the rows after it can't be read safely. Check that line for a stray " mark.`
+        )
+        return
+      }
       setRows(parsed)
       setFileError(parsed.length === 0 ? NO_ROWS : null)
     }

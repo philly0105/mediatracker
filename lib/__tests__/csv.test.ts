@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { csvField, parseCSV, parseCsvRecords } from '@/lib/csv'
+import { csvField, parseCSV, parseCsvRecords, UnterminatedQuoteError } from '@/lib/csv'
 
 type ExportRow = {
   title: string
@@ -124,5 +124,43 @@ describe('parseCSV shape handling', () => {
   it('reads columns by header name, in whatever order they come', () => {
     const doc = 'Status,TITLE\nwatchlist,Weapons'
     expect(parseCSV(doc)[0]).toMatchObject({ title: 'Weapons', status: 'watchlist' })
+  })
+})
+
+describe('stray quotes in hand-made files', () => {
+  // Once newlines inside quotes are content, a quote that opens where it
+  // should not swallows every record after it. These pin the two halves of
+  // the guard: a quote mid-field is a literal character, and an opening quote
+  // that never closes stops the import instead of being read past.
+
+  it('keeps a quote in the middle of a review literal', () => {
+    const doc = 'title,review,status\nSinners,He was 6\'2" tall,watched\nWeapons,,watchlist'
+    expect(parseCSV(doc)).toEqual([
+      { title: 'Sinners', year: '', type: '', rating: '', date: '', review: 'He was 6\'2" tall', status: 'watched' },
+      { title: 'Weapons', year: '', type: '', rating: '', date: '', review: '', status: 'watchlist' },
+    ])
+  })
+
+  it('keeps a lone quote inside a title literal', () => {
+    const doc = 'title,status\nThe 12" Single,watched\nAnora,watched'
+    expect(parseCSV(doc).map((r) => r.title)).toEqual(['The 12" Single', 'Anora'])
+  })
+
+  it('treats a quote after a closed quoted section as literal', () => {
+    expect(parseCsvRecords('"a"b"c,d')).toEqual([['ab"c', 'd']])
+  })
+
+  it('still opens a quoted field after a space, the way people type it', () => {
+    expect(parseCsvRecords('a, "b, c",d')).toEqual([['a', 'b, c', 'd']])
+  })
+
+  it('refuses a quoted field that never closes, naming the line it opened on', () => {
+    const doc = 'title,review\nSinners,"Loved it\nWeapons,fine\nAnora,great'
+    expect(() => parseCSV(doc)).toThrow(UnterminatedQuoteError)
+    try {
+      parseCSV(doc)
+    } catch (err) {
+      expect((err as UnterminatedQuoteError).line).toBe(2)
+    }
   })
 })
