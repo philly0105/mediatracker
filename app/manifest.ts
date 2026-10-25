@@ -14,7 +14,9 @@ export default function manifest(): MetadataRoute.Manifest {
     // off to the browser instead.
     scope: '/',
     display: 'standalone',
-    orientation: 'portrait',
+    // No `orientation`: setting one locks the installed app to it. The poster
+    // grids, stats and calendar all use the width on a tablet or a phone held
+    // sideways, and the browser tab never imposed a lock either.
     lang: 'en',
     dir: 'ltr',
     categories: ['entertainment', 'lifestyle', 'utilities'],

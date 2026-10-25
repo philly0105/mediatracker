@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { proxy } from '@/proxy'
+import manifest from '@/app/manifest'
 
 const getClaims = vi.fn()
 vi.mock('@supabase/ssr', () => ({
@@ -33,6 +34,11 @@ describe('proxy public metadata routes', () => {
     '/icon',
     '/apple-icon',
     '/manifest.webmanifest',
+    // The icons the manifest lists. Without these the manifest loads and the
+    // app still cannot install, because every icon it names is a redirect.
+    '/icon-192.png',
+    '/icon-512.png',
+    '/icon-maskable-512.png',
     '/robots.txt',
     '/sitemap.xml',
   ])('serves %s to a signed-out visitor', async (path) => {
@@ -50,6 +56,17 @@ describe('proxy public metadata routes', () => {
   it('decides without constructing a Supabase client', async () => {
     await get('/opengraph-image')
     expect(getClaims).not.toHaveBeenCalled()
+  })
+
+  it('serves every icon the manifest lists', async () => {
+    // Read from the manifest itself, not a copied list: the bug this guards
+    // against was the manifest being public while the icons it names were
+    // not, which is exactly the drift a second hand-kept list would allow.
+    const icons = manifest().icons ?? []
+    expect(icons.length).toBeGreaterThan(0)
+    for (const { src } of icons) {
+      expect((await get(src)).status, src).toBe(200)
+    }
   })
 })
 

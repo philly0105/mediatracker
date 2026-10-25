@@ -19,18 +19,26 @@ const SIGNED_OUT_ONLY = ['/login', '/signup', '/forgot-password']
 // user data, so serving them to anyone is safe. /robots.txt and /sitemap.xml
 // are here for the same reason: a crawler cannot authenticate.
 //
+// The three PNGs are the icons the manifest lists. Opening the manifest alone
+// was not enough: it loaded, but every icon it pointed at 307ed to the login
+// HTML, so the browser found no usable 192 or 512 icon and still refused to
+// install the app.
+//
 // Exact pathnames, not a prefix or an extension pattern, for the same reason
 // the matcher below has none (see the ponytail note): anything looser is a hole.
 // `startsWith('/icon')` would admit /icons/secret, and an extension rule would
 // admit the per-title OG images at /show/[id]/opengraph-image-*.png — those
 // render a user's own titles and must stay behind the gate, with /share/**
 // (already in PUBLIC_PATHS) the only public view of a library. A set of whole
-// pathnames can only ever admit exactly these six.
+// pathnames can only ever admit exactly what is listed.
 const PUBLIC_FILES = new Set([
   '/opengraph-image',
   '/icon',
   '/apple-icon',
   '/manifest.webmanifest',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
   '/robots.txt',
   '/sitemap.xml',
 ])
