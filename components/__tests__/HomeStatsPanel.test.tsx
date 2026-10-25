@@ -62,6 +62,12 @@ describe('HomeStatsPanel', () => {
     expect(screen.getByText('2026 so far')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /All stats/ })).toBeInTheDocument()
     expect(screen.queryByText('Titles logged')).not.toBeInTheDocument()
+
+    // The two counts come from the page's own reads, which did not fail.
+    expect(screen.getByText('In progress')).toBeInTheDocument()
+    expect(screen.getByText('On Must watch')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
   })
 
   it('says so when the year ran past the paging ceiling', async () => {

@@ -133,9 +133,14 @@ function StreamingContent() {
         console.error(err)
         if (cancelled) return
         // A failed page 2 leaves page 1 on screen; only a failed first page
-        // has nothing to show.
+        // has nothing to show. It also zeroes totalPages: left at the previous
+        // provider's count, the empty grid looked like a page Hide watched had
+        // filtered bare, so auto-fill stepped on to page 2 — showing page 2
+        // with page 1 missing if that one worked, and leaving "Try again"
+        // pointed at page N if it did not.
         if (page === 1) {
           setResults([])
+          setTotalPages(0)
           setError(true)
         }
       } finally {
@@ -184,33 +189,42 @@ function StreamingContent() {
 
   useEffect(() => {
     if (autoFill.current.key !== autoFillKey) autoFill.current = { key: autoFillKey, used: 0 }
-    if (!hideWatched || loading || loadingMore) return
+    if (!hideWatched || loading || loadingMore || error) return
     if (page >= totalPages) return
     if (visibleResults.length >= FILL_TARGET) return
     if (autoFill.current.used >= MAX_AUTO_FILL_PAGES) return
     autoFill.current.used += 1
     setPage((currentPage) => Math.min(currentPage + 1, totalPages))
-  }, [autoFillKey, hideWatched, loading, loadingMore, page, totalPages, visibleResults.length])
+  }, [autoFillKey, hideWatched, loading, loadingMore, error, page, totalPages, visibleResults.length])
+
+  // A new query starts from nothing, page count included. totalPages belongs
+  // to the old query: left at its value, the first render after a switch had
+  // an empty grid, loading not yet set and forty pages to go, which auto-fill
+  // (with Hide watched on) read as a page filtered bare — so it asked for page
+  // 2 before page 1 had answered, the page-1 request was cancelled, and its
+  // titles never appeared.
+  function startOver() {
+    setResults([])
+    setTotalPages(0)
+    setPage(1)
+  }
 
   function changeProvider(id: string) {
     if (id === provider) return
     setFilter('provider', id)
-    setResults([])
-    setPage(1)
+    startOver()
   }
 
   function changeType(t: 'movie' | 'show') {
     if (t === type) return
     setFilter('type', t)
-    setResults([])
-    setPage(1)
+    startOver()
   }
 
   function changeSort(sort: StreamingSort) {
     if (sort === sortBy) return
     setFilter('sort', sort)
-    setResults([])
-    setPage(1)
+    startOver()
   }
 
   function toggleHideWatched() {
@@ -320,7 +334,11 @@ function StreamingContent() {
           title="Couldn't load what's streaming"
           hint="We couldn't reach the streaming catalogue just now. This is usually temporary."
           actionLabel="Try again"
-          onAction={() => setRetry((n) => n + 1)}
+          // From the top: the only failure that shows this card is page 1's.
+          onAction={() => {
+            setPage(1)
+            setRetry((n) => n + 1)
+          }}
         />
       ) : visibleResults.length === 0 ? (
         <EmptyState

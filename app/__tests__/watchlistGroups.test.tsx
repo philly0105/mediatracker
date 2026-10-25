@@ -275,6 +275,33 @@ describe('watchlist grouped load (F-32)', () => {
     expect(screen.getByText('Nothing in Must watch yet')).toBeTruthy()
     expect(screen.queryByText('Your watchlist is empty')).toBeNull()
   })
+
+  // A failed load clears the groups too, and empty groups after a 500 used to
+  // read exactly like a new account: "Your watchlist is empty", toolbar gone.
+  it('says the load failed rather than that the watchlist is empty, and retries', async () => {
+    let failNext = true
+    const fallback = mockFetch.getMockImplementation()!
+    mockFetch.mockImplementation(async (input: unknown, init?: { method?: string }) => {
+      if (failNext && url(input).includes('group=priority')) {
+        failNext = false
+        return { ok: false, status: 500, json: async () => ({ error: 'boom' }) }
+      }
+      return fallback(input, init)
+    })
+
+    renderPage()
+    await act(async () => { await Promise.resolve() })
+
+    expect(await screen.findByText("Couldn't load your watchlist")).toBeTruthy()
+    expect(screen.queryByText('Your watchlist is empty')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Your watchlist did not load.')
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Try again/ }))
+    })
+    await screen.findByRole('heading', { name: 'Must watch', level: 2 })
+    expect(screen.queryByText("Couldn't load your watchlist")).toBeNull()
+  })
 })
 
 describe('watchlist undo restores position (F-32)', () => {

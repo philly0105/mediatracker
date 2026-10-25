@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AlertCircle, Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
+import { STILL_PANEL_CLASS } from '@/components/ui/cardVariants'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { StatTile } from '@/components/ui/StatTile'
@@ -115,12 +116,18 @@ export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now
     />
   )
 
+  // These two come from the page's own reads, not the year's, so they are
+  // shown whether or not the year's reads failed.
+  const inProgressTile = <StatTile label="In progress" value={inProgress} unit={inProgress === 1 ? 'show' : 'shows'} />
+  const mustWatchTile = <StatTile label="On Must watch" value={mustWatch} unit={mustWatch === 1 ? 'title' : 'titles'} />
+
   // A failed read used to render as a year of zeros, which is a statement
   // about the user rather than about the query. Throwing is the wrong answer
   // here — unlike /stats this is one panel among several, and its siblings
   // each degrade on their own — so the panel keeps its slot and says what
   // happened. The compact empty state is a flat row, safe inside a panel that
-  // already blurs.
+  // already blurs. Only the year's figures go: the two counts above did load,
+  // and dropping them with the rest threw away numbers that were right.
   if (failed) {
     return (
       <Card variant="panel" as="section" aria-labelledby="stats-title" style={{ flex: '1.7 1 520px', minWidth: 0 }}>
@@ -130,8 +137,12 @@ export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now
           tone="error"
           icon={AlertCircle}
           title="This year's numbers didn't load"
-          hint="The rest of the dashboard is unaffected. Reload to try again, or open All stats."
+          hint="Reload to try again, or open All stats."
         />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 16px', padding: '16px 4px 0' }}>
+          {inProgressTile}
+          {mustWatchTile}
+        </div>
       </Card>
     )
   }
@@ -176,8 +187,8 @@ export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now
             icon={<Star size={18} strokeWidth={1.8} aria-hidden="true" style={{ color: 'var(--rating)', fill: 'var(--rating)' }} />}
           />
           <StatTile label="Top genre" value={topGenre} />
-          <StatTile label="In progress" value={inProgress} unit={inProgress === 1 ? 'show' : 'shows'} />
-          <StatTile label="On Must watch" value={mustWatch} unit={mustWatch === 1 ? 'title' : 'titles'} />
+          {inProgressTile}
+          {mustWatchTile}
         </div>
 
         <figure style={{ flex: '1.35 1 280px', margin: 0, minWidth: 0 }}>
@@ -209,8 +220,11 @@ export default async function HomeStatsPanel({ stats, inProgress, mustWatch, now
 /** The panel's footprint while the year's reads stream in. */
 export function StatsPanelSkeleton() {
   return (
-    <div role="status" aria-busy="true" className="card-surface flex-[1.7_1_520px]" style={{ minWidth: 0 }}>
-      <span className="sr-only">Loading this year&apos;s stats...</span>
+    // STILL_PANEL_CLASS, like the other Home skeletons: the panel's 14px/20px
+    // padding and rim without its blur. `card-surface` padded 20px at every
+    // width, so on a phone the panel narrowed and re-wrapped when it loaded.
+    <div role="status" aria-busy="true" className={`${STILL_PANEL_CLASS} flex-[1.7_1_520px]`} style={{ minWidth: 0 }}>
+      <span className="sr-only">Loading this year&apos;s stats…</span>
       <div aria-hidden="true">
         <div className="flex items-center justify-between" style={{ marginBottom: 12, paddingLeft: 4 }}>
           <div className="space-y-2">

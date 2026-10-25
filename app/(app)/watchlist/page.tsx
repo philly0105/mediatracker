@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic'
 
 import { useCallback, useState, useEffect, useRef, Suspense } from 'react'
-import { Flame, Sparkles, Inbox, Loader2, Trash2, Dices, Search, SearchX, ChevronDown, CheckSquare, Bookmark } from 'lucide-react'
+import { Flame, Sparkles, Inbox, Loader2, Trash2, Dices, Search, SearchX, ChevronDown, CheckSquare, Bookmark, AlertCircle } from 'lucide-react'
 import type { WatchlistItem, WatchlistPriority } from '@/types'
 import { mediaToResult } from '@/lib/mediaToResult'
 import { useMediaActions, readCreatedEntry } from '@/lib/useMediaActions'
@@ -86,6 +86,12 @@ function WatchlistContent() {
   const [groups, setGroups] = useState<Groups>(EMPTY_GROUPS)
   const [availableGenres, setAvailableGenres] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  // A failed load has to be its own state. The catch clears the groups, and
+  // without this flag empty groups after a 500 read exactly like a brand-new
+  // account — "Your watchlist is empty", toolbar gone — to someone with three
+  // hundred titles. Bumping reloadKey re-runs the load for "Try again".
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [actioningId, setActioningId] = useState<string | null>(null)
   const [showPick, setShowPick] = useState(false)
   // Which bucket the grid shows (plan Task 10: priority SegmentedControl +
@@ -147,6 +153,7 @@ function WatchlistContent() {
     let active = true
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
+    setLoadError(false)
 
     fetch(`/api/watchlist?${listParams(null, 1, PAGE_SIZE)}`)
       .then((r) => {
@@ -191,6 +198,7 @@ function WatchlistContent() {
         if (!active) return
         setGroups(EMPTY_GROUPS)
         setAvailableGenres([])
+        setLoadError(true)
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -199,7 +207,7 @@ function WatchlistContent() {
     return () => {
       active = false
     }
-  }, [listParams])
+  }, [listParams, reloadKey])
 
   function patchGroup(priority: WatchlistPriority, patch: Partial<GroupState>) {
     setGroups((prev) => ({ ...prev, [priority]: { ...prev[priority], ...patch } }))
@@ -438,14 +446,16 @@ function WatchlistContent() {
   // toolbar over one compact "set a title's priority from its details" —
   // advice that cannot be followed by someone with no titles to set.
   const watchlistEmpty =
-    !loading && !hasActiveFilters && PRIORITY_ORDER.every((p) => groups[p].total === 0)
+    !loading && !loadError && !hasActiveFilters && PRIORITY_ORDER.every((p) => groups[p].total === 0)
 
   // The grid swaps under the toolbar with nothing said: the skeletons and the
   // spinner are all aria-hidden, so a filter that matched nothing and one that
   // matched two hundred titles sound identical. This is the only announcement.
   const resultSummary = loading
     ? 'Loading your watchlist.'
-    : watchlistEmpty
+    : loadError
+      ? 'Your watchlist did not load.'
+      : watchlistEmpty
       ? 'Your watchlist is empty.'
       : `${groups[activePriority].total} ${groups[activePriority].total === 1 ? 'title' : 'titles'} in ${PRIORITY_LABELS[activePriority]}.`
 
@@ -553,7 +563,18 @@ function WatchlistContent() {
         )}
       </div>
 
-      {watchlistEmpty ? (
+      {loadError ? (
+        // The toolbar stays: if a filter change is what failed, changing it
+        // back is a way out too.
+        <EmptyState
+          tone="error"
+          icon={AlertCircle}
+          title="Couldn't load your watchlist"
+          hint="Nothing has been lost — this is usually temporary."
+          actionLabel="Try again"
+          onAction={() => setReloadKey((k) => k + 1)}
+        />
+      ) : watchlistEmpty ? (
         // No toolbar above this one: filtering, sorting and picking for me are
         // all actions on titles, and there are none. One way out instead.
         <EmptyState

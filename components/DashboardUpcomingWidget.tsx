@@ -108,13 +108,15 @@ export default function DashboardUpcomingWidget({ releases, watchlistKeys = [], 
       />
 
       {upcoming.length === 0 ? (
-        // "Found" was misleading: this is also what renders when TMDB_API_KEY
-        // is unset, in which case nothing was looked for.
+        // The copy describes the panel, not the world. fetchUpcomingReleases
+        // returns [] when TMDB fails or TMDB_API_KEY is unset, so this renders
+        // for "nothing was looked for" as well as "nothing is coming", and any
+        // sentence claiming there are no releases is false half the time.
         <EmptyState
           size="compact"
           icon={CalendarOff}
-          title="Nothing on the calendar"
-          hint="No wide releases in the next three months. Check back in a week or two."
+          title="No releases to show"
+          hint="Films and episodes due in the next three months appear here."
         />
       ) : (
         <ul className="flex flex-col" style={{ gap: 14, margin: 0, padding: 0, listStyle: 'none' }}>
