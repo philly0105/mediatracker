@@ -16,12 +16,14 @@ interface Props {
   /** Titles and air dates, when they have been fetched. Absent is normal — the
    *  rows fall back to numbers, which is all they could ever render before. */
   episodes?: Episode[]
-  /** Whether `episodes` is still on its way. The season-wide mark checks air
-   *  dates to skip episodes that have not aired, and an empty map makes that
-   *  check pass everything, so on a slow connection one click could claim
-   *  episodes airing next month. Defaults to true for callers that already
-   *  have their metadata when they render. */
-  episodesSettled?: boolean
+  /** Where `episodes` stands. The season-wide mark checks air dates to skip
+   *  episodes that have not aired, and an empty map makes that check pass
+   *  everything — so until the dates are in, one click could claim episodes
+   *  airing next month. 'loading' (slow connection) and 'failed' (the fetch
+   *  errored, so the map will stay empty) both hold the mark back; only
+   *  'ready' releases it. Defaults to 'ready' for callers that already have
+   *  their metadata when they render. */
+  episodeMeta?: 'loading' | 'ready' | 'failed'
   onProgressChange: (seasonId: string, episode: number | number[], watched: boolean) => void
 }
 
@@ -49,7 +51,7 @@ function cascadeLabel(
     : `Unmark S${seasonNumber} E${ep}–E${episodeCount}${suffix}`
 }
 
-export default function EpisodeTracker({ seasons, progress, episodes, episodesSettled = true, onProgressChange }: Props) {
+export default function EpisodeTracker({ seasons, progress, episodes, episodeMeta = 'ready', onProgressChange }: Props) {
   const [open, setOpen] = useState<string | null>(() => {
     const watchedKeys = new Set(progress.map(p => `${p.season_id}-${p.episode_number}`))
     return findNextUp(seasons, watchedKeys)?.season_id ?? seasons[0]?.id ?? null
@@ -124,9 +126,12 @@ export default function EpisodeTracker({ seasons, progress, episodes, episodesSe
 
   const { watchedCount, airedCount, allWatched } = seasonCounts(season)
   // Until the air dates land, handleSeasonToggle's unaired guard has nothing
-  // to check against and silently passes everything. Unmarking never consults
-  // air dates, so only the marking direction waits.
-  const markBlocked = !allWatched && !episodesSettled
+  // to check against and silently passes everything — and if the fetch failed
+  // they never will. Unmarking never consults air dates, so only the marking
+  // direction waits; single episodes stay clickable, since each one is a
+  // deliberate choice rather than a sweep across dates nobody has checked.
+  const markBlocked = !allWatched && episodeMeta !== 'ready'
+  const metaFailed = markBlocked && episodeMeta === 'failed'
 
   return (
     <div className="space-y-4">
@@ -174,12 +179,21 @@ export default function EpisodeTracker({ seasons, progress, episodes, episodesSe
           variant="secondary"
           size="sm"
           disabled={markBlocked}
-          title={markBlocked ? 'Checking which episodes have aired...' : undefined}
+          title={markBlocked && !metaFailed ? 'Checking which episodes have aired…' : undefined}
           onClick={() => handleSeasonToggle(season, allWatched)}
         >
           {allWatched ? 'Unmark whole season' : 'Mark whole season watched'}
         </Button>
       </div>
+
+      {/* Visible rather than a tooltip: a disabled button cannot take focus,
+          and a title attribute says nothing to a tap. */}
+      {metaFailed && (
+        <p style={{ margin: 0, fontSize: 'var(--text-sm)', lineHeight: '18px', color: 'var(--text-muted)' }}>
+          Air dates didn&apos;t load, so whole-season marking is off — it can&apos;t tell which episodes are out
+          yet. Mark episodes one at a time, or reload to try again.
+        </p>
+      )}
 
       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {Array.from({ length: season.episode_count }, (_, i) => i + 1).map(ep => {

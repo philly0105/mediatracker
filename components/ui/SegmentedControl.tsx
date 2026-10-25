@@ -90,9 +90,15 @@ export function SegmentedControl<T extends string>({
   // Selection follows focus, which is the radio-group pattern: the arrows pick
   // a segment rather than merely visiting it. The segments render in `options`
   // order, so the index addresses the button directly.
+  //
+  // Landing on the segment that is already selected — Home on the first, End
+  // on the last, an arrow in a one-option group — moves focus and nothing
+  // else. Callers treat onChange as "the selection changed": ImportExportPanel
+  // clears its loaded rows on a mode change, so a repeat call threw away a
+  // preview the user had not asked to lose.
   function selectAt(index: number) {
     const next = (index + options.length) % options.length
-    onChange(options[next].id)
+    if (options[next].id !== value) onChange(options[next].id)
     groupRef.current?.querySelectorAll<HTMLElement>('[role="radio"]')[next]?.focus()
   }
 

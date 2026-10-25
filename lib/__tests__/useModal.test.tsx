@@ -63,6 +63,42 @@ function ModalWithUnreachableTail({ onClose }: { onClose: () => void }) {
   )
 }
 
+// A control outside the ring that the user can still focus, by clicking it:
+// Chrome focuses a clicked tabindex="-1" button. The ring excludes it, so Tab
+// from it must be placed by document order rather than left to the browser.
+function ModalWithClickableOffRing({ onClose }: { onClose: () => void }) {
+  const { containerRef } = useModal(onClose)
+  return (
+    <div ref={containerRef} role="dialog" aria-label="off-ring">
+      <button>ring first</button>
+      <button tabIndex={-1}>off-ring middle</button>
+      <button>ring last</button>
+      <button tabIndex={-1}>off-ring tail</button>
+    </div>
+  )
+}
+
+describe('useModal with focus on a clicked control outside the ring', () => {
+  it('wraps Tab from one after the ring instead of letting focus escape', () => {
+    render(<ModalWithClickableOffRing onClose={vi.fn()} />)
+    screen.getByText('off-ring tail').focus()
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(screen.getByText('ring first')).toHaveFocus()
+  })
+
+  it('moves to the neighbouring ring control in either direction', () => {
+    render(<ModalWithClickableOffRing onClose={vi.fn()} />)
+    screen.getByText('off-ring middle').focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(screen.getByText('ring last')).toHaveFocus()
+
+    screen.getByText('off-ring middle').focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(screen.getByText('ring first')).toHaveFocus()
+  })
+})
+
 describe('useModal with an unreachable control after the last real one', () => {
   it('wraps Tab from the last tabbable control instead of letting focus escape', () => {
     render(<ModalWithUnreachableTail onClose={vi.fn()} />)

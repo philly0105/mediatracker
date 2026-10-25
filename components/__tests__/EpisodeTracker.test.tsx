@@ -218,7 +218,7 @@ describe('EpisodeTracker season-wide mark before the air dates arrive', () => {
         seasons={[season]}
         progress={[]}
         episodes={[]}
-        episodesSettled={false}
+        episodeMeta="loading"
         onProgressChange={onProgressChange}
       />
     )
@@ -233,11 +233,32 @@ describe('EpisodeTracker season-wide mark before the air dates arrive', () => {
         seasons={[season]}
         progress={[]}
         episodes={[episode(1, 'Pilot', '2008-01-20')]}
-        episodesSettled
+        episodeMeta="ready"
         onProgressChange={onProgressChange}
       />
     )
     expect(screen.getByRole('button', { name: 'Mark whole season watched' })).toBeEnabled()
+  })
+
+  it('keeps the season mark off and says why when the metadata failed', () => {
+    // A failed fetch leaves the map empty for good. Treating that as settled
+    // let one click mark next month's episodes on a show still airing.
+    render(
+      <EpisodeTracker
+        seasons={[season]}
+        progress={[]}
+        episodes={[]}
+        episodeMeta="failed"
+        onProgressChange={onProgressChange}
+      />
+    )
+    const button = screen.getByRole('button', { name: 'Mark whole season watched' })
+    expect(button).toBeDisabled()
+    expect(screen.getByText(/Air dates didn.t load, so whole-season marking is off/)).toBeInTheDocument()
+
+    // Single episodes are still a deliberate choice, one at a time.
+    fireEvent.click(screen.getByRole('button', { name: 'Mark S1 E1 watched' }))
+    expect(onProgressChange).toHaveBeenCalledWith('s1', expect.anything(), true)
   })
 
   it('leaves unmarking available, since it never consults an air date', () => {
@@ -246,7 +267,7 @@ describe('EpisodeTracker season-wide mark before the air dates arrive', () => {
         seasons={[season]}
         progress={watched(1, 2, 3, 4, 5)}
         episodes={[]}
-        episodesSettled={false}
+        episodeMeta="failed"
         onProgressChange={onProgressChange}
       />
     )

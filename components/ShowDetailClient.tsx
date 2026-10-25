@@ -51,10 +51,9 @@ export default function ShowDetailClient({
   const seasons = initialDetails.seasons
   const [progress, setProgress] = useState<EpisodeProgress[]>(initialDetails.progress)
   const [episodes, setEpisodes] = useState<Episode[]>([])
-  // Settled, not successful: once the fetch is done the tracker knows the air
-  // dates are as good as they will get, and can stop holding back the
-  // season-wide mark that guards on them.
-  const [episodesSettled, setEpisodesSettled] = useState(false)
+  // Failed is its own state, not "done": a failed fetch leaves no air dates,
+  // and the season-wide mark's unaired guard passes everything without them.
+  const [episodeMeta, setEpisodeMeta] = useState<'loading' | 'ready' | 'failed'>('loading')
   const [entry, setEntry] = useState<WatchEntry | null>(initialDetails.entry)
   const [rating, setRating] = useState<number | null>(initialDetails.entry?.rating ?? null)
   const [markingWatched, setMarkingWatched] = useState(false)
@@ -77,10 +76,19 @@ export default function ShowDetailClient({
   useEffect(() => {
     let cancelled = false
     fetch(`/api/episodes/meta?media_id=${mediaId}`)
-      .then((res) => (res.ok ? res.json() : { episodes: [] }))
-      .then((data) => { if (!cancelled) setEpisodes(data.episodes ?? []) })
-      .catch((err) => console.error(err))
-      .finally(() => { if (!cancelled) setEpisodesSettled(true) })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Episode metadata failed (${res.status})`)
+        return res.json()
+      })
+      .then((data) => {
+        if (cancelled) return
+        setEpisodes(data.episodes ?? [])
+        setEpisodeMeta('ready')
+      })
+      .catch((err) => {
+        console.error(err)
+        if (!cancelled) setEpisodeMeta('failed')
+      })
     return () => { cancelled = true }
   }, [mediaId])
 
@@ -410,7 +418,7 @@ export default function ShowDetailClient({
             seasons={seasons}
             progress={progress}
             episodes={episodes}
-            episodesSettled={episodesSettled}
+            episodeMeta={episodeMeta}
             onProgressChange={handleProgressChange}
           />
         </Card>

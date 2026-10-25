@@ -193,6 +193,24 @@ describe('SegmentedControl', () => {
       expect(screen.getByRole('radio', { name: 'Season 1' })).toHaveAttribute('aria-checked', 'true')
     })
 
+    it('does not report a change when the key lands on the selected segment', () => {
+      // Callers read onChange as "the selection changed": the import panel
+      // clears its loaded rows on a mode change, so Home on the first segment
+      // used to throw a preview away.
+      const onChange = vi.fn()
+      render(<SegmentedControl options={options} value="movie" onChange={onChange} />)
+      const movies = screen.getByRole('radio', { name: 'Movies' })
+      act(() => movies.focus())
+
+      fireEvent.keyDown(movies, { key: 'Home' })
+      expect(onChange).not.toHaveBeenCalled()
+      expect(movies).toHaveFocus()
+
+      fireEvent.keyDown(movies, { key: 'End' })
+      expect(onChange).toHaveBeenCalledTimes(1)
+      expect(onChange).toHaveBeenCalledWith('show')
+    })
+
     it('leaves every other key to the browser', () => {
       const onChange = vi.fn()
       render(<SegmentedControl options={options} value="movie" onChange={onChange} />)

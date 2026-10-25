@@ -330,12 +330,29 @@ export default function RecommendationsPage() {
   }, [loadMoreRecommendations])
 
   // Every skeleton and spinner on this page is aria-hidden, so a filter that
-  // matched nothing and one that matched forty sound identical.
-  const resultSummary = loading
-    ? 'Loading your recommendations.'
-    : error
-      ? 'Could not load your recommendations.'
-      : `${filteredItems.length} ${filteredItems.length === 1 ? 'recommendation' : 'recommendations'} showing.`
+  // matched nothing and one that matched forty sound identical. The count is
+  // what is rendered, not what is loaded — the grid reveals ten at a time — and
+  // it is fixed when the filter changes or a load finishes, not rewritten as
+  // infinite scroll reveals and fetches more: a polite region re-announces on
+  // every change of text, and a running tally read out mid-scroll is noise.
+  // Updating state during render on a changed key is React's documented way
+  // to derive from a previous render without an effect.
+  const announceKey = `${loading}:${error}:${filterKey}`
+  const [announcement, setAnnouncement] = useState({ key: '', text: '' })
+  if (announcement.key !== announceKey) {
+    const shown = visibleItems.length
+    setAnnouncement({
+      key: announceKey,
+      text: loading
+        ? 'Loading your recommendations.'
+        : error
+          ? 'Could not load your recommendations.'
+          : shown === 0
+            ? 'No recommendations match.'
+            : `Showing ${shown} ${shown === 1 ? 'recommendation' : 'recommendations'}.`,
+    })
+  }
+  const resultSummary = announcement.text
 
   return (
     <div className="space-y-6 pb-12">

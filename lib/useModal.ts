@@ -102,11 +102,28 @@ export function useModal(onClose: () => void): { containerRef: RefObject<HTMLDiv
       // consumer renders next.
       //
       // An index of -1 is the panel itself (useModal focuses it with tabindex
-      // -1) or something outside the modal. Backwards that belongs at the end
-      // of the ring; forwards it is left to the browser, whose next stop from
-      // the panel is already the first control inside it.
+      // -1), something outside the modal, or a control inside it that is not
+      // in the ring — a tabindex="-1" button the user clicked, which Chrome
+      // focuses. That last one is placed by document order: left to the
+      // browser, Tab from it after the ring's end walks straight out of the
+      // modal, which is the leak the ring exists to stop.
       const active = document.activeElement
       const index = focusable.indexOf(active as HTMLElement)
+      if (index === -1 && active && active !== scope && scope.contains(active)) {
+        event.preventDefault()
+        const follows = (el: HTMLElement) =>
+          (active.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+        if (event.shiftKey) {
+          const before = focusable.filter((el) => !follows(el))
+          ;(before[before.length - 1] ?? last).focus()
+        } else {
+          ;(focusable.find(follows) ?? first).focus()
+        }
+        return
+      }
+      // The panel itself or outside the modal: backwards that belongs at the
+      // end of the ring; forwards from the panel is left to the browser, whose
+      // next stop is already the first control inside it.
       if (event.shiftKey) {
         if (index <= 0) {
           event.preventDefault()

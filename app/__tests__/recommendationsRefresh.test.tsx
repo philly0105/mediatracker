@@ -114,4 +114,16 @@ describe('RecommendationsPage refresh', () => {
     })
     expect(recUrls()).toEqual(['/api/recommendations'])
   })
+
+  it('announces what is rendered, not everything loaded', async () => {
+    // The grid reveals ten at a time. Announcing the loaded count read out
+    // "forty showing" over a page with ten on it.
+    const results = Array.from({ length: 40 }, (_, i) => rec(i + 1, `Film ${i + 1}`))
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ results }) })
+    renderPage()
+    await screen.findByText('Film 1')
+
+    const status = screen.getAllByRole('status').find((el) => /recommendation/.test(el.textContent ?? ''))
+    expect(status).toHaveTextContent('Showing 10 recommendations.')
+  })
 })
