@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
-import { CARD_VARIANT_CLASS } from '@/components/ui/cardVariants'
+import { STILL_PANEL_CLASS } from '@/components/ui/cardVariants'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 // The hero's frame and the panels, at the sizes they load into, so the page
@@ -9,14 +9,15 @@ import { Skeleton } from '@/components/ui/Skeleton'
 // shows while TMDB fills in the next episodes. The hero frame is the panel
 // tint without blur: a placeholder is not worth a tier-1 surface.
 
-// The real panels are `Card variant="panel"`, so this takes the same class
-// rather than `card-surface`: that one hardcodes 20px of padding, while a
-// panel tightens to 14px under 760px and carries the gradient rim. The
-// skeleton was 12px narrower in the content box on a phone, so every panel
-// re-wrapped its text and changed height the instant the page resolved.
+// The real panels are `Card variant="panel"`, which tightens to 14px of
+// padding under 760px and carries the gradient rim; `card-surface` hardcodes
+// 20px, so the skeleton's content box was 12px narrower on a phone and every
+// panel re-wrapped and changed height the instant the page resolved. The
+// geometry comes from STILL_PANEL_CLASS rather than the panel class itself,
+// which would bring the blur with it.
 export function PanelSkeleton({ className = '', children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`${CARD_VARIANT_CLASS.panel} ${className}`}>
+    <div className={`${STILL_PANEL_CLASS} ${className}`}>
       <div className="flex items-center justify-between" style={{ marginBottom: 12, paddingLeft: 4 }}>
         <div className="space-y-2">
           <Skeleton className="h-[26px] w-36" />
