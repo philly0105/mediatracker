@@ -1,5 +1,5 @@
 import type { createClient } from '@/lib/supabase/server'
-import { fetchAllRows } from '@/lib/fetchAllRows'
+import { fetchAllRowsConcurrent } from '@/lib/fetchAllRows'
 import { discoverByGenre, fetchTmdbRecommendations, fetchTmdbTrending } from '@/lib/tmdb'
 import type { MediaType, TmdbSearchResult } from '@/types'
 
@@ -99,21 +99,27 @@ function tmdbIds(rows: JoinedTmdbId[]): number[] {
  * truncated one are the same wrong answer, and /api/recommendations reports a
  * 500 to a page that has an error card for it, while Home's card already
  * catches to null.
+ *
+ * This runs on every dashboard render and every recommendations load, so it
+ * pages concurrently: walking the windows in sequence cost one round trip per
+ * thousand rows, fifteen for a library of fifteen thousand entries. The first
+ * window carries the count, so a library under a thousand is still one
+ * request each.
  */
 async function fetchLibraryTmdbIds(supabase: ServerSupabase, userId: string): Promise<Set<number>> {
   const [watched, watchlist] = await Promise.all([
-    fetchAllRows<JoinedTmdbId>((from, to) =>
+    fetchAllRowsConcurrent<JoinedTmdbId>((from, to, withCount) =>
       supabase
         .from('watch_entries')
-        .select('media!inner(tmdb_id)')
+        .select('media!inner(tmdb_id)', withCount ? { count: 'exact' } : undefined)
         .eq('user_id', userId)
         .order('id')
         .range(from, to)
     ),
-    fetchAllRows<JoinedTmdbId>((from, to) =>
+    fetchAllRowsConcurrent<JoinedTmdbId>((from, to, withCount) =>
       supabase
         .from('watchlist_items')
-        .select('media!inner(tmdb_id)')
+        .select('media!inner(tmdb_id)', withCount ? { count: 'exact' } : undefined)
         .eq('user_id', userId)
         .order('id')
         .range(from, to)

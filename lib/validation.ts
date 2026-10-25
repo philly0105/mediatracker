@@ -86,10 +86,11 @@ export function parseTmdbIdParam(raw: string | null | undefined): ValidationResu
 export const MAX_TMDB_PAGE = 500
 
 /**
- * Reads a 1-based page (or batch) number from a query string, clamped to
- * [1, max]. Promoted from the private parser in app/api/watchlist/route.ts so
- * the TMDB-backed routes stop hand-rolling `Math.max(1, parseInt(...))`, which
- * passes NaN straight through.
+ * Reads a 1-based page, batch or limit from a query string, clamped to
+ * [1, max]. The one parser every list route uses: the watchlist and
+ * recommendations routes each had their own, with slightly different rules
+ * (parseInt against Number, a ceiling or none), and the TMDB-backed routes
+ * hand-rolled `Math.max(1, parseInt(...))`, which passes NaN straight through.
  *
  * A junk value falls back rather than erroring: a page number is a navigation
  * detail, and a list route that answers page 1 is friendlier than one that

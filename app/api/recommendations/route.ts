@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { getRecommendations, type TypeFilter } from '@/lib/recommendations'
+import { parsePageParam } from '@/lib/validation'
 
 // The seed query moved to lib/recommendations with the rest of the scoring; it
 // is re-exported because the seed-cascade tests import it from here.
@@ -19,11 +20,6 @@ function parseTypeFilter(value: string | null): TypeFilter {
   return value === 'movie' || value === 'show' ? value : 'all'
 }
 
-function parsePage(value: string | null) {
-  const page = Number.parseInt(value ?? '1', 10)
-  return Number.isFinite(page) && page > 0 ? page : 1
-}
-
 /** How many times Refresh has been pressed — rotates the seed window. */
 function parseCycle(value: string | null) {
   const cycle = Number.parseInt(value ?? '0', 10)
@@ -35,7 +31,8 @@ export async function GET(request: NextRequest) {
   const excludeIds = parseExcludeIds(searchParams.get('excludeIds'))
   const genre = searchParams.get('genre')?.trim() || null
   const type = parseTypeFilter(searchParams.get('type'))
-  const page = parsePage(searchParams.get('page'))
+  // A TMDB discover page underneath, so TMDB's own 500-page ceiling applies.
+  const page = parsePageParam(searchParams.get('page'))
   const refresh = Boolean(searchParams.get('refresh'))
   const cycle = parseCycle(searchParams.get('cycle'))
 

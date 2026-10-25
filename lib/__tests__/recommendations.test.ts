@@ -24,15 +24,18 @@ function fakeSupabase({
   loved = [] as SeedRow[],
   recent = [] as SeedRow[],
   readError = null as string | null,
+  // Each id-read window as `table:from:counted`, for asserting how it paged.
+  log = [] as string[],
 }) {
   return {
     from: (table: string) => {
       let select = ''
+      let counted = false
       let tier: 'loved' | 'rated' | 'recent' = 'recent'
       let first = 0
       let last = POSTGREST_MAX_ROWS - 1
       const builder = {
-        select: (s: string) => { select = s; return builder },
+        select: (s: string, opts?: { count?: string }) => { select = s; counted = opts?.count === 'exact'; return builder },
         eq: () => builder,
         limit: () => builder,
         order: () => builder,
@@ -47,9 +50,11 @@ function fakeSupabase({
           const window = (ids: number[]) =>
             ids.slice(first, last + 1).map((tmdb_id) => ({ media: { tmdb_id } }))
           const isIdRead = table === 'watchlist_items' || select === 'media!inner(tmdb_id)'
+          if (isIdRead) log.push(`${table}:${first}:${counted}`)
           if (isIdRead && readError) return resolve({ data: null, error: { message: readError } })
-          if (table === 'watchlist_items') return resolve({ data: window(watchlist) })
-          if (select === 'media!inner(tmdb_id)') return resolve({ data: window(watched) })
+          // An exact count comes back only when asked for, as from PostgREST.
+          const ids = table === 'watchlist_items' ? watchlist : watched
+          if (isIdRead) return resolve({ data: window(ids), ...(counted ? { count: ids.length } : {}) } as never)
           resolve({ data: tier === 'loved' ? loved : tier === 'rated' ? [] : recent })
         },
       }
@@ -121,6 +126,25 @@ describe('getTopRecommendation', () => {
     vi.mocked(fetchTmdbRecommendations).mockResolvedValue([rec(2000, 'Already watched'), rec(42, 'Genuinely new')])
 
     expect(await getTopRecommendation(supabase, 'user-1')).toMatchObject({ tmdb_id: 42 })
+  })
+
+  it('reads a large library with one counted request and the rest alongside it', async () => {
+    // Walking the windows in turn cost a round trip per thousand rows on every
+    // dashboard render. The first window now carries the count, and the rest
+    // go out together from it.
+    const log: string[] = []
+    const watched = Array.from({ length: 2500 }, (_, i) => 1000 + i)
+    const supabase = fakeSupabase({ watched, loved: [seed(95396, 5, 'Severance')], log })
+    vi.mocked(fetchTmdbRecommendations).mockResolvedValue([rec(3499, 'Last one watched'), rec(42, 'Genuinely new')])
+
+    expect(await getTopRecommendation(supabase, 'user-1')).toMatchObject({ tmdb_id: 42 })
+    expect(log.filter((l) => l.startsWith('watch_entries'))).toEqual([
+      'watch_entries:0:true',
+      'watch_entries:1000:false',
+      'watch_entries:2000:false',
+    ])
+    // A small library is still one request.
+    expect(log.filter((l) => l.startsWith('watchlist_items'))).toEqual(['watchlist_items:0:true'])
   })
 
   it('pages the watchlist read too', async () => {

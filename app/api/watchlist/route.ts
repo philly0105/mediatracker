@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { upsertMedia } from '@/lib/media'
 import { collectGenres } from '@/lib/libraryFilters'
-import { parsePriority, parseTmdbId, parseMediaType, badRequest, readJson } from '@/lib/validation'
+import { parsePriority, parseTmdbId, parseMediaType, parsePageParam, badRequest, readJson } from '@/lib/validation'
 
 // The buckets the watchlist page renders, in the order it renders them.
 const GROUPED_PRIORITIES = ['must_watch', 'want_to_watch', 'someday'] as const
@@ -53,14 +53,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const parsePositiveInt = (raw: string | null, fallback: number, max: number): number => {
-    const n = Number(raw)
-    if (!Number.isInteger(n) || n < 1) return fallback
-    return Math.min(n, max)
-  }
-
-  const page = parsePositiveInt(searchParams.get('page'), 1, 10_000)
-  const limit = parsePositiveInt(searchParams.get('limit'), 24, 100)
+  const page = parsePageParam(searchParams.get('page'), 1, 10_000)
+  const limit = parsePageParam(searchParams.get('limit'), 24, 100)
   const type = searchParams.get('type')
   const genre = searchParams.get('genre')
   const priority = searchParams.get('priority')
