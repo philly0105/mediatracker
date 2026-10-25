@@ -10,8 +10,8 @@ import { SectionError } from '@/components/ui/SectionError'
 // is the point: app/error.tsx renders above the shell and takes the sidebar,
 // the nav and the mobile bars down with the page.
 export default function DashboardError(props: {
-  error: Error & { digest?: string }
-  unstable_retry: () => void
+  error: unknown
+  retry: () => void
 }) {
-  return <SectionError error={props.error} onRetry={props.unstable_retry} title="Your dashboard didn't load" message="Something failed while building your dashboard. Try again — your data is safe." />
+  return <SectionError error={props.error} onRetry={props.retry} title="Your dashboard didn't load" message="Something failed while building your dashboard. Try again — your data is safe." />
 }

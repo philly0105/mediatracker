@@ -3,6 +3,7 @@
 import { useEffect, type CSSProperties } from 'react'
 import { AlertCircle, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { errorDigest } from '@/lib/errorDigest'
 
 /**
  * Shared body for every `error.tsx`. The route-level boundaries are one-liners
@@ -17,17 +18,20 @@ export function SectionError({
   title = 'Something went wrong',
   message = "That didn't load. It's usually temporary — try again, and if it keeps happening, reload the app.",
 }: {
-  error: Error & { digest?: string }
+  /** Whatever was thrown. `unknown` because Next 16.3 types it so: a value
+   *  thrown in a Client Component arrives as-is and need not be an Error. */
+  error: unknown
   /**
-   * What "Try again" runs. Every error.tsx passes Next's `unstable_retry`,
-   * NOT its `reset`: per the error.js reference, reset only clears the error
-   * state and re-renders the boundary's children *without re-fetching*, so
-   * for a Server Component read that threw it hands back the same failure and
-   * the button does nothing. Every boundary here wraps a server read.
+   * What "Try again" runs. Every error.tsx passes Next's `retry` (named
+   * `unstable_retry` before 16.3), NOT its `reset`: per the error.js
+   * reference, reset only clears the error state and re-renders the
+   * boundary's children *without re-fetching*, so for a Server Component read
+   * that threw it hands back the same failure and the button does nothing.
+   * Every boundary here wraps a server read.
    *
-   * It stays a plain callback rather than taking `unstable_retry` by name
-   * because LibraryView renders this directly, outside any boundary, and
-   * passes its own refetch.
+   * It stays a plain callback rather than taking `retry` by name because
+   * LibraryView renders this directly, outside any boundary, and passes its
+   * own refetch — and because the name has already changed once.
    */
   onRetry: () => void
   title?: string
@@ -38,6 +42,8 @@ export function SectionError({
     // it can carry query fragments and upstream API detail.
     console.error(error)
   }, [error])
+
+  const digest = errorDigest(error)
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-4">
@@ -79,9 +85,9 @@ export function SectionError({
         >
           {message}
         </p>
-        {error.digest && (
+        {digest && (
           <p className="tabular" style={{ margin: '8px 0 0', fontSize: 'var(--text-xs)', lineHeight: '16px', color: 'var(--text-muted)' }}>
-            Reference: {error.digest}
+            Reference: {digest}
           </p>
         )}
         <Button onClick={onRetry} style={{ marginTop: 24 }}>

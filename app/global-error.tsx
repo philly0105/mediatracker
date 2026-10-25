@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
+import { errorDigest } from '@/lib/errorDigest'
 
 /**
  * The last resort: an error thrown in the root layout itself never reaches
@@ -20,10 +21,10 @@ import { AlertCircle } from 'lucide-react'
  */
 export default function GlobalError({
   error,
-  unstable_retry,
+  retry,
 }: {
-  error: Error & { digest?: string }
-  unstable_retry: () => void
+  error: unknown
+  retry: () => void
 }) {
   useEffect(() => {
     console.error(error)
@@ -75,14 +76,16 @@ export default function GlobalError({
             <p style={{ fontSize: 14, lineHeight: '20px', color: 'rgba(236,245,249,.80)', margin: '8px auto 0', maxWidth: '42ch' }}>
               Something failed before the app could render. Reloading usually clears it.
             </p>
-            {error.digest && (
+            {errorDigest(error) && (
               <p style={{ fontSize: 12, lineHeight: '16px', color: 'rgba(236,245,249,.74)', margin: '8px 0 0', fontVariantNumeric: 'tabular-nums' }}>
-                Reference: {error.digest}
+                Reference: {errorDigest(error)}
               </p>
             )}
             <button
               type="button"
-              onClick={unstable_retry}
+              // `retry`, not `reset`: reset re-renders without re-fetching, so
+              // it hands back the same failure.
+              onClick={retry}
               style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 marginTop: 24, minHeight: 44, padding: '0 18px', fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em',

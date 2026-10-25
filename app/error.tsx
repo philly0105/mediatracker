@@ -9,12 +9,12 @@ import { SectionError } from '@/components/ui/SectionError'
 // group layout that owns the app's only landmark is one of the things this
 // boundary replaced, so without it the page has no landmark at all.
 export default function ErrorPage(props: {
-  error: Error & { digest?: string }
-  unstable_retry: () => void
+  error: unknown
+  retry: () => void
 }) {
   return (
     <main id="main" tabIndex={-1} className="flex min-h-dvh items-center justify-center">
-      <SectionError error={props.error} onRetry={props.unstable_retry} />
+      <SectionError error={props.error} onRetry={props.retry} />
     </main>
   )
 }
