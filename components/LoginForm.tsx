@@ -18,11 +18,17 @@ export default function LoginForm({ signupEnabled }: { signupEnabled: boolean })
     e.preventDefault()
     setError('')
     setLoading(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
-    router.push('/')
-    router.refresh()
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setError(error.message); return }
+      router.push('/')
+      router.refresh()
+    } catch {
+      setError('Could not reach the server. Try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
