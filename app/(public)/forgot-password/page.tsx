@@ -14,21 +14,21 @@ export default function ForgotPasswordPage() {
     setError('')
     setLoading(true)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // The link carries a one-time code that only /auth/callback can exchange
-      // for a session; landing straight on /reset-password would arrive with no
-      // session and nothing to update.
-      redirectTo: `${window.location.origin}/auth/callback?next=%2Freset-password`,
-    })
-    setLoading(false)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        // Exchange the one-time code for a session before opening the form.
+        redirectTo: `${window.location.origin}/auth/callback?next=%2Freset-password`,
+      })
 
-    // Deliberately not branching on whether the address exists: a "no such
-    // account" message here turns this form into an account-enumeration oracle.
-    // Supabase only errors on malformed input or rate limits, which are worth
-    // showing.
-    if (error) { setError(error.message); return }
-    setSent(true)
+      // Keep the confirmation independent of whether the account exists.
+      if (error) { setError(error.message); return }
+      setSent(true)
+    } catch {
+      setError('Could not reach the server. Try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
